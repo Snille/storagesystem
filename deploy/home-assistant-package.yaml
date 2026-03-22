@@ -1,0 +1,120 @@
+# Exempelpaket för Home Assistant
+# Lägg filen i /config/packages/hyllsystem.yaml
+# och se till att "packages: !include_dir_named packages" finns i configuration.yaml
+
+input_text:
+  hyllsystem_last_query:
+    name: Hyllsystem senast fråga
+    max: 255
+  hyllsystem_last_answer:
+    name: Hyllsystem senaste svar
+    max: 255
+  hyllsystem_last_location:
+    name: Hyllsystem senaste plats
+    max: 255
+
+rest_command:
+  hyllsystem_ask:
+    url: !secret hyllsystem_api_url
+    method: POST
+    content_type: application/json
+    headers:
+      x-api-key: !secret hyllsystem_api_key
+    payload: >-
+      {{ {"query": query} | to_json }}
+
+script:
+  hyllsystem_fraga_verkstan:
+    alias: Hyllsystem - Fråga verkstan
+    mode: restart
+    fields:
+      query:
+        name: Fråga
+        description: Vad letar du efter?
+        example: Var finns skarvdosorna?
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          effective_query: "{{ query | trim }}"
+      - if:
+          - condition: template
+            value_template: "{{ effective_query == '' }}"
+        then:
+          - stop: Ingen fråga angavs.
+
+      - action: rest_command.hyllsystem_ask
+        data:
+          query: "{{ effective_query }}"
+        response_variable: hyllsystem_response
+
+      - variables:
+          hyllsystem_payload: >-
+            {% if hyllsystem_response.content is mapping %}
+              {{ hyllsystem_response.content }}
+            {% else %}
+              {{ hyllsystem_response.content | from_json }}
+            {% endif %}
+          hyllsystem_answer: >-
+            {% set payload = hyllsystem_response.content if hyllsystem_response.content is mapping else (hyllsystem_response.content | from_json) %}
+            {{ payload.answer | default('Jag hittade inget tydligt svar.') }}
+          hyllsystem_location: >-
+            {% set payload = hyllsystem_response.content if hyllsystem_response.content is mapping else (hyllsystem_response.content | from_json) %}
+            {% if payload.matches is defined and payload.matches | count > 0 %}
+              {{ payload.matches[0].location.system }}, {{ payload.matches[0].location.shelf }}, {{ payload.matches[0].location.slot }}
+            {% else %}
+              Okänd plats
+            {% endif %}
+          hyllsystem_box_id: >-
+            {% set payload = hyllsystem_response.content if hyllsystem_response.content is mapping else (hyllsystem_response.content | from_json) %}
+            {% if payload.matches is defined and payload.matches | count > 0 %}
+              {{ payload.matches[0].boxId }}
+            {% else %}
+              okand
+            {% endif %}
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hyllsystem_last_query
+        data:
+          value: "{{ effective_query[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hyllsystem_last_answer
+        data:
+          value: "{{ hyllsystem_answer[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.hyllsystem_last_location
+        data:
+          value: "{{ hyllsystem_location[:255] }}"
+
+      # Byt ut entiteterna nedan mot din egen TTS- och media player-setup.
+      - action: tts.speak
+        target:
+          entity_id: !secret hyllsystem_tts_entity
+        data:
+          media_player_entity_id: !secret hyllsystem_media_player
+          message: "{{ hyllsystem_answer }}"
+
+      # Exempel på event vidare till annan automation, MQTT-bridge eller ESPHome-logik.
+      - event: hyllsystem_result
+        event_data:
+          query: "{{ effective_query }}"
+          answer: "{{ hyllsystem_answer }}"
+          location: "{{ hyllsystem_location }}"
+          box_id: "{{ hyllsystem_box_id }}"
+          raw: "{{ hyllsystem_payload }}"
+
+template:
+  - sensor:
+      - name: Hyllsystem senaste svar
+        unique_id: hyllsystem_latest_answer
+        state: "{{ states('input_text.hyllsystem_last_answer') }}"
+
+      - name: Hyllsystem senaste plats
+        unique_id: hyllsystem_latest_location
+        state: "{{ states('input_text.hyllsystem_last_location') }}"

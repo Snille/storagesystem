@@ -1,0 +1,61 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="800" y1="0" x2="800" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f5efbf"/>
+      <stop offset="0.38" stop-color="#d8e5b1"/>
+      <stop offset="1" stop-color="#94b882"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(790 90) rotate(90) scale(190 420)">
+      <stop offset="0" stop-color="#fff8c9" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#fff2ae" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#fff2ae" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mist" x1="800" y1="170" x2="800" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7f2cf" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#f7f2cf" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="hillA" x1="199" y1="381" x2="1358" y2="712" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b3e64f"/>
+      <stop offset="0.35" stop-color="#79b81f"/>
+      <stop offset="1" stop-color="#305f18"/>
+    </linearGradient>
+    <linearGradient id="hillB" x1="227" y1="458" x2="1487" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9ee13f"/>
+      <stop offset="0.45" stop-color="#5e9f1c"/>
+      <stop offset="1" stop-color="#214410"/>
+    </linearGradient>
+    <linearGradient id="hillC" x1="134" y1="534" x2="1383" y2="872" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8fda31"/>
+      <stop offset="0.4" stop-color="#4c8d17"/>
+      <stop offset="1" stop-color="#18350c"/>
+    </linearGradient>
+    <linearGradient id="grassGlow" x1="228" y1="620" x2="1307" y2="823" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d0ff73" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#91dc31" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#91dc31" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blurSoft" x="-60" y="-60" width="1720" height="1020" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <ellipse cx="800" cy="110" rx="330" ry="180" fill="url(#sunGlow)"/>
+  <rect y="120" width="1600" height="420" fill="url(#mist)"/>
+
+  <g opacity="0.35" filter="url(#blurSoft)">
+    <path d="M-40 289C126 257 165 227 287 246C397 264 462 304 570 300C693 294 721 242 842 245C976 248 1013 309 1139 318C1266 327 1313 278 1424 273C1519 268 1569 291 1644 308V403H-40V289Z" fill="#7ba07a"/>
+    <path d="M-15 350C141 310 216 337 332 345C463 355 523 304 651 302C775 301 847 354 956 361C1086 370 1151 325 1275 332C1391 338 1495 370 1628 398V474H-15V350Z" fill="#6d926c"/>
+  </g>
+
+  <path d="M-90 495C37 442 127 449 242 422C355 396 413 342 537 352C657 362 705 432 823 439C946 446 1009 390 1129 391C1258 392 1327 460 1451 484C1536 501 1590 495 1685 470V734H-90V495Z" fill="url(#hillA)"/>
+  <path d="M-100 574C22 536 99 582 196 573C303 563 341 487 455 485C562 484 603 549 700 560C825 573 893 520 1009 505C1143 488 1218 519 1318 566C1424 616 1517 636 1694 625V809H-100V574Z" fill="url(#hillB)"/>
+  <path d="M-106 675C33 614 116 642 223 624C322 607 369 541 480 551C595 561 640 643 751 662C866 682 930 611 1045 594C1189 573 1285 601 1386 661C1476 714 1570 738 1692 729V950H-106V675Z" fill="url(#hillC)"/>
+
+  <path d="M-94 554C47 486 107 493 222 475C333 457 401 413 531 418C661 422 714 493 833 504C956 516 1004 465 1125 459C1263 453 1333 515 1452 550C1537 575 1596 584 1678 565V618C1596 633 1546 630 1450 607C1320 576 1258 516 1118 523C1005 529 945 575 824 562C694 548 641 480 512 485C407 490 336 547 223 561C111 576 38 566-94 633V554Z" fill="url(#grassGlow)"/>
+  <path d="M-101 635C27 582 113 598 220 586C333 574 371 520 484 527C604 535 653 597 753 613C875 632 939 585 1051 567C1189 545 1281 579 1389 634C1480 679 1574 694 1694 684V741C1578 751 1486 735 1394 694C1288 647 1201 614 1060 636C947 653 887 698 761 687C648 677 603 619 484 612C371 605 324 657 214 669C107 680 28 669-101 726V635Z" fill="url(#grassGlow)" opacity="0.75"/>
+
+  <g opacity="0.22">
+    <path d="M8 749C93 726 169 699 270 714C370 729 410 787 504 792C613 798 660 750 760 733C859 716 921 734 1017 759C1122 788 1179 814 1278 805C1381 796 1452 735 1595 735V900H8V749Z" fill="#132d12"/>
+  </g>
+</svg>

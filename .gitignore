@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env.local
+.tools/
+tsconfig.tsbuildinfo
+tmp_album/
+tmp_album_full/
+data/*.json
+data/*.xlsx
+*.zip
