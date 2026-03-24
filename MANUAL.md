@@ -2,6 +2,8 @@
 
 Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
 
+Aktuell version: `v1.1.0`
+
 ## Tanken med systemet
 
 Varje fysisk låda har en egen identitet, och varje gång innehållet uppdateras skapas en ny inventering för samma låda.
@@ -11,6 +13,12 @@ Det betyder att du kan:
 - flytta en låda utan att tappa historik
 - lägga till fler bilder senare
 - byta innehåll i lådan och ändå behålla samma låda
+
+En låda kan nu stå på flera typer av platser:
+
+- i en `Ivar`
+- på eller under en `Bänk`
+- i ett `Skåp`
 
 ## Vanligt arbetsflöde
 
@@ -59,12 +67,29 @@ På startsidan kan du:
 - använda röstsökning
 - öppna en låda genom att klicka på lådkortet
 - klicka på bilder för att se dem i lightbox
+- se hur många aktuella platser som finns i systemet
 
 Sökningen hittar inte bara lådnamn, utan även:
 
 - sammanfattningar
 - sökord
 - bildspecifika analystexter
+
+## Hyllsystem
+
+Sidan `Hyllsystem` visar alla platsenheter, till exempel:
+
+- `Ivar C`
+- `Bänk Svarv`
+- `Skåp 3D-print`
+
+Här kan du:
+
+- klicka dig in på rätt platsenhet
+- se lådor grupperade per hylla eller yta
+- öppna en låda direkt från platsvyn
+
+Det här är särskilt bra när du vill hitta något utifrån hur verkstaden faktiskt ser ut, snarare än genom fritextsökning.
 
 ## Bilder att koppla
 
@@ -86,11 +111,14 @@ Här gör du själva registreringen.
 Du kan:
 
 - justera lådnamn
-- se aktuell plats
+- välja platskategori: `Ivar`, `Bänk` eller `Skåp`
+- välja eller ändra aktuell plats
 - ändra bildordning
 - ändra bildroller
 - analysera enskilda bilder
 - redigera analystexten manuellt
+
+För en befintlig låda kan du använda `Ändra plats` om lådan flyttats i verkstaden.
 
 Det är ofta den bästa sidan att använda när AI:n nästan har rätt men behöver lite hjälp.
 
@@ -107,6 +135,8 @@ Du kan:
 - lägga till fler bilder
 - släppa en felkopplad bild
 - öppna historik
+
+Historiken finns kvar även om lådan flyttas till en ny plats.
 
 ## När AI:n inte blir rätt
 
@@ -135,6 +165,7 @@ På sidan `Inställningar` kan du ändra:
 - Immich-konto och album
 - AI-provider och modell
 - promptar som styr modellen
+- rensningsfraser och andra filter som städar AI-svar
 
 Det här är särskilt användbart om du testar olika modeller i LM Studio.
 
@@ -154,6 +185,9 @@ Några vanliga situationer:
 - En bild hamnade i fel låda:
   använd `Släpp bild` från lådvyn.
 
+- En låda står på fel plats:
+  öppna lådan eller registreringssidan och använd `Ändra plats`.
+
 ## Rekommenderat arbetssätt i vardagen
 
 - Fota alltid etikett först om möjligt.
@@ -161,3 +195,4 @@ Några vanliga situationer:
 - Använd `Bilder att koppla` för snabb sortering.
 - Gör finjusteringar i `Ny låda / inventering`.
 - Använd översikten som din huvudsakliga söksida.
+- Använd `Hyllsystem` när du vill navigera visuellt mellan Ivar, bänkar och skåp.

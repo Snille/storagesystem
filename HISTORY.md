@@ -1,5 +1,33 @@
 # History
 
+## v1.1.0 - 2026-03-24
+
+Första utbyggnadsreleasen efter `v1.0.0`, med fokus på platsstruktur och navigering i verkstaden.
+
+### Platser och navigering
+
+- Ny generell platsmodell för `Ivar`, `Bänk` och `Skåp`.
+- Ny sida `Hyllsystem` som visar alla platsenheter i systemet.
+- Ny detaljvy per platsenhet med visuell hyllstruktur och klickbara lådor.
+- Översikten visar nu `aktuella platser` i stället för dubblerad sessionsstatistik.
+
+### Registrering och flytt
+
+- `Ny låda / inventering` kan nu välja platskategori direkt.
+- Befintliga lådor kan flyttas genom att öppna och ändra `Aktuell plats`.
+- Stöd för bokstavsvariant även vid flytt till ny plats.
+
+### Struktur och presentation
+
+- Ny intern platsparser och normalisering för flera typer av plats-ID.
+- Svensk presentation av `Ivar`, `Bänk`, `Skåp`, `Hylla`, `Yta` och `Plats` i hela UI:t.
+- Förbättrad hyllvy med trästruktur, hyllplan och dynamiska rader utan onödiga tomma platshållare.
+
+### Språk och polish
+
+- Språkfix för `lådor`.
+- Dokumentation uppdaterad för nya platsenheter, hyllvyn och flyttflödet.
+
 ## v1.0.0 - 2026-03-24
 
 Första stabila releasen av Hyllsystem.
@@ -49,4 +77,3 @@ Första stabila releasen av Hyllsystem.
 
 - Säkrare deployflöde med atomisk build-swap via `scripts/deploy_safe.sh`.
 - Förbättrad hantering av fallback, parserrobusthet och felmeddelanden i analysflöden.
-

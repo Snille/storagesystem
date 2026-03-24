@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
+import { buildLocationId, parseLocationId, type BenchZone, type LocationKind } from "@/lib/location-schema";
 import { presentLocation } from "@/lib/location-presentation";
 import { presentPhotoRole } from "@/lib/photo-role-presentation";
 import type { PhotoRole } from "@/lib/types";
@@ -53,19 +54,6 @@ function formatLocationDisplay(locationId: string, boxId = "") {
   return [location.system, location.shelf, location.slot].filter(Boolean).join(" ");
 }
 
-function parseLocationId(locationId: string) {
-  const match = locationId.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    system: match[1].toUpperCase(),
-    shelf: match[2],
-    slot: match[3]
-  };
-}
-
 export function SessionForm({ defaults, initialPhotos, availablePhotos }: SessionFormProps) {
   const [photos, setPhotos] = useState<PhotoDraft[]>(initialPhotos);
   const [boxId, setBoxId] = useState(defaults.boxId);
@@ -88,10 +76,13 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
   const [analyzingPhotoId, setAnalyzingPhotoId] = useState<string | null>(null);
   const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
   const locationParts = parseLocationId(currentLocationId);
-  const [locationSystem, setLocationSystem] = useState(locationParts?.system ?? "");
-  const [locationShelf, setLocationShelf] = useState(locationParts?.shelf ?? "");
+  const [locationKind, setLocationKind] = useState<LocationKind>(locationParts?.kind ?? "ivar");
+  const [locationUnit, setLocationUnit] = useState(locationParts?.unitId ?? "");
+  const [locationRow, setLocationRow] = useState(locationParts?.rowId ?? "");
   const [locationSlot, setLocationSlot] = useState(locationParts?.slot ?? "");
+  const [locationVariant, setLocationVariant] = useState(locationParts?.variant ?? "");
   const isExistingBox = Boolean(defaults.boxId);
+  const [isEditingLocation, setIsEditingLocation] = useState(!isExistingBox);
 
   useEffect(() => {
     const activeEntries = Object.entries(photoStatusStartedAt).filter(([, startedAt]) => Boolean(startedAt));
@@ -115,16 +106,24 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
   }, [photoStatusStartedAt]);
 
   useEffect(() => {
-    if (isExistingBox) {
+    if (isExistingBox && !isEditingLocation) {
       return;
     }
 
-    if (locationSystem && locationShelf && locationSlot) {
-      setCurrentLocationId(`${locationSystem}-H${locationShelf}-P${locationSlot}`);
+    if (locationKind && locationUnit && locationRow && locationSlot) {
+      setCurrentLocationId(
+        buildLocationId({
+          kind: locationKind,
+          unitId: locationUnit,
+          rowId: locationRow,
+          slot: locationSlot,
+          variant: locationVariant
+        })
+      );
     } else {
       setCurrentLocationId("");
     }
-  }, [isExistingBox, locationShelf, locationSlot, locationSystem]);
+  }, [isExistingBox, isEditingLocation, locationKind, locationRow, locationSlot, locationUnit, locationVariant]);
 
   const photoRows = useMemo(
     () => photos.map((photo) => `${photo.immichAssetId}|${photo.photoRole}|${photo.capturedAt ?? ""}`).join("\n"),
@@ -150,11 +149,16 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
   );
   const knownSystems = Array.from(
     new Set(
-      [locationSystem, ...["A", "B", "C", "D", "E", "F", "G"]].filter(Boolean)
+      [locationUnit, ...["A", "B", "C", "D", "E", "F", "G"]].filter(Boolean)
     )
   );
   const shelfOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
   const slotOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
+  const variantOptions = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
+  const benchZones: Array<{ value: BenchZone; label: string }> = [
+    { value: "TOP", label: "Ovanpå" },
+    { value: "UNDER", label: "Under" }
+  ];
 
   function updateRole(immichAssetId: string, photoRole: PhotoRole) {
     setPhotos((current) =>
@@ -339,57 +343,141 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
       </label>
       <label>
         Aktuell plats
-        {isExistingBox ? (
-          <div className="card" style={{ padding: 12 }}>
-            {presentedLocation ? (
-              <div className="meta card-meta">
-                <>
-                  <span>{presentLocation(currentLocationId, boxId).system}</span>
-                  <span>{presentLocation(currentLocationId, boxId).shelf}</span>
-                  <span>{presentLocation(currentLocationId, boxId).slot}</span>
-                </>
-              </div>
-            ) : (
-              <span className="muted">Ingen plats vald ännu.</span>
-            )}
-          </div>
+        {isExistingBox && !isEditingLocation ? (
+          <>
+            <div className="card" style={{ padding: 12 }}>
+              {presentedLocation ? (
+                <div className="meta card-meta">
+                  <>
+                    <span>{presentLocation(currentLocationId, boxId).system}</span>
+                    <span>{presentLocation(currentLocationId, boxId).shelf}</span>
+                    <span>{presentLocation(currentLocationId, boxId).slot}</span>
+                  </>
+                </div>
+              ) : (
+                <span className="muted">Ingen plats vald ännu.</span>
+              )}
+            </div>
+            <div className="action-row" style={{ marginTop: 10 }}>
+              <button type="button" className="button secondary" onClick={() => setIsEditingLocation(true)}>
+                Ändra plats
+              </button>
+            </div>
+          </>
         ) : (
-          <div className="grid three">
-            <label>
-              Ivar
-              <select value={locationSystem} onChange={(event) => setLocationSystem(event.target.value)} required>
-                <option value="">Välj Ivar</option>
-                {knownSystems.map((system) => (
-                  <option key={system} value={system}>
-                    {system}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Hylla
-              <select value={locationShelf} onChange={(event) => setLocationShelf(event.target.value)} required>
-                <option value="">Välj hylla</option>
-                {shelfOptions.map((shelf) => (
-                  <option key={shelf} value={shelf}>
-                    {shelf}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Plats
-              <select value={locationSlot} onChange={(event) => setLocationSlot(event.target.value)} required>
-                <option value="">Välj plats</option>
-                {slotOptions.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <>
+            <div className="grid three">
+              <label>
+                Platskategori
+                <select
+                  value={locationKind}
+                  onChange={(event) => {
+                    const nextKind = event.target.value as LocationKind;
+                    setLocationKind(nextKind);
+                    setLocationRow(nextKind === "bench" ? "TOP" : "");
+                  }}
+                  required
+                >
+                  <option value="ivar">Ivar</option>
+                  <option value="bench">Bänk</option>
+                  <option value="cabinet">Skåp</option>
+                </select>
+              </label>
+              <label>
+                {locationKind === "ivar" ? "Ivar" : locationKind === "bench" ? "Bänk" : "Skåp"}
+                {locationKind === "ivar" ? (
+                  <select value={locationUnit} onChange={(event) => setLocationUnit(event.target.value)} required>
+                    <option value="">Välj Ivar</option>
+                    {knownSystems.map((system) => (
+                      <option key={system} value={system}>
+                        {system}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={locationUnit}
+                    onChange={(event) => setLocationUnit(event.target.value)}
+                    placeholder={locationKind === "bench" ? "Svarv" : "3D-print"}
+                    required
+                  />
+                )}
+              </label>
+              <label>
+                {locationKind === "bench" ? "Yta" : "Hylla"}
+                {locationKind === "bench" ? (
+                  <select value={locationRow} onChange={(event) => setLocationRow(event.target.value)} required>
+                    {benchZones.map((zone) => (
+                      <option key={zone.value} value={zone.value}>
+                        {zone.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={locationRow.replace(/^H/i, "")}
+                    onChange={(event) => setLocationRow(`H${event.target.value}`)}
+                    required
+                  >
+                    <option value="">Välj hylla</option>
+                    {shelfOptions.map((shelf) => (
+                      <option key={shelf} value={shelf}>
+                        {shelf}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+            </div>
+            <div className="grid three" style={{ marginTop: 10 }}>
+              <label>
+                Plats
+                <select value={locationSlot} onChange={(event) => setLocationSlot(event.target.value)} required>
+                  <option value="">Välj plats</option>
+                  {slotOptions.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Bokstav
+                <select value={locationVariant} onChange={(event) => setLocationVariant(event.target.value)}>
+                  <option value="">Ingen</option>
+                  {variantOptions.map((variant) => (
+                    <option key={variant} value={variant}>
+                      {variant}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </>
         )}
+        {isExistingBox && isEditingLocation ? (
+          <div className="action-row" style={{ marginTop: 10 }}>
+            <button type="button" className="button secondary" onClick={() => setIsEditingLocation(false)}>
+              Klar med plats
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                const original = parseLocationId(defaults.currentLocationId);
+                setLocationKind(original?.kind ?? "ivar");
+                setLocationUnit(original?.unitId ?? "");
+                setLocationRow(original?.rowId ?? "");
+                setLocationSlot(original?.slot ?? "");
+                setLocationVariant(original?.variant ?? "");
+                setCurrentLocationId(defaults.currentLocationId);
+                setIsEditingLocation(false);
+              }}
+            >
+              Avbryt
+            </button>
+          </div>
+        ) : null}
       </label>
       <input type="hidden" name="createdAt" value={defaults.createdAt} />
       <label>

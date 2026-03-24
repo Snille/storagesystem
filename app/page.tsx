@@ -18,6 +18,9 @@ export default async function Home({ searchParams }: HomeProps) {
   ]);
   const sessionsByBox = getCurrentSessionByBox(data);
   const currentSessions = [...sessionsByBox.values()];
+  const currentLocationCount = new Set(
+    data.boxes.map((box) => box.currentLocationId.trim()).filter(Boolean)
+  ).size;
   const photosBySession = new Map(
     data.photos.reduce<Array<[string, typeof data.photos]>>((groups, photo) => {
       const existing = groups.find(([sessionId]) => sessionId === photo.sessionId);
@@ -77,8 +80,8 @@ export default async function Home({ searchParams }: HomeProps) {
             registrerade lådor
           </div>
           <div className="stat">
-            <strong>{currentSessions.length}</strong>
-            aktuella inventeringar
+            <strong>{currentLocationCount}</strong>
+            aktuella platser
           </div>
           <div className="stat">
             <strong>{data.photos.length}</strong>

@@ -7,6 +7,7 @@ import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
 import { fetchAlbumAssets } from "@/lib/immich";
 import { readAppSettings } from "@/lib/settings";
+import { getShelfSystemCount } from "@/lib/shelf-map";
 import { ThemeController } from "@/app/theme-controller";
 
 const inlineGlobalCss = readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     albums.find((album) => album.id === settings.immich.albumId)?.label ||
     settings.immich.accountLabel ||
     "Album";
+  const shelfSystemCount = getShelfSystemCount(data);
 
   return (
     <html
@@ -65,6 +67,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <main>
           <nav className="topnav">
             <Link href="/">Översikt</Link>
+            <Link href="/hyllsystem" className="nav-with-count">
+              <span>Hyllsystem</span>
+              <span className="nav-count" aria-label={`${shelfSystemCount} platsenheter`}>
+                {shelfSystemCount}
+              </span>
+            </Link>
             <Link href="/inbox" className="nav-with-count">
               <span>{albumLabel}</span>
               <span className="nav-count" aria-label={`${inboxCount} bilder i inkorgen`}>

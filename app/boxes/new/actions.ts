@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { readInventoryData, upsertBoxSession } from "@/lib/data-store";
+import { buildLocationId, normalizeLocationUnit, parseLocationId } from "@/lib/location-schema";
 import type { PhotoRole } from "@/lib/types";
 
 function normalizeList(value: FormDataEntryValue | null) {
@@ -13,31 +14,58 @@ function normalizeList(value: FormDataEntryValue | null) {
 
 function normalizeLocationId(value: string) {
   const trimmed = value.trim();
-  const directMatch = trimmed.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
-  if (directMatch) {
-    return `${directMatch[1].toUpperCase()}-H${directMatch[2]}-P${directMatch[3]}`;
+  const parsed = parseLocationId(trimmed);
+  if (parsed) {
+    return parsed.normalizedId;
   }
 
-  const presentedMatch = trimmed.match(/(?:Ivar|IVAR)\s*:\s*([A-Z]).*?Hylla\s*:\s*(\d+).*?Plats\s*:\s*(\d+)/i);
-  if (presentedMatch) {
-    return `${presentedMatch[1].toUpperCase()}-H${presentedMatch[2]}-P${presentedMatch[3]}`;
+  const ivarPresentedMatch = trimmed.match(/(?:Ivar|IVAR)\s*:\s*([A-Z]).*?Hylla\s*:?\s*(\d+).*?Plats\s*:?\s*(\d+)\s*([A-Z])?/i);
+  if (ivarPresentedMatch) {
+    return buildLocationId({
+      kind: "ivar",
+      unitId: ivarPresentedMatch[1].toUpperCase(),
+      rowId: `H${ivarPresentedMatch[2]}`,
+      slot: ivarPresentedMatch[3],
+      variant: ivarPresentedMatch[4]?.toUpperCase() ?? ""
+    });
+  }
+
+  const benchPresentedMatch = trimmed.match(/Bänk\s*:\s*([A-Z0-9 -]+).*?Yta\s*:?\s*(Ovanpå|Under).*?Plats\s*:?\s*(\d+)\s*([A-Z])?/i);
+  if (benchPresentedMatch) {
+    return buildLocationId({
+      kind: "bench",
+      unitId: normalizeLocationUnit(benchPresentedMatch[1]),
+      rowId: benchPresentedMatch[2].toLowerCase().startsWith("o") ? "TOP" : "UNDER",
+      slot: benchPresentedMatch[3],
+      variant: benchPresentedMatch[4]?.toUpperCase() ?? ""
+    });
+  }
+
+  const cabinetPresentedMatch = trimmed.match(/Skåp\s*:\s*([A-Z0-9 -]+).*?Hylla\s*:?\s*(\d+).*?Plats\s*:?\s*(\d+)\s*([A-Z])?/i);
+  if (cabinetPresentedMatch) {
+    return buildLocationId({
+      kind: "cabinet",
+      unitId: normalizeLocationUnit(cabinetPresentedMatch[1]),
+      rowId: `H${cabinetPresentedMatch[2]}`,
+      slot: cabinetPresentedMatch[3],
+      variant: cabinetPresentedMatch[4]?.toUpperCase() ?? ""
+    });
   }
 
   return trimmed;
 }
 
 function extractVariantLetter(value: string) {
-  const match = value.match(/Plats\s*:\s*\d+\s*([A-Z])\b/i);
+  const match = value.match(/Plats\s*:?\s*\d+\s*([A-Z])\b/i);
   return match?.[1]?.toUpperCase() ?? "";
 }
 
 async function generateBoxId(locationId: string, preferredVariant = "") {
-  const match = locationId.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
-  if (!match) {
+  const parsed = parseLocationId(locationId);
+  if (!parsed) {
     return "";
   }
 
-  const [, shelfSystem, shelf, slot] = match;
   const inventory = await readInventoryData();
   const existingVariants = new Set(
     inventory.boxes
@@ -47,13 +75,22 @@ async function generateBoxId(locationId: string, preferredVariant = "") {
   );
 
   const variant =
+    (parsed.variant && !existingVariants.has(parsed.variant.toUpperCase()) ? parsed.variant.toUpperCase() : "") ||
     (preferredVariant && !existingVariants.has(preferredVariant) ? preferredVariant : "") ||
     Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)).find(
       (letter) => !existingVariants.has(letter)
     ) ||
     "A";
 
-  return `IVAR-${shelfSystem.toUpperCase()}-H${shelf}-P${slot}-${variant}`;
+  if (parsed.kind === "ivar") {
+    return `IVAR-${parsed.unitId}-H${parsed.rowId.replace(/^H/i, "")}-P${parsed.slot}-${variant}`;
+  }
+
+  if (parsed.kind === "bench") {
+    return `BENCH-${parsed.unitId}-${parsed.rowId.toUpperCase()}-P${parsed.slot}-${variant}`;
+  }
+
+  return `CABINET-${parsed.unitId}-H${parsed.rowId.replace(/^H/i, "")}-P${parsed.slot}-${variant}`;
 }
 
 function generateSessionId() {

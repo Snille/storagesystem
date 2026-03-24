@@ -2,6 +2,8 @@
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
+Aktuell version: `v1.1.0`
+
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
 Appen är byggd för ett praktiskt arbetsflöde:
@@ -27,6 +29,14 @@ Det gör att:
 - innehållet kan ändras via en ny session
 - flera bilder kan kopplas till samma session
 - en plats kan ha flera små lådor, till exempel `A`, `B`, `C`
+
+Platsmodellen är nu generell och klarar flera typer av platsenheter:
+
+- `Ivar`
+- `Bänk`
+- `Skåp`
+
+Det betyder att samma inventariemodell kan användas både för hyllor, arbetsbänkar och skåp.
 
 ## Teknik
 
@@ -70,6 +80,12 @@ I UI:t visas de på svenska:
 - `Utplockat`
 - `Detalj`
 
+Plats-ID:n kan vara både äldre och nya format:
+
+- `A-H2-P3-A` för äldre IVAR-platser
+- `BENCH:SVARV:TOP:P1:A` för bänkytor
+- `CABINET:3D-PRINT:H2:P1:A` för skåpplatser
+
 ### `data/app-settings.json`
 
 Innehåller allt som går att ändra från sidan `Inställningar`, bland annat:
@@ -93,6 +109,7 @@ Den visar:
 - sökruta med text eller röst
 - lådkort med plats, sammanfattning, sökord och bilder
 - alla kopplade bilder för respektive låda i sökresultat
+- statistik för registrerade lådor, aktuella platser och kopplade bilder
 
 Sökningen använder:
 
@@ -103,6 +120,17 @@ Sökningen använder:
 - sessionsnoteringar
 - sökord
 - bildspecifika analystexter
+
+### `Hyllsystem`
+
+Visar alla platsenheter i systemet, till exempel `Ivar C`, `Bänk Svarv` eller `Skåp 3D-print`.
+
+Här kan man:
+
+- öppna en platsenhet
+- se lådor grupperade per hylla eller yta
+- klicka direkt på en låda för att öppna låd-vyn
+- se den visuella hyllstrukturen för respektive `Ivar`
 
 ### `Bilder att koppla`
 
@@ -124,11 +152,14 @@ Sidan används för att registrera en ny låda eller uppdatera en befintlig sess
 Här kan man:
 
 - se och justera lådnamn, sammanfattning och sökord
-- se aktuell plats i läsbar form
+- välja platskategori: `Ivar`, `Bänk`, `Skåp`
+- välja eller ändra aktuell plats
 - ändra bildroller och bildordning
 - analysera enskilda bilder direkt
 - redigera eller rensa analystext per bild
 - spara sessionen och gå tillbaka till översikten
+
+För befintliga lådor går det också att klicka på `Ändra plats` för att flytta lådan i systemet utan att tappa historiken.
 
 ### `Låd-vy`
 
@@ -156,6 +187,7 @@ Här kan man ändra:
 - AI-provider: `LM Studio`, `OpenAI`, `Anthropic`, `OpenRouter`, `Open WebUI`
 - modell och API-inställningar
 - promptar för analys
+- rensningsfraser och andra filter för AI-svar
 
 ## Immich-integration
 
@@ -308,6 +340,18 @@ Vid översiktsanalys försöker den:
 
 Det hjälper särskilt när flera små lådor står på samma plats i hyllan.
 
+## Platsenheter
+
+Appen arbetar nu med tre typer av platsenheter:
+
+- `Ivar`: klassiska hyllor med `Hylla` och `Plats`
+- `Bänk`: arbetsbänkar med `Yta` (`Ovanpå` eller `Under`) och `Plats`
+- `Skåp`: skåp med `Hylla` och `Plats`
+
+Det gör att inventariet kan växa utanför rena IVAR-hyllor utan att datamodellen behöver göras om igen.
+
+Stöd för lösa objekt som inte ligger i en låda är en naturlig nästa utbyggnad, men modellen är redan förberedd för att flera typer av platser ska kunna samexistera.
+
 ## Bildhantering
 
 Förhandsbilder och originalfiler hämtas via appens egna proxyroutes mot Immich.
@@ -401,6 +445,8 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 ## Filer att känna till
 
 - `app/page.tsx`: översikten
+- `app/hyllsystem/page.tsx`: lista över platsenheter
+- `app/hyllsystem/[system]/page.tsx`: visuell hyll-/platsvy för vald enhet
 - `app/inbox/page.tsx`: serverdel för okopplade bilder
 - `app/inbox/inbox-workspace.tsx`: klientflödet för `Bilder att koppla`
 - `app/boxes/new/session-form.tsx`: registrera/uppdatera låda
@@ -410,6 +456,9 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 - `lib/analysis-jobs.ts`: statusjobb för analys
 - `lib/data-store.ts`: läs/skriv av inventariedata
 - `lib/immich.ts`: Immich-hämtning
+- `lib/location-schema.ts`: parsing och generering av plats-ID för `Ivar`, `Bänk` och `Skåp`
+- `lib/location-presentation.ts`: svensk presentation av platsinfo i UI:t
+- `lib/shelf-map.ts`: grupperar lådor till platsenheter, rader och platser
 - `lib/settings.ts`: läs/skriv av appinställningar
 
 ## Import av etikettkatalog

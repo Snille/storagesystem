@@ -1,48 +1,15 @@
+import { parseBoxId, parseLocationId } from "@/lib/location-schema";
+
 type PresentedLocation = {
   system: string;
   shelf: string;
   slot: string;
 };
 
-function parseLocationId(locationId: string) {
-  const match = locationId.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    shelfSystem: match[1].toUpperCase(),
-    shelf: match[2],
-    slot: match[3]
-  };
-}
-
-function parseBoxId(boxId: string) {
-  const match = boxId.match(/^([A-Z]+)-([A-Z])-H(\d+)-P(\d+)-([A-Z])$/i);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    systemName: match[1],
-    shelfSystem: match[2].toUpperCase(),
-    shelf: match[3],
-    slot: match[4],
-    variant: match[5].toUpperCase()
-  };
-}
-
 export function presentLocation(locationId: string, boxId?: string): PresentedLocation {
-  const box = boxId ? parseBoxId(boxId) : null;
-  const location = parseLocationId(locationId);
+  const location = parseLocationId(locationId) ?? (boxId ? parseBoxId(boxId) : null);
 
-  const shelfSystem = box?.shelfSystem ?? location?.shelfSystem ?? "";
-  const shelf = box?.shelf ?? location?.shelf ?? "";
-  const slot = box?.slot ?? location?.slot ?? "";
-  const variant = box?.variant ?? "";
-  const systemName = box?.systemName ?? "IVAR";
-
-  if (!shelfSystem || !shelf || !slot) {
+  if (!location) {
     return {
       system: locationId || boxId || "",
       shelf: "",
@@ -50,9 +17,18 @@ export function presentLocation(locationId: string, boxId?: string): PresentedLo
     };
   }
 
+  const systemLabel =
+    location.kind === "ivar"
+      ? `Ivar: ${location.unitLabel}`
+      : location.kind === "bench"
+        ? `Bänk: ${location.unitLabel}`
+        : `Skåp: ${location.unitLabel}`;
+
+  const shelfLabel = location.kind === "bench" ? `Yta: ${location.rowLabel}` : location.rowLabel;
+
   return {
-    system: `${systemName[0]}${systemName.slice(1).toLowerCase()}: ${shelfSystem}`,
-    shelf: `Hylla: ${shelf}`,
-    slot: `Plats: ${slot}${variant}`
+    system: systemLabel,
+    shelf: shelfLabel,
+    slot: `Plats: ${location.slot}${location.variant}`
   };
 }
