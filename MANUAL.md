@@ -2,7 +2,7 @@
 
 Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
 
-Aktuell version: `v1.1.0`
+Aktuell version: `v1.1.1`
 
 ## Tanken med systemet
 
@@ -67,6 +67,7 @@ På startsidan kan du:
 - använda röstsökning
 - öppna en låda genom att klicka på lådkortet
 - klicka på bilder för att se dem i lightbox
+- hovra på bilder med analystext för att läsa en snabb beskrivning direkt
 - se hur många aktuella platser som finns i systemet
 
 Sökningen hittar inte bara lådnamn, utan även:
@@ -75,9 +76,9 @@ Sökningen hittar inte bara lådnamn, utan även:
 - sökord
 - bildspecifika analystexter
 
-## Hyllsystem
+## Lagerplats
 
-Sidan `Hyllsystem` visar alla platsenheter, till exempel:
+Sidan `Lagerplats` visar alla platsenheter, till exempel:
 
 - `Ivar C`
 - `Bänk Svarv`
@@ -113,10 +114,12 @@ Du kan:
 - justera lådnamn
 - välja platskategori: `Ivar`, `Bänk` eller `Skåp`
 - välja eller ändra aktuell plats
+- skriva noteringar och spara sessionen direkt efter `Sökord`
 - ändra bildordning
 - ändra bildroller
 - analysera enskilda bilder
 - redigera analystexten manuellt
+- låta markerade album-bilder följa med automatiskt när du sparar, även om du inte först trycker på `Lägg till valda bilder`
 
 För en befintlig låda kan du använda `Ändra plats` om lådan flyttats i verkstaden.
 
@@ -195,4 +198,4 @@ Några vanliga situationer:
 - Använd `Bilder att koppla` för snabb sortering.
 - Gör finjusteringar i `Ny låda / inventering`.
 - Använd översikten som din huvudsakliga söksida.
-- Använd `Hyllsystem` när du vill navigera visuellt mellan Ivar, bänkar och skåp.
+- Använd `Lagerplats` när du vill navigera visuellt mellan Ivar, bänkar och skåp.

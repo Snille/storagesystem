@@ -2,7 +2,7 @@
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
-Aktuell version: `v1.1.0`
+Aktuell version: `v1.1.1`
 
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
@@ -121,9 +121,9 @@ Sökningen använder:
 - sökord
 - bildspecifika analystexter
 
-### `Hyllsystem`
+### `Lagerplats`
 
-Visar alla platsenheter i systemet, till exempel `Ivar C`, `Bänk Svarv` eller `Skåp 3D-print`.
+Sidan heter `Lagerplats` i UI:t och visar alla platsenheter i systemet, till exempel `Ivar C`, `Bänk Svarv` eller `Skåp 3D-print`.
 
 Här kan man:
 
@@ -154,9 +154,11 @@ Här kan man:
 - se och justera lådnamn, sammanfattning och sökord
 - välja platskategori: `Ivar`, `Bänk`, `Skåp`
 - välja eller ändra aktuell plats
+- skriva noteringar och spara sessionen direkt under `Sökord`
 - ändra bildroller och bildordning
 - analysera enskilda bilder direkt
 - redigera eller rensa analystext per bild
+- låta markerade album-bilder följa med när man sparar, även utan att först trycka på `Lägg till valda bilder`
 - spara sessionen och gå tillbaka till översikten
 
 För befintliga lådor går det också att klicka på `Ändra plats` för att flytta lådan i systemet utan att tappa historiken.
@@ -361,6 +363,7 @@ Det ger några fördelar:
 - appen kan hantera API/share-key på serversidan
 - roterade/redigerade bilder i Immich kan speglas i appen
 - appen kan falla tillbaka till placeholder om en bild tagits bort i Immich
+- analystext kan visas både i lightbox och som hover-tooltip på bilder där text finns
 
 Om en bild tas bort från albumet:
 
@@ -468,7 +471,7 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 ## Filer att känna till
 
 - `app/page.tsx`: översikten
-- `app/hyllsystem/page.tsx`: lista över platsenheter
+- `app/hyllsystem/page.tsx`: lista över platsenheter (`Lagerplats` i UI:t)
 - `app/hyllsystem/[system]/page.tsx`: visuell hyll-/platsvy för vald enhet
 - `app/inbox/page.tsx`: serverdel för okopplade bilder
 - `app/inbox/inbox-workspace.tsx`: klientflödet för `Bilder att koppla`

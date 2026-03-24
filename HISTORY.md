@@ -1,5 +1,25 @@
 # History
 
+## v1.1.1 - 2026-03-24
+
+Punktrelease med fokus på registreringsflöde, bildinformation och dokumentationssynk.
+
+### Registrering och bildflöde
+
+- Markerade album-bilder följer nu med vid sparning även om `Lägg till valda bilder` inte trycks först.
+- `Ny låda / inventering` har fått en mer kompakt layout där `Noteringar` och `Spara session` ligger direkt under `Sökord`.
+- Knappen `Lägg till valda bilder` använder nu samma primärstil som `Spara session`.
+
+### Bildvisning
+
+- Analystext visas nu som hover-tooltip på bilder när sådan text finns.
+- Registreringssidan skickar nu med analystext till den gemensamma bildvisaren så tooltip och lightbox visar samma information.
+
+### UI och dokumentation
+
+- Dokumentationen använder nu `Lagerplats` där det speglar dagens UI.
+- README och MANUAL uppdaterade för det senaste registreringsflödet och bildvisningen.
+
 ## v1.1.0 - 2026-03-24
 
 Första utbyggnadsreleasen efter `v1.0.0`, med fokus på platsstruktur och navigering i verkstaden.

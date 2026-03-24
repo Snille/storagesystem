@@ -518,6 +518,18 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
           onChange={(event) => setItemKeywords(event.target.value)}
         />
       </label>
+      <label>
+        Noteringar
+        <textarea
+          name="notes"
+          placeholder="Valfria noteringar om lådan eller inventeringen."
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+        />
+      </label>
+      <div>
+        <button type="submit">Spara session</button>
+      </div>
 
       <input type="hidden" name="photoRows" value={photoRows} />
 
@@ -536,6 +548,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
                     originalUrl={photo.originalUrl}
                     overlayTitle={`Bild ${index + 1}`}
                     overlayMeta={formatDateTime(photo.capturedAt)}
+                    overlayNote={draftPhotoNotes[photo.immichAssetId] ?? ""}
                   />
                   <div className="shell session-photo-controls" style={{ gap: 12, minWidth: 0 }}>
                     <div className="meta">
@@ -628,7 +641,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
             <span className="muted">{selectedAvailableIds.length} valda bilder</span>
             <button
               type="button"
-              className="button secondary"
+              className="button"
               onClick={addSelectedPhotos}
               disabled={selectedAvailableIds.length === 0}
             >
@@ -674,19 +687,6 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
           </p>
         ) : null}
       </section>
-
-      <label>
-        Noteringar
-        <textarea
-          name="notes"
-          placeholder="Valfria noteringar om lådan eller inventeringen."
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-        />
-      </label>
-      <div>
-        <button type="submit">Spara session</button>
-      </div>
     </div>
   );
 }

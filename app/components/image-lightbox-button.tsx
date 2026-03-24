@@ -118,6 +118,7 @@ export function ImageLightboxButton({
         maxHeight: `${imageMaxHeight}px`
       } satisfies CSSProperties)
     : undefined;
+  const tooltipText = overlayNote?.trim() || undefined;
   const panelStyle = !layoutReady
     ? ({
         visibility: "hidden"
@@ -134,6 +135,7 @@ export function ImageLightboxButton({
           setOpen(true);
         }}
         aria-label={`Visa större bild: ${alt}`}
+        title={tooltipText}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt={alt} className={imageClassName} src={thumbnailUrl} loading="lazy" decoding="async" />
