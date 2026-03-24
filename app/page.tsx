@@ -4,6 +4,7 @@ import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
 import { searchInventory } from "@/lib/search";
+import packageJson from "@/package.json";
 
 type HomeProps = {
   searchParams: Promise<{ q?: string }>;
@@ -38,7 +39,12 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <div className="shell">
       <section className="panel">
-        <h2>Sök efter något i verkstan</h2>
+        <div className="section-header">
+          <h2>Sök efter något i verkstan</h2>
+          <span className="app-version-badge" aria-label={`Appversion ${packageJson.version}`}>
+            v{packageJson.version}
+          </span>
+        </div>
         <HomeSearchForm query={query} />
         {query ? (
           <div className="card-list" style={{ marginTop: 18 }}>
