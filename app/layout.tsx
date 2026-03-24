@@ -68,7 +68,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <nav className="topnav">
             <Link href="/">Översikt</Link>
             <Link href="/hyllsystem" className="nav-with-count">
-              <span>Hyllsystem</span>
+              <span>Lagerplats</span>
               <span className="nav-count" aria-label={`${shelfSystemCount} platsenheter`}>
                 {shelfSystemCount}
               </span>

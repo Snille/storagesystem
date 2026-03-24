@@ -9,7 +9,7 @@ export default async function ShelfSystemsPage() {
   return (
     <div className="shell">
       <section className="hero">
-        <h1>Hyllsystem</h1>
+        <h1>Lagerplats</h1>
         <p>Välj en platsenhet för att se platserna och öppna rätt låda direkt.</p>
       </section>
 

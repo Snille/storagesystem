@@ -30,7 +30,7 @@ export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) 
         <div className="section-header">
           <h1>{unit.title}</h1>
           <Link href="/hyllsystem" className="button secondary">
-            Tillbaka till hyllsystem
+            Tillbaka till lagerplatser
           </Link>
         </div>
         <p>
