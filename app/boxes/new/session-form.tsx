@@ -125,14 +125,37 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
     }
   }, [isExistingBox, isEditingLocation, locationKind, locationRow, locationSlot, locationUnit, locationVariant]);
 
+  const availableAssets = availablePhotos.filter(
+    (photo) =>
+      !photos.some((selectedPhoto) => selectedPhoto.immichAssetId === photo.immichAssetId)
+  );
+  const pendingSelectedPhotos = useMemo(
+    () =>
+      availableAssets
+        .filter((photo) => selectedAvailableIds.includes(photo.immichAssetId))
+        .map<PhotoDraft>((photo) => ({
+          photoId: undefined,
+          immichAssetId: photo.immichAssetId,
+          photoRole: "inside" as PhotoRole,
+          capturedAt: photo.capturedAt,
+          notes: "",
+          thumbnailUrl: photo.thumbnailUrl,
+          originalUrl: photo.originalUrl
+        })),
+    [availableAssets, selectedAvailableIds]
+  );
+  const effectivePhotos = useMemo(
+    () => [...photos, ...pendingSelectedPhotos],
+    [pendingSelectedPhotos, photos]
+  );
   const photoRows = useMemo(
-    () => photos.map((photo) => `${photo.immichAssetId}|${photo.photoRole}|${photo.capturedAt ?? ""}`).join("\n"),
-    [photos]
+    () => effectivePhotos.map((photo) => `${photo.immichAssetId}|${photo.photoRole}|${photo.capturedAt ?? ""}`).join("\n"),
+    [effectivePhotos]
   );
   const photoPayload = useMemo(
     () =>
       JSON.stringify(
-        photos.map((photo) => ({
+        effectivePhotos.map((photo) => ({
           photoId: photo.photoId,
           immichAssetId: photo.immichAssetId,
           photoRole: photo.photoRole,
@@ -140,13 +163,9 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
           notes: draftPhotoNotes[photo.immichAssetId] ?? ""
         }))
       ),
-    [draftPhotoNotes, photos]
+    [draftPhotoNotes, effectivePhotos]
   );
   const presentedLocation = formatLocationDisplay(currentLocationId, boxId);
-  const availableAssets = availablePhotos.filter(
-    (photo) =>
-      !photos.some((selectedPhoto) => selectedPhoto.immichAssetId === photo.immichAssetId)
-  );
   const knownSystems = Array.from(
     new Set(
       [locationUnit, ...["A", "B", "C", "D", "E", "F", "G"]].filter(Boolean)
@@ -648,6 +667,12 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
         ) : (
           <div className="empty">Det finns inga lediga bilder kvar att välja just nu.</div>
         )}
+        {selectedAvailableIds.length > 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Markerade album-bilder följer med när du sparar sessionen, även om du inte först klickar på
+            &nbsp;`Lägg till valda bilder`.
+          </p>
+        ) : null}
       </section>
 
       <label>
