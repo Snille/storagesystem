@@ -28,10 +28,14 @@ const settingsSchema = z.object({
     photoRoleSystemPrompt: z.string(),
     photoSummaryPrompt: z.string(),
     photoSummarySystemPrompt: z.string(),
-    anthropicBoxSystemPrompt: z.string()
+    anthropicBoxSystemPrompt: z.string(),
+    summaryCleanupPrefixes: z.string(),
+    keywordCleanupTerms: z.string(),
+    notesCleanupPhrases: z.string(),
+    photoSummaryCleanupPhrases: z.string()
   }),
   ai: z.object({
-    provider: z.enum(["lmstudio", "openai", "anthropic", "openrouter"]),
+    provider: z.enum(["lmstudio", "openai", "anthropic", "openrouter", "openwebui"]),
     lmstudio: z.object({
       baseUrl: z.string(),
       model: z.string(),
@@ -49,6 +53,11 @@ const settingsSchema = z.object({
       apiKey: z.string().optional()
     }),
     openrouter: z.object({
+      baseUrl: z.string(),
+      model: z.string(),
+      apiKey: z.string().optional()
+    }),
+    openwebui: z.object({
       baseUrl: z.string(),
       model: z.string(),
       apiKey: z.string().optional()
@@ -194,7 +203,45 @@ export function getDefaultAppSettings(): AppSettings {
       ].join(" "),
       photoSummarySystemPrompt: "Du beskriver verkstadsbilder kortfattat på svenska och svarar endast med JSON.",
       anthropicBoxSystemPrompt:
-        "Du analyserar verkstadslådor på svenska. Följ användarens instruktioner och svara endast med ett JSON-objekt."
+        "Du analyserar verkstadslådor på svenska. Följ användarens instruktioner och svara endast med ett JSON-objekt.",
+      summaryCleanupPrefixes: [
+        "placerad på ivar",
+        "placerat på ivar",
+        "placerade på ivar",
+        "placerad i ivar",
+        "placerat i ivar",
+        "placerade i ivar",
+        "på ivar",
+        "i ivar",
+        "märkt med plats"
+      ].join("\n"),
+      keywordCleanupTerms: [
+        "ivar",
+        "hylla",
+        "plats",
+        "the",
+        "user",
+        "wants",
+        "analyze",
+        "analysis",
+        "images",
+        "workshop",
+        "boxes"
+      ].join("\n"),
+      notesCleanupPhrases: [
+        "matchar katalogen",
+        "stämmer överens med katalogen",
+        "ocr läser",
+        "etiketten anger",
+        "innehållet i lådan",
+        "vilket stödjer",
+        "katalogen anger"
+      ].join("\n"),
+      photoSummaryCleanupPhrases: [
+        "ocr läser",
+        "matchar katalogen",
+        "katalogen"
+      ].join("\n")
     },
     ai: {
       provider: ((process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
@@ -203,6 +250,9 @@ export function getDefaultAppSettings(): AppSettings {
         : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
             "openrouter"
           ? "openrouter"
+        : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
+            "openwebui"
+          ? "openwebui"
         : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
             "lmstudio"
           ? "lmstudio"
@@ -227,6 +277,11 @@ export function getDefaultAppSettings(): AppSettings {
         baseUrl: trimTrailingSlash(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"),
         model: process.env.OPENROUTER_MODEL || "",
         apiKey: process.env.OPENROUTER_API_KEY || ""
+      },
+      openwebui: {
+        baseUrl: trimTrailingSlash(process.env.OPENWEBUI_BASE_URL || "http://llm.snille.net:8080/api"),
+        model: process.env.OPENWEBUI_MODEL || "",
+        apiKey: process.env.OPENWEBUI_API_KEY || ""
       }
     },
     labels: getDefaultLabelSettings()
@@ -270,6 +325,10 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
       openrouter: {
         ...base.ai.openrouter,
         ...(input?.ai?.openrouter ?? {})
+      },
+      openwebui: {
+        ...base.ai.openwebui,
+        ...(input?.ai?.openwebui ?? {})
       }
     },
     labels: normalizeLabelSettings({

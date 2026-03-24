@@ -28,6 +28,19 @@ type HomeBoxCardProps = {
   photos: CardPhoto[];
 };
 
+function renderLocationChip(value: string) {
+  const [label, detail] = value.split(": ");
+  if (!detail) {
+    return <span className="location-chip">{value}</span>;
+  }
+
+  return (
+    <span className="location-chip">
+      {label}: <span className="location-chip-value">{detail}</span>
+    </span>
+  );
+}
+
 export function HomeBoxCard({
   href,
   label,
@@ -58,10 +71,10 @@ export function HomeBoxCard({
       tabIndex={0}
       aria-label={`Öppna ${label}`}
     >
-      <div className="meta card-meta">
-        <span>{location.system}</span>
-        <span>{location.shelf}</span>
-        <span>{location.slot}</span>
+      <div className="meta card-meta location-meta">
+        {renderLocationChip(location.system)}
+        {renderLocationChip(location.shelf)}
+        {renderLocationChip(location.slot)}
         <span className="meta-count">Bilder {photoCount}</span>
       </div>
       <div className={`home-card-layout${primaryPhoto ? " has-primary-photo" : ""}`}>

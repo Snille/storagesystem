@@ -153,7 +153,7 @@ Här kan man ändra:
 - kontoetikett
 - API-nyckel eller share key
 - vilket album som ska användas
-- AI-provider: `LM Studio`, `OpenAI`, `Anthropic`, `OpenRouter`
+- AI-provider: `LM Studio`, `OpenAI`, `Anthropic`, `OpenRouter`, `Open WebUI`
 - modell och API-inställningar
 - promptar för analys
 
@@ -248,11 +248,13 @@ Svarar med:
 
 ## AI-integration
 
-Appen kan använda tre AI-leverantörer:
+Appen kan använda flera AI-leverantörer:
 
 - `LM Studio`
 - `OpenAI`
 - `Anthropic`
+- `OpenRouter`
+- `Open WebUI`
 
 ### LM Studio
 

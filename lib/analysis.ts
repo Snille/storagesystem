@@ -30,7 +30,25 @@ function tokenize(value: string) {
     .filter((token) => token.length > 1);
 }
 
+function parseCleanupLines(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function getCleanupPrompts() {
+  const prompts = readAppSettingsSync().prompts;
+  return {
+    summary: parseCleanupLines(prompts.summaryCleanupPrefixes),
+    keyword: parseCleanupLines(prompts.keywordCleanupTerms),
+    notes: parseCleanupLines(prompts.notesCleanupPhrases),
+    photoSummary: parseCleanupLines(prompts.photoSummaryCleanupPhrases)
+  };
+}
+
 function sanitizeKeywordList(keywords: string[]) {
+  const extraBlocked = getCleanupPrompts().keyword;
   const blocked = new Set([
     "ivar",
     "hylla",
@@ -46,7 +64,8 @@ function sanitizeKeywordList(keywords: string[]) {
     "image",
     "workshop",
     "boxes",
-    "storage"
+    "storage",
+    ...extraBlocked.map((token) => normalizeText(token)).filter(Boolean)
   ]);
 
   return keywords.filter((keyword) => {
@@ -55,7 +74,13 @@ function sanitizeKeywordList(keywords: string[]) {
       return false;
     }
 
+    const parts = token.split(/\s+/).filter(Boolean);
+
     if (blocked.has(token)) {
+      return false;
+    }
+
+    if (parts.some((part) => blocked.has(part))) {
       return false;
     }
 
@@ -64,6 +89,22 @@ function sanitizeKeywordList(keywords: string[]) {
     }
 
     if (/^\d+$/.test(token)) {
+      return false;
+    }
+
+    if (/^[a-z]\s+hylla\s+\d+$/i.test(token)) {
+      return false;
+    }
+
+    if (/^plats\s+\d+[a-z]?$/i.test(token)) {
+      return false;
+    }
+
+    if (/^[a-z]\s+hylla\s+\d+\s+plats\s+\d+[a-z]?$/i.test(token)) {
+      return false;
+    }
+
+    if (/^[a-z]\s+h\d+\s+p\d+[a-z]?$/i.test(token)) {
       return false;
     }
 
@@ -570,18 +611,20 @@ async function sendAiRequest(
     throw new Error("Anthropic använder ett annat API-flöde.");
   }
 
-  if (aiConfig.provider === "openrouter") {
-    await onProgress?.("Kontaktar OpenRouter...");
+  if (aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui") {
+    await onProgress?.(aiConfig.provider === "openwebui" ? "Kontaktar Open WebUI..." : "Kontaktar OpenRouter...");
     const response = await postChatCompletionsRequest(
       aiConfig.baseUrl,
       body,
       aiConfig.apiKey,
       onProgress,
-      "OpenRouter bearbetar bilderna...",
-      {
-        "HTTP-Referer": "https://hylla.snille.net",
-        "X-Title": "Hyllsystem"
-      }
+      aiConfig.provider === "openwebui" ? "Open WebUI bearbetar bilderna..." : "OpenRouter bearbetar bilderna...",
+      aiConfig.provider === "openrouter"
+        ? {
+            "HTTP-Referer": "https://hylla.snille.net",
+            "X-Title": "Hyllsystem"
+          }
+        : undefined
     );
 
     if (!response.ok) {
@@ -950,6 +993,51 @@ function inferSummaryFromParsed(parsed: {
   return "AI-modellen gav inget tydligt sammanfattningsfält. Gå gärna igenom förslaget manuellt.";
 }
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseSummaryCleanupPrefixes(value: string) {
+  return parseCleanupLines(value);
+}
+
+function cleanSuggestedBoxSummary(value: string, cleanupPrefixes: string[] = []) {
+  const cleaned = value
+    .split(/\s+/)
+    .join(" ")
+    .trim()
+    .replace(
+      /\s*(?:,?\s*|och\s+)(?:placerad|placerat|placerade|märkt)\s+(?:på|i)\s+ivar\s+[a-zåäö]\s*,?\s*hylla\s*\d+\s*,?\s*plats\s*\d+[a-z]?\.?/gi,
+      ""
+    )
+    .replace(
+      /\s*(?:,?\s*|och\s+)(?:placerad|placerat|placerade)\s+(?:på|i)\s+[a-zåäö]-?hylla\s*\d+\s*,?\s*plats\s*\d+[a-z]?\.?/gi,
+      ""
+    )
+    .replace(
+      /\s*(?:,?\s*|och\s+)(?:på|i)\s+ivar\s+[a-zåäö]\s*,?\s*hylla\s*\d+\s*,?\s*plats\s*\d+[a-z]?\.?/gi,
+      ""
+    )
+    .replace(/\s*,\s*\./g, ".")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  let result = cleaned;
+  for (const prefix of cleanupPrefixes) {
+    if (!prefix) {
+      continue;
+    }
+
+    const escaped = escapeRegex(prefix);
+    result = result.replace(
+      new RegExp(`\\s*(?:,?\\s*|och\\s+)${escaped}[^.]*\\.?`, "gi"),
+      ""
+    );
+  }
+
+  return result.replace(/[,\s]+$/g, "").trim();
+}
+
 function isUsefulSuggestion(parsed: Partial<
   Omit<AnalysisSuggestion, "sessionId" | "source" | "matchCandidates">
 >) {
@@ -997,7 +1085,7 @@ function parseSuggestionFromLooseText(
     suggestedBoxId: boxIdMatch?.[0]?.toUpperCase() ?? "",
     suggestedLabel,
     suggestedLocationId: locationId,
-    suggestedSummary: cleanPhotoSummary(summary),
+    suggestedSummary: cleanSuggestedBoxSummary(cleanPhotoSummary(summary)),
     suggestedKeywords: keywords,
     suggestedNotes: "",
     confidence: "low",
@@ -1041,6 +1129,7 @@ function cleanSuggestedNotes(value: unknown) {
     return "";
   }
 
+  const dynamicCleanupPhrases = getCleanupPrompts().notes;
   const looksLikeReasoning = [
     "matchar katalogen",
     "stämmer överens med katalogen",
@@ -1048,7 +1137,8 @@ function cleanSuggestedNotes(value: unknown) {
     "etiketten anger",
     "innehållet i lådan",
     "vilket stödjer",
-    "katalogen anger"
+    "katalogen anger",
+    ...dynamicCleanupPhrases
   ].some((pattern) => cleaned.toLowerCase().includes(pattern));
 
   const looksLikeUncertainty = [
@@ -1307,13 +1397,25 @@ async function recoverMissingLabelPhoto(
 }
 
 function cleanPhotoSummary(value: string) {
-  return value
+  let cleaned = value
     .split(/\s+/)
     .join(" ")
     .replace(/\bOCR läser\b.*$/i, "")
     .replace(/\bmatchar katalogen\b.*$/i, "")
     .replace(/\bkatalogen\b.*$/i, "")
     .trim();
+
+  const cleanupPhrases = getCleanupPrompts().photoSummary;
+  for (const phrase of cleanupPhrases) {
+    if (!phrase) {
+      continue;
+    }
+
+    const escaped = escapeRegex(phrase);
+    cleaned = cleaned.replace(new RegExp(`\\b${escaped}\\b.*$`, "i"), "").trim();
+  }
+
+  return cleaned;
 }
 
 function isUsefulPhotoSummary(value: string) {
@@ -1399,10 +1501,15 @@ export async function analyzeSinglePhoto(
   const settings = readAppSettingsSync();
 
   if (
-    (aiConfig.provider === "openai" || aiConfig.provider === "anthropic" || aiConfig.provider === "openrouter") &&
+    (aiConfig.provider === "openai" ||
+      aiConfig.provider === "anthropic" ||
+      aiConfig.provider === "openrouter" ||
+      aiConfig.provider === "openwebui") &&
     !aiConfig.apiKey
   ) {
-    throw new Error("API-nyckel saknas för vald AI-motor.");
+    if (aiConfig.provider !== "openwebui") {
+      throw new Error("API-nyckel saknas för vald AI-motor.");
+    }
   }
   const summaryPrompt = settings.prompts.photoSummaryPrompt;
   const summarySystemPrompt = settings.prompts.photoSummarySystemPrompt;
@@ -1424,7 +1531,7 @@ export async function analyzeSinglePhoto(
             images: [imagePayload],
             maxTokens: 260
           }, onProgress)
-        : aiConfig.provider === "openrouter"
+        : aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui"
           ? await sendAiRequest(aiConfig, {
               model: aiConfig.model,
               messages: [
@@ -1487,7 +1594,7 @@ Var pragmatisk. Svara med ett enda JSON-objekt på formen {"summary":"..."}.
 Om du inte kan identifiera allt, skriv ändå en kort svensk beskrivning av det mest synliga i bilden.`;
       const relaxedResponseText = await sendAiRequest(
         aiConfig,
-        aiConfig.provider === "openrouter"
+        aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui"
           ? {
               model: aiConfig.model,
               messages: [
@@ -1546,10 +1653,15 @@ async function buildOpenAiSuggestion(
   const settings = readAppSettingsSync();
 
   if (
-    (aiConfig.provider === "openai" || aiConfig.provider === "anthropic" || aiConfig.provider === "openrouter") &&
+    (aiConfig.provider === "openai" ||
+      aiConfig.provider === "anthropic" ||
+      aiConfig.provider === "openrouter" ||
+      aiConfig.provider === "openwebui") &&
     !aiConfig.apiKey
   ) {
-    return buildFallbackSuggestion(assets);
+    if (aiConfig.provider !== "openwebui") {
+      return buildFallbackSuggestion(assets);
+    }
   }
 
   const schema = {
@@ -1601,6 +1713,7 @@ async function buildOpenAiSuggestion(
   };
 
   const instructions = settings.prompts.boxAnalysisInstructions;
+  const summaryCleanupPrefixes = parseSummaryCleanupPrefixes(settings.prompts.summaryCleanupPrefixes);
   await onProgress?.("Förbereder bilder och katalog för analys...");
 
   const textPart = {
@@ -1635,7 +1748,7 @@ async function buildOpenAiSuggestion(
           images: await Promise.all(assets.map((asset) => fetchAssetImagePayload(asset.id))),
           maxTokens: 1400
         }, onProgress)
-      : aiConfig.provider === "openrouter"
+      : aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui"
         ? await sendAiRequest(aiConfig, {
             model: aiConfig.model,
             messages: [
@@ -1690,10 +1803,10 @@ JSON-fält: suggestedBoxId, suggestedLabel, suggestedLocationId, suggestedSummar
 `;
     const relaxedResponseText = await sendAiRequest(
       aiConfig,
-      aiConfig.provider === "openrouter"
-        ? {
-            model: aiConfig.model,
-            messages: [
+        aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui"
+          ? {
+              model: aiConfig.model,
+              messages: [
               {
                 role: "user",
                 content: [
@@ -1754,8 +1867,8 @@ JSON-fält: suggestedBoxId, suggestedLabel, suggestedLocationId, suggestedSummar
     suggestedLocationId: typeof parsed.suggestedLocationId === "string" ? parsed.suggestedLocationId : "",
     suggestedSummary:
       typeof parsed.suggestedSummary === "string" && parsed.suggestedSummary.trim()
-        ? parsed.suggestedSummary
-        : inferSummaryFromParsed(parsed),
+        ? cleanSuggestedBoxSummary(parsed.suggestedSummary, summaryCleanupPrefixes)
+        : cleanSuggestedBoxSummary(inferSummaryFromParsed(parsed), summaryCleanupPrefixes),
     suggestedKeywords: Array.isArray(parsed.suggestedKeywords)
       ? sanitizeKeywordList(parsed.suggestedKeywords.filter((item): item is string => typeof item === "string"))
       : [],

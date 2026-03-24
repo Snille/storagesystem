@@ -16,6 +16,13 @@ type PhotoDraft = {
   originalUrl: string;
 };
 
+type AvailablePhoto = {
+  immichAssetId: string;
+  capturedAt?: string;
+  thumbnailUrl: string;
+  originalUrl: string;
+};
+
 type SessionFormProps = {
   defaults: {
     boxId: string;
@@ -28,6 +35,7 @@ type SessionFormProps = {
     notes: string;
   };
   initialPhotos: PhotoDraft[];
+  availablePhotos: AvailablePhoto[];
 };
 
 const roleOptions: PhotoRole[] = ["label", "location", "inside", "spread", "detail"];
@@ -45,7 +53,20 @@ function formatLocationDisplay(locationId: string, boxId = "") {
   return [location.system, location.shelf, location.slot].filter(Boolean).join(" ");
 }
 
-export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
+function parseLocationId(locationId: string) {
+  const match = locationId.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    system: match[1].toUpperCase(),
+    shelf: match[2],
+    slot: match[3]
+  };
+}
+
+export function SessionForm({ defaults, initialPhotos, availablePhotos }: SessionFormProps) {
   const [photos, setPhotos] = useState<PhotoDraft[]>(initialPhotos);
   const [boxId, setBoxId] = useState(defaults.boxId);
   const [sessionId, setSessionId] = useState(defaults.sessionId);
@@ -65,6 +86,12 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
   const [photoStatusStartedAt, setPhotoStatusStartedAt] = useState<Record<string, number>>({});
   const [photoElapsedSeconds, setPhotoElapsedSeconds] = useState<Record<string, number>>({});
   const [analyzingPhotoId, setAnalyzingPhotoId] = useState<string | null>(null);
+  const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
+  const locationParts = parseLocationId(currentLocationId);
+  const [locationSystem, setLocationSystem] = useState(locationParts?.system ?? "");
+  const [locationShelf, setLocationShelf] = useState(locationParts?.shelf ?? "");
+  const [locationSlot, setLocationSlot] = useState(locationParts?.slot ?? "");
+  const isExistingBox = Boolean(defaults.boxId);
 
   useEffect(() => {
     const activeEntries = Object.entries(photoStatusStartedAt).filter(([, startedAt]) => Boolean(startedAt));
@@ -87,6 +114,18 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
     return () => window.clearInterval(timer);
   }, [photoStatusStartedAt]);
 
+  useEffect(() => {
+    if (isExistingBox) {
+      return;
+    }
+
+    if (locationSystem && locationShelf && locationSlot) {
+      setCurrentLocationId(`${locationSystem}-H${locationShelf}-P${locationSlot}`);
+    } else {
+      setCurrentLocationId("");
+    }
+  }, [isExistingBox, locationShelf, locationSlot, locationSystem]);
+
   const photoRows = useMemo(
     () => photos.map((photo) => `${photo.immichAssetId}|${photo.photoRole}|${photo.capturedAt ?? ""}`).join("\n"),
     [photos]
@@ -105,6 +144,17 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
     [draftPhotoNotes, photos]
   );
   const presentedLocation = formatLocationDisplay(currentLocationId, boxId);
+  const availableAssets = availablePhotos.filter(
+    (photo) =>
+      !photos.some((selectedPhoto) => selectedPhoto.immichAssetId === photo.immichAssetId)
+  );
+  const knownSystems = Array.from(
+    new Set(
+      [locationSystem, ...["A", "B", "C", "D", "E", "F", "G"]].filter(Boolean)
+    )
+  );
+  const shelfOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
+  const slotOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
 
   function updateRole(immichAssetId: string, photoRole: PhotoRole) {
     setPhotos((current) =>
@@ -144,6 +194,38 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
       delete next[immichAssetId];
       return next;
     });
+  }
+
+  function toggleAvailablePhoto(immichAssetId: string) {
+    setSelectedAvailableIds((current) =>
+      current.includes(immichAssetId)
+        ? current.filter((entry) => entry !== immichAssetId)
+        : [...current, immichAssetId]
+    );
+  }
+
+  function addSelectedPhotos() {
+    if (selectedAvailableIds.length === 0) {
+      return;
+    }
+
+    const toAdd = availableAssets.filter((photo) => selectedAvailableIds.includes(photo.immichAssetId));
+    if (toAdd.length === 0) {
+      return;
+    }
+
+    setPhotos((current) => [
+      ...current,
+      ...toAdd.map((photo) => ({
+        immichAssetId: photo.immichAssetId,
+        photoRole: "inside" as PhotoRole,
+        capturedAt: photo.capturedAt,
+        notes: "",
+        thumbnailUrl: photo.thumbnailUrl,
+        originalUrl: photo.originalUrl
+      }))
+    ]);
+    setSelectedAvailableIds([]);
   }
 
   async function analyzePhoto(assetId: string) {
@@ -257,21 +339,57 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
       </label>
       <label>
         Aktuell plats
-        <div className="card" style={{ padding: 12 }}>
-          {presentedLocation ? (
-            <div className="meta card-meta">
-              {presentedLocation.split(" ").length > 0 ? (
+        {isExistingBox ? (
+          <div className="card" style={{ padding: 12 }}>
+            {presentedLocation ? (
+              <div className="meta card-meta">
                 <>
                   <span>{presentLocation(currentLocationId, boxId).system}</span>
                   <span>{presentLocation(currentLocationId, boxId).shelf}</span>
                   <span>{presentLocation(currentLocationId, boxId).slot}</span>
                 </>
-              ) : null}
-            </div>
-          ) : (
-            <span className="muted">Ingen plats vald ännu.</span>
-          )}
-        </div>
+              </div>
+            ) : (
+              <span className="muted">Ingen plats vald ännu.</span>
+            )}
+          </div>
+        ) : (
+          <div className="grid three">
+            <label>
+              Ivar
+              <select value={locationSystem} onChange={(event) => setLocationSystem(event.target.value)} required>
+                <option value="">Välj Ivar</option>
+                {knownSystems.map((system) => (
+                  <option key={system} value={system}>
+                    {system}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Hylla
+              <select value={locationShelf} onChange={(event) => setLocationShelf(event.target.value)} required>
+                <option value="">Välj hylla</option>
+                {shelfOptions.map((shelf) => (
+                  <option key={shelf} value={shelf}>
+                    {shelf}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Plats
+              <select value={locationSlot} onChange={(event) => setLocationSlot(event.target.value)} required>
+                <option value="">Välj plats</option>
+                {slotOptions.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
       </label>
       <input type="hidden" name="createdAt" value={defaults.createdAt} />
       <label>
@@ -395,6 +513,52 @@ export function SessionForm({ defaults, initialPhotos }: SessionFormProps) {
           </div>
         ) : (
           <div className="empty">Inga bilder valda ännu.</div>
+        )}
+
+        <div className="section-header" style={{ marginTop: 18 }}>
+          <h3>Välj bilder från albumet</h3>
+          <div className="action-row">
+            <span className="muted">{selectedAvailableIds.length} valda bilder</span>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={addSelectedPhotos}
+              disabled={selectedAvailableIds.length === 0}
+            >
+              Lägg till valda bilder
+            </button>
+          </div>
+        </div>
+        {availableAssets.length > 0 ? (
+          <div className="photo-grid">
+            {availableAssets.map((photo) => {
+              const selected = selectedAvailableIds.includes(photo.immichAssetId);
+              return (
+                <article className={`photo-card selectable-photo${selected ? " selected" : ""}`} key={photo.immichAssetId}>
+                  <button
+                    type="button"
+                    className={`button secondary select-toggle${selected ? " selected" : ""}`}
+                    onClick={() => toggleAvailablePhoto(photo.immichAssetId)}
+                  >
+                    {selected ? "Vald" : "Välj"}
+                  </button>
+                  <ImageLightboxButton
+                    alt="Tillgänglig album-bild"
+                    buttonClassName="photo-open"
+                    thumbnailUrl={photo.thumbnailUrl}
+                    originalUrl={photo.originalUrl}
+                    overlayTitle="Album-bild"
+                    overlayMeta={formatDateTime(photo.capturedAt)}
+                  />
+                  <div className="body">
+                    <p className="muted">{formatDateTime(photo.capturedAt)}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="empty">Det finns inga lediga bilder kvar att välja just nu.</div>
         )}
       </section>
 

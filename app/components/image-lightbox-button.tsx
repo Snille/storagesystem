@@ -109,6 +109,7 @@ export function ImageLightboxButton({
   const contentStyle = measuredWidth
     ? ({
         width: `${measuredWidth}px`,
+        minWidth: `${measuredWidth}px`,
         maxWidth: `${measuredWidth}px`
       } satisfies CSSProperties)
     : undefined;
@@ -169,7 +170,7 @@ export function ImageLightboxButton({
               </div>
             ) : null}
             <div className="lightbox-content-column" style={{ ...(contentStyle ?? {}), ...(panelStyle ?? {}) }}>
-              <div className="lightbox-image-wrap">
+              <div className="lightbox-image-wrap" style={contentStyle}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={imageRef}
@@ -182,7 +183,7 @@ export function ImageLightboxButton({
                 />
               </div>
               {overlayNote?.trim() ? (
-                <p ref={noteRef} className="photo-note">
+                <p ref={noteRef} className="photo-note" style={contentStyle}>
                   {overlayNote.trim()}
                 </p>
               ) : null}

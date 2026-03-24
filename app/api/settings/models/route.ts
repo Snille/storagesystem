@@ -3,7 +3,9 @@ import { fetchAvailableModels } from "@/lib/ai-models";
 import type { AiProvider } from "@/lib/types";
 
 function asProvider(value: string): AiProvider {
-  return value === "openai" || value === "anthropic" || value === "openrouter" ? value : "lmstudio";
+  return value === "openai" || value === "anthropic" || value === "openrouter" || value === "openwebui"
+    ? value
+    : "lmstudio";
 }
 
 export async function POST(request: Request) {

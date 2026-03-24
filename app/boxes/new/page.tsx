@@ -1,6 +1,7 @@
 import { saveBoxSession } from "@/app/boxes/new/actions";
 import { SessionForm } from "@/app/boxes/new/session-form";
-import { getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
+import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
+import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import type { PhotoRole } from "@/lib/types";
 
 type NewBoxPageProps = {
@@ -20,6 +21,7 @@ type NewBoxPageProps = {
 
 export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
   const params = await searchParams;
+  const [assets, data] = await Promise.all([fetchAlbumAssets().catch(() => []), readInventoryData()]);
   const initialPhotos = (() => {
     const payload = String(params.photoPayload ?? "").trim();
 
@@ -63,6 +65,23 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
         };
       });
   })();
+  const currentSessionIds = new Set([...getCurrentSessionByBox(data).values()].map((session) => session.sessionId));
+  const mappedAssetIds = new Set(
+    data.photos
+      .filter((photo) => currentSessionIds.has(photo.sessionId))
+      .map((photo) => photo.immichAssetId)
+  );
+  for (const photo of initialPhotos) {
+    mappedAssetIds.add(photo.immichAssetId);
+  }
+  const availablePhotos = assets
+    .filter((asset) => !mappedAssetIds.has(asset.id))
+    .map((asset) => ({
+      immichAssetId: asset.id,
+      capturedAt: asset.fileCreatedAt,
+      thumbnailUrl: getAssetThumbnailUrl(asset.id),
+      originalUrl: getAssetOriginalUrl(asset.id)
+    }));
 
   return (
     <div className="shell">
@@ -91,6 +110,7 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
               notes: params.notes ?? ""
             }}
             initialPhotos={initialPhotos}
+            availablePhotos={availablePhotos}
           />
         </form>
       </section>

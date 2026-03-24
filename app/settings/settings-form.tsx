@@ -35,7 +35,8 @@ const providerOptions: Array<{ value: AiProvider; label: string }> = [
   { value: "lmstudio", label: "LM Studio" },
   { value: "openai", label: "OpenAI" },
   { value: "anthropic", label: "Anthropic" },
-  { value: "openrouter", label: "OpenRouter" }
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "openwebui", label: "Open WebUI" }
 ];
 
 export function SettingsForm({ initialSettings, initialModels, initialAlbums }: SettingsFormProps) {
@@ -57,8 +58,14 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
     if (settings.ai.provider === "openai") return settings.ai.openai;
     if (settings.ai.provider === "anthropic") return settings.ai.anthropic;
     if (settings.ai.provider === "openrouter") return settings.ai.openrouter;
+    if (settings.ai.provider === "openwebui") return settings.ai.openwebui;
     return settings.ai.lmstudio;
   }, [settings]);
+
+  const sortedModels = useMemo(
+    () => [...models].sort((a, b) => a.label.localeCompare(b.label, "sv", { sensitivity: "base" })),
+    [models]
+  );
 
   function patchAppearance<K extends keyof AppSettings["appearance"]>(key: K, value: AppSettings["appearance"][K]) {
     setSettings((current) => ({
@@ -71,7 +78,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
   }
 
   function patchAiSection(
-    section: "lmstudio" | "openai" | "anthropic" | "openrouter",
+    section: "lmstudio" | "openai" | "anthropic" | "openrouter" | "openwebui",
     updates: Record<string, string | number | undefined>
   ) {
     setSettings((current) => ({
@@ -421,18 +428,20 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Modell
-            <select
+            Modell (sökbar lista)
+            <input
+              list="available-models"
               value={activeConnection.model}
               onChange={(event) => patchAiSection(settings.ai.provider, { model: event.target.value })}
-            >
-              <option value="">Välj modell eller skriv in manuellt nedan</option>
-              {models.map((model) => (
+              placeholder="Börja skriva för att söka modell..."
+            />
+            <datalist id="available-models">
+              {sortedModels.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.label}
                 </option>
               ))}
-            </select>
+            </datalist>
           </label>
         </div>
 
@@ -449,7 +458,9 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
                     ? "https://api.openai.com/v1"
                     : settings.ai.provider === "openrouter"
                       ? "https://openrouter.ai/api/v1"
-                      : "https://api.anthropic.com"
+                      : settings.ai.provider === "openwebui"
+                        ? "http://llm.snille.net:8080/api"
+                        : "https://api.anthropic.com"
               }
             />
           </label>
@@ -493,7 +504,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             <div className="panel-quiet">
               <strong>Tips</strong>
               <p className="muted">
-                OpenAI, Anthropic och OpenRouter använder sina egna modellistor. LM Studio hämtar modeller från din lokala server.
+                OpenAI, Anthropic, OpenRouter och Open WebUI använder sina egna modellistor. LM Studio hämtar modeller från din lokala server.
               </p>
             </div>
           )}
@@ -654,6 +665,74 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             }
           />
         </label>
+
+        <div className="grid two">
+          <label>
+            Rensningsfraser: sammanfattning (en per rad)
+            <textarea
+              value={settings.prompts.summaryCleanupPrefixes}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  prompts: {
+                    ...current.prompts,
+                    summaryCleanupPrefixes: event.target.value
+                  }
+                }))
+              }
+            />
+          </label>
+
+          <label>
+            Rensningsord: sökord (en per rad)
+            <textarea
+              value={settings.prompts.keywordCleanupTerms}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  prompts: {
+                    ...current.prompts,
+                    keywordCleanupTerms: event.target.value
+                  }
+                }))
+              }
+            />
+          </label>
+        </div>
+
+        <div className="grid two">
+          <label>
+            Rensningsfraser: noteringar (en per rad)
+            <textarea
+              value={settings.prompts.notesCleanupPhrases}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  prompts: {
+                    ...current.prompts,
+                    notesCleanupPhrases: event.target.value
+                  }
+                }))
+              }
+            />
+          </label>
+
+          <label>
+            Rensningsfraser: bildtext (en per rad)
+            <textarea
+              value={settings.prompts.photoSummaryCleanupPhrases}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  prompts: {
+                    ...current.prompts,
+                    photoSummaryCleanupPhrases: event.target.value
+                  }
+                }))
+              }
+            />
+          </label>
+        </div>
 
         {renderSaveRow("Spara promptar")}
       </section>

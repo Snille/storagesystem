@@ -30,6 +30,10 @@ function normalizeImportedAppSettings(input: unknown) {
     record.appearance && typeof record.appearance === "object"
       ? { ...(record.appearance as Record<string, unknown>) }
       : undefined;
+  const prompts =
+    record.prompts && typeof record.prompts === "object"
+      ? { ...(record.prompts as Record<string, unknown>) }
+      : undefined;
 
   if (appearance && typeof appearance.fontSizePt !== "number" && typeof appearance.fontScale === "string") {
     appearance.fontSizePt =
@@ -42,9 +46,60 @@ function normalizeImportedAppSettings(input: unknown) {
             : 12;
   }
 
+  if (prompts && typeof prompts.summaryCleanupPrefixes !== "string") {
+    prompts.summaryCleanupPrefixes = [
+      "placerad på ivar",
+      "placerat på ivar",
+      "placerade på ivar",
+      "placerad i ivar",
+      "placerat i ivar",
+      "placerade i ivar",
+      "på ivar",
+      "i ivar",
+      "märkt med plats"
+    ].join("\n");
+  }
+
+  if (prompts && typeof prompts.keywordCleanupTerms !== "string") {
+    prompts.keywordCleanupTerms = [
+      "ivar",
+      "hylla",
+      "plats",
+      "the",
+      "user",
+      "wants",
+      "analyze",
+      "analysis",
+      "images",
+      "workshop",
+      "boxes"
+    ].join("\n");
+  }
+
+  if (prompts && typeof prompts.notesCleanupPhrases !== "string") {
+    prompts.notesCleanupPhrases = [
+      "matchar katalogen",
+      "stämmer överens med katalogen",
+      "ocr läser",
+      "etiketten anger",
+      "innehållet i lådan",
+      "vilket stödjer",
+      "katalogen anger"
+    ].join("\n");
+  }
+
+  if (prompts && typeof prompts.photoSummaryCleanupPhrases !== "string") {
+    prompts.photoSummaryCleanupPhrases = [
+      "ocr läser",
+      "matchar katalogen",
+      "katalogen"
+    ].join("\n");
+  }
+
   return {
     ...record,
-    ...(appearance ? { appearance } : {})
+    ...(appearance ? { appearance } : {}),
+    ...(prompts ? { prompts } : {})
   };
 }
 

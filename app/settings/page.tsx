@@ -11,6 +11,8 @@ async function readInitialModels() {
       ? settings.ai.anthropic
       : settings.ai.provider === "openrouter"
         ? settings.ai.openrouter
+      : settings.ai.provider === "openwebui"
+        ? settings.ai.openwebui
       : settings.ai.provider === "openai"
         ? settings.ai.openai
         : settings.ai.lmstudio;

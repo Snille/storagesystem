@@ -28,7 +28,9 @@ function asFontSizePt(value: unknown) {
 }
 
 function asProvider(value: string): AiProvider {
-  return value === "openai" || value === "anthropic" || value === "openrouter" ? value : "lmstudio";
+  return value === "openai" || value === "anthropic" || value === "openrouter" || value === "openwebui"
+    ? value
+    : "lmstudio";
 }
 
 function asImmichAccessMode(value: string): ImmichAccessMode {
@@ -60,7 +62,11 @@ export async function POST(request: Request) {
         photoRoleSystemPrompt: String(payload.prompts?.photoRoleSystemPrompt ?? "").trim(),
         photoSummaryPrompt: String(payload.prompts?.photoSummaryPrompt ?? "").trim(),
         photoSummarySystemPrompt: String(payload.prompts?.photoSummarySystemPrompt ?? "").trim(),
-        anthropicBoxSystemPrompt: String(payload.prompts?.anthropicBoxSystemPrompt ?? "").trim()
+        anthropicBoxSystemPrompt: String(payload.prompts?.anthropicBoxSystemPrompt ?? "").trim(),
+        summaryCleanupPrefixes: String(payload.prompts?.summaryCleanupPrefixes ?? "").trim(),
+        keywordCleanupTerms: String(payload.prompts?.keywordCleanupTerms ?? "").trim(),
+        notesCleanupPhrases: String(payload.prompts?.notesCleanupPhrases ?? "").trim(),
+        photoSummaryCleanupPhrases: String(payload.prompts?.photoSummaryCleanupPhrases ?? "").trim()
       },
       ai: {
         provider: asProvider(String(payload.ai?.provider ?? "lmstudio")),
@@ -87,6 +93,11 @@ export async function POST(request: Request) {
           baseUrl: String(payload.ai?.openrouter?.baseUrl ?? "").trim(),
           model: String(payload.ai?.openrouter?.model ?? "").trim(),
           apiKey: String(payload.ai?.openrouter?.apiKey ?? "").trim()
+        },
+        openwebui: {
+          baseUrl: String(payload.ai?.openwebui?.baseUrl ?? "").trim(),
+          model: String(payload.ai?.openwebui?.model ?? "").trim(),
+          apiKey: String(payload.ai?.openwebui?.apiKey ?? "").trim()
         }
       },
       labels: normalizeLabelSettings(payload.labels ?? previousSettings.labels)

@@ -60,6 +60,25 @@ export async function fetchAvailableModels(input: {
       .filter((model) => model.id);
   }
 
+  if (provider === "openwebui") {
+    const json = (await fetchJson(`${baseUrl}/models`, {
+      headers: {
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+      }
+    })) as
+      | { data?: Array<{ id?: string; name?: string; model?: string }> }
+      | Array<{ id?: string; name?: string; model?: string }>;
+
+    const list = Array.isArray(json) ? json : (json.data ?? []);
+
+    return list
+      .map((model) => ({
+        id: model.id ?? model.model ?? "",
+        label: model.name || model.id || model.model || ""
+      }))
+      .filter((model) => model.id);
+  }
+
   const json = (await fetchJson(`${baseUrl}/models`, {
     headers: apiKey
       ? provider === "lmstudio"

@@ -84,6 +84,26 @@ export function getAiConfig() {
     };
   }
 
+  if (provider === "openwebui") {
+    const baseUrl = settings.ai.openwebui.baseUrl;
+    const model = settings.ai.openwebui.model;
+
+    if (!baseUrl) {
+      throw new Error("OPENWEBUI_BASE_URL saknas.");
+    }
+
+    if (!model) {
+      throw new Error("OPENWEBUI_MODEL saknas.");
+    }
+
+    return {
+      provider: "openwebui" as const,
+      baseUrl: trimTrailingSlash(baseUrl),
+      model,
+      apiKey: settings.ai.openwebui.apiKey
+    };
+  }
+
   return {
     provider: "openai" as const,
     baseUrl: trimTrailingSlash(settings.ai.openai.baseUrl || "https://api.openai.com/v1"),

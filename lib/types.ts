@@ -1,7 +1,7 @@
 export type PhotoRole = "label" | "location" | "inside" | "spread" | "detail";
 export type ThemePreference = "auto" | "light" | "dark";
 export type FontFamilyChoice = "arial" | "georgia" | "verdana" | "trebuchet" | "system";
-export type AiProvider = "lmstudio" | "openai" | "anthropic" | "openrouter";
+export type AiProvider = "lmstudio" | "openai" | "anthropic" | "openrouter" | "openwebui";
 export type ImmichAccessMode = "apiKey" | "shareKey";
 export type LabelTextAlign = "left" | "center";
 export type LabelPlaceDisplay = "chips" | "singleLine";
@@ -82,7 +82,7 @@ export type AnalysisSuggestion = {
     capturedAt?: string;
   }>;
   confidence: "low" | "medium" | "high";
-  source: "fallback" | "openai" | "lmstudio" | "anthropic" | "openrouter";
+  source: "fallback" | "openai" | "lmstudio" | "anthropic" | "openrouter" | "openwebui";
   matchCandidates: Array<{
     boxId: string;
     label: string;
@@ -125,12 +125,19 @@ export type OpenRouterSettings = {
   apiKey?: string;
 };
 
+export type OpenWebUiSettings = {
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+};
+
 export type AiSettings = {
   provider: AiProvider;
   lmstudio: LmStudioSettings;
   openai: OpenAiSettings;
   anthropic: AnthropicSettings;
   openrouter: OpenRouterSettings;
+  openwebui: OpenWebUiSettings;
 };
 
 export type PromptSettings = {
@@ -140,6 +147,10 @@ export type PromptSettings = {
   photoSummaryPrompt: string;
   photoSummarySystemPrompt: string;
   anthropicBoxSystemPrompt: string;
+  summaryCleanupPrefixes: string;
+  keywordCleanupTerms: string;
+  notesCleanupPhrases: string;
+  photoSummaryCleanupPhrases: string;
 };
 
 export type LabelTemplate = {
