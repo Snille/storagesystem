@@ -416,6 +416,16 @@ Typiskt flöde:
 1. synka koden till servern
 2. kör säker deploy via `scripts/deploy_safe.sh`
 
+Viktigt vid self-hosting med Next.js server actions:
+
+- sätt en fast `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` i `.env.local`
+- använd samma nyckel över deployer
+
+Det minskar risken för fel som:
+
+- `Failed to find Server Action "..."`
+- klientkod från äldre deploy som inte längre hittar rätt action på servern
+
 Exempel på servern:
 
 ```bash

@@ -77,3 +77,4 @@ Första stabila releasen av Hyllsystem.
 
 - Säkrare deployflöde med atomisk build-swap via `scripts/deploy_safe.sh`.
 - Förbättrad hantering av fallback, parserrobusthet och felmeddelanden i analysflöden.
+- Stöd för fast `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` i miljön för stabilare deployer med Next.js server actions.
