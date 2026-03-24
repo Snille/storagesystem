@@ -396,6 +396,19 @@ npm install
 npm run dev
 ```
 
+På Windows finns även ett hjälpskript som sätter upp `nvm`-miljön och startar appen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
+```
+
+Skriptet:
+
+- aktiverar `nvm`
+- installerar `Node 22.14.0` om den saknas
+- kör `npm install` första gången
+- startar appen på `http://localhost:3000`
+
 ### Vanliga kommandon
 
 ```bash
