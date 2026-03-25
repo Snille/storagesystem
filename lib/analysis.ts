@@ -1,6 +1,8 @@
 import { getAiConfig, getImmichConfig } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets } from "@/lib/immich";
+import { buildLocationId, normalizeLocationUnit, parseBoxId, parseLocationId } from "@/lib/location-schema";
+import { presentLocation } from "@/lib/location-presentation";
 import { readAppSettingsSync } from "@/lib/settings";
 import type { AnalysisSuggestion, BoxRecord, ImmichAsset, PhotoRole, SessionRecord } from "@/lib/types";
 
@@ -112,68 +114,109 @@ function sanitizeKeywordList(keywords: string[]) {
   });
 }
 
-function parseLocationParts(value: string) {
-  const match = value.match(/^([A-Z])-H(\d+)-P(\d+)$/i);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    shelfSystem: match[1].toUpperCase(),
-    shelf: match[2],
-    slot: match[3]
-  };
-}
-
-function parseBoxIdParts(value: string) {
-  const match = value.match(/^([A-Z]+)-([A-Z])-H(\d+)-P(\d+)-([A-Z])$/i);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    systemName: match[1].toUpperCase(),
-    shelfSystem: match[2].toUpperCase(),
-    shelf: match[3],
-    slot: match[4],
-    variant: match[5].toUpperCase()
-  };
-}
-
 function boxIdMatchesLocation(boxId: string, locationId: string) {
-  const boxParts = parseBoxIdParts(boxId);
-  const locationParts = parseLocationParts(locationId);
+  const boxParts = parseBoxId(boxId);
+  const locationParts = parseLocationId(locationId);
 
   if (!boxParts || !locationParts) {
     return true;
   }
 
   return (
-    boxParts.shelfSystem === locationParts.shelfSystem &&
-    boxParts.shelf === locationParts.shelf &&
+    boxParts.kind === locationParts.kind &&
+    boxParts.unitId === locationParts.unitId &&
+    boxParts.rowId === locationParts.rowId &&
     boxParts.slot === locationParts.slot
   );
 }
 
-function extractLocationIdFromText(value: string, fallbackShelfSystem = "") {
+function sameNormalizedLocation(left: string, right: string) {
+  const parsedLeft = parseLocationId(left);
+  const parsedRight = parseLocationId(right);
+
+  if (parsedLeft && parsedRight) {
+    return parsedLeft.normalizedId === parsedRight.normalizedId;
+  }
+
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
+function extractLocationIdFromText(
+  value: string,
+  fallback?: { kind?: "ivar" | "bench" | "cabinet"; unitId?: string }
+) {
   const directMatch = value.match(/\b([A-Z])\s*[,.\- ]+\s*Hylla\s*(\d+)\s*[,.\- ]+\s*Plats\s*(\d+)\b/i);
   if (directMatch) {
-    return `${directMatch[1].toUpperCase()}-H${directMatch[2]}-P${directMatch[3]}`;
+    return buildLocationId({
+      kind: "ivar",
+      unitId: directMatch[1].toUpperCase(),
+      rowId: `H${directMatch[2]}`,
+      slot: directMatch[3]
+    });
   }
 
   const systemNameMatch = value.match(/\b(?:Ivar|IVAR|Hylla)\s*([A-Z])\s*[,.\- ]+\s*Hylla\s*(\d+)\s*[,.\- ]+\s*Plats\s*(\d+)\b/i);
   if (systemNameMatch) {
-    return `${systemNameMatch[1].toUpperCase()}-H${systemNameMatch[2]}-P${systemNameMatch[3]}`;
+    return buildLocationId({
+      kind: "ivar",
+      unitId: systemNameMatch[1].toUpperCase(),
+      rowId: `H${systemNameMatch[2]}`,
+      slot: systemNameMatch[3]
+    });
   }
 
-  const explicitShelfAndSlotMatch = value.match(/\bHylla\s*(\d+)\s*[,.\- ]+\s*Plats\s*(\d+)\b/i);
-  if (explicitShelfAndSlotMatch && fallbackShelfSystem) {
-    return `${fallbackShelfSystem.toUpperCase()}-H${explicitShelfAndSlotMatch[1]}-P${explicitShelfAndSlotMatch[2]}`;
+  const cabinetMatch = value.match(/\bSkåp\s*[: ]\s*([A-Z0-9ÅÄÖ -]+).*?Hylla\s*(\d+)\s*[,.\- ]+\s*Plats\s*(\d+)\s*([A-Z])?\b/i);
+  if (cabinetMatch) {
+    return buildLocationId({
+      kind: "cabinet",
+      unitId: normalizeLocationUnit(cabinetMatch[1]),
+      rowId: `H${cabinetMatch[2]}`,
+      slot: cabinetMatch[3],
+      variant: cabinetMatch[4]?.toUpperCase() ?? ""
+    });
+  }
+
+  const benchMatch = value.match(/\bBänk\s*[: ]\s*([A-Z0-9ÅÄÖ -]+).*?(?:Yta\s*:?\s*)?(Ovanpå|Under).*?Plats\s*(\d+)\s*([A-Z])?\b/i);
+  if (benchMatch) {
+    return buildLocationId({
+      kind: "bench",
+      unitId: normalizeLocationUnit(benchMatch[1]),
+      rowId: benchMatch[2].toLowerCase().startsWith("o") ? "TOP" : "UNDER",
+      slot: benchMatch[3],
+      variant: benchMatch[4]?.toUpperCase() ?? ""
+    });
+  }
+
+  const explicitShelfAndSlotMatch = value.match(/\bHylla\s*(\d+)\s*[,.\- ]+\s*Plats\s*(\d+)\s*([A-Z])?\b/i);
+  if (explicitShelfAndSlotMatch && fallback?.kind && fallback?.unitId && fallback.kind !== "bench") {
+    return buildLocationId({
+      kind: fallback.kind,
+      unitId: fallback.unitId,
+      rowId: `H${explicitShelfAndSlotMatch[1]}`,
+      slot: explicitShelfAndSlotMatch[2],
+      variant: explicitShelfAndSlotMatch[3]?.toUpperCase() ?? ""
+    });
+  }
+
+  const explicitBenchMatch = value.match(/\b(?:Yta\s*:?\s*)?(Ovanpå|Under)\s*[,.\- ]+\s*Plats\s*(\d+)\s*([A-Z])?\b/i);
+  if (explicitBenchMatch && fallback?.kind === "bench" && fallback.unitId) {
+    return buildLocationId({
+      kind: "bench",
+      unitId: fallback.unitId,
+      rowId: explicitBenchMatch[1].toLowerCase().startsWith("o") ? "TOP" : "UNDER",
+      slot: explicitBenchMatch[2],
+      variant: explicitBenchMatch[3]?.toUpperCase() ?? ""
+    });
   }
 
   const compactMatch = value.match(/\b([A-Z])\s*-\s*H(\d+)\s*-\s*P(\d+)\b/i);
   if (compactMatch) {
-    return `${compactMatch[1].toUpperCase()}-H${compactMatch[2]}-P${compactMatch[3]}`;
+    return buildLocationId({
+      kind: "ivar",
+      unitId: compactMatch[1].toUpperCase(),
+      rowId: `H${compactMatch[2]}`,
+      slot: compactMatch[3]
+    });
   }
 
   return "";
@@ -183,13 +226,20 @@ function validateSuggestion(suggestion: AnalysisSuggestion): AnalysisSuggestion 
   let suggestedBoxId = suggestion.suggestedBoxId;
   let suggestedLocationId = suggestion.suggestedLocationId;
   let suggestedNotes = suggestion.suggestedNotes ?? "";
-  const fallbackShelfSystem =
-    parseLocationParts(suggestedLocationId)?.shelfSystem ??
-    parseBoxIdParts(suggestedBoxId)?.shelfSystem ??
-    "";
+  const parsedSuggestedLocation = parseLocationId(suggestedLocationId);
+  if (parsedSuggestedLocation) {
+    suggestedLocationId = parsedSuggestedLocation.normalizedId;
+  }
+
+  const fallbackLocation = parsedSuggestedLocation ?? parseBoxId(suggestedBoxId);
   const ocrLocationId = extractLocationIdFromText(
     [suggestion.suggestedNotes ?? "", suggestion.suggestedSummary ?? "", suggestion.suggestedLabel ?? ""].join(" "),
-    fallbackShelfSystem
+    fallbackLocation
+      ? {
+          kind: fallbackLocation.kind,
+          unitId: fallbackLocation.unitId
+        }
+      : undefined
   );
 
   if (ocrLocationId && ocrLocationId !== suggestedLocationId) {
@@ -228,7 +278,9 @@ function buildCatalogContext(candidates: CandidateRecord[]) {
   return candidates
     .map(({ box, session }) => {
       const keywords = (session?.itemKeywords ?? []).join(", ");
-      return `${box.boxId} | ${box.currentLocationId} | ${box.label} | ${session?.summary ?? ""} | ${keywords}`;
+      const presented = presentLocation(box.currentLocationId, box.boxId);
+      const humanReadableLocation = [presented.system, presented.shelf, presented.slot].filter(Boolean).join(", ");
+      return `${box.boxId} | ${box.currentLocationId} | ${humanReadableLocation} | ${box.label} | ${session?.summary ?? ""} | ${keywords}`;
     })
     .join("\n");
 }
@@ -244,7 +296,7 @@ function scoreCandidate(candidate: CandidateRecord, suggestion: AnalysisSuggesti
 
   if (
     suggestion.suggestedLocationId &&
-    candidate.box.currentLocationId.toLowerCase() === suggestion.suggestedLocationId.toLowerCase()
+    sameNormalizedLocation(candidate.box.currentLocationId, suggestion.suggestedLocationId)
   ) {
     score += 40;
     reasons.push("plats matchar exakt");
@@ -297,7 +349,7 @@ function compareVariantLetters(a: string, b: string) {
 }
 
 function getVariantLetter(boxId: string) {
-  return parseBoxIdParts(boxId)?.variant ?? "Z";
+  return parseBoxId(boxId)?.variant ?? "Z";
 }
 
 function chooseNextAvailableVariant(candidates: Array<{
@@ -367,7 +419,7 @@ function enrichWithMatches(
   if (validatedSuggestion.suggestedLocationId) {
     const sameLocationCandidates = matchCandidates.filter(
       (candidate) =>
-        candidate.currentLocationId.toLowerCase() === validatedSuggestion.suggestedLocationId.toLowerCase()
+        sameNormalizedLocation(candidate.currentLocationId, validatedSuggestion.suggestedLocationId)
     );
 
     const preferredVariant = chooseNextAvailableVariant(sameLocationCandidates);
@@ -394,7 +446,7 @@ function enrichWithMatches(
   const locationMatchesBestCandidate =
     !!bestMatch &&
     !!validatedSuggestion.suggestedLocationId &&
-    bestMatch.currentLocationId.toLowerCase() === validatedSuggestion.suggestedLocationId.toLowerCase();
+    sameNormalizedLocation(bestMatch.currentLocationId, validatedSuggestion.suggestedLocationId);
   const hasStrongBestMatch = !!bestMatch && bestMatch.score >= 70;
   const shouldAdoptBestMatch =
     !!bestMatch &&
@@ -622,7 +674,7 @@ async function sendAiRequest(
       aiConfig.provider === "openrouter"
         ? {
             "HTTP-Referer": "https://hylla.snille.net",
-            "X-Title": "Hyllsystem"
+            "X-Title": "Lagersystem"
           }
         : undefined
     );

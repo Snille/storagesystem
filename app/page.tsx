@@ -3,6 +3,7 @@ import { HomeBoxCard } from "@/app/home-box-card";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
+import { compareBoxesByLocation } from "@/lib/location-sort";
 import { searchInventory } from "@/lib/search";
 import packageJson from "@/package.json";
 
@@ -35,6 +36,7 @@ export default async function Home({ searchParams }: HomeProps) {
   );
   const assetFileNamesById = new Map(albumAssets.map((asset) => [asset.id, asset.originalFileName]));
   const results = query ? searchInventory(data, query, assetFileNamesById) : [];
+  const sortedBoxes = [...data.boxes].sort(compareBoxesByLocation);
 
   return (
     <div className="shell">
@@ -99,7 +101,7 @@ export default async function Home({ searchParams }: HomeProps) {
       <section className="panel">
         <h2>Aktuella lådor</h2>
         <div className="two-column-list">
-          {data.boxes.map((box) => {
+          {sortedBoxes.map((box) => {
             const session = sessionsByBox.get(box.boxId);
             const photos = session ? photosBySession.get(session.sessionId) ?? [] : [];
             const boxMeta = presentLocation(box.currentLocationId, box.boxId);

@@ -39,6 +39,18 @@ export const inventorySchema = z.object({
 
 const dataFilePath = path.join(process.cwd(), "data", "inventory.json");
 
+function getHighestPhotoIndexForSession(photos: Array<Pick<PhotoRecord, "photoId" | "sessionId">>, sessionId: string) {
+  return photos.reduce((highest, photo) => {
+    if (photo.sessionId !== sessionId) {
+      return highest;
+    }
+
+    const match = photo.photoId.match(new RegExp(`^${sessionId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:(\\d+)$`));
+    const index = match ? Number(match[1]) : 0;
+    return Number.isFinite(index) ? Math.max(highest, index) : highest;
+  }, 0);
+}
+
 async function ensureDataFile() {
   await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
   try {
@@ -74,8 +86,7 @@ export async function appendPhotosToSession(payload: {
   }
 
   const usedAssetIds = new Set(data.photos.map((photo) => photo.immichAssetId));
-  const existingPhotos = data.photos.filter((photo) => photo.sessionId === payload.sessionId);
-  let nextIndex = existingPhotos.length;
+  let nextIndex = getHighestPhotoIndexForSession(data.photos, payload.sessionId);
 
   for (const photo of payload.photos) {
     if (usedAssetIds.has(photo.immichAssetId)) {

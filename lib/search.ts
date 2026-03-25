@@ -63,16 +63,46 @@ function normalizeFilenameForMatch(value: string) {
 }
 
 function looksLikeFileNameQuery(value: string) {
-  return /[._-]/.test(value) || /\.[a-z0-9]{2,4}$/i.test(value) || /^[a-z]{2,}\d/i.test(value);
+  return (
+    /[._]/.test(value) ||
+    /\.[a-z0-9]{2,4}$/i.test(value) ||
+    /^[a-z]{2,}\d/i.test(value) ||
+    /^[a-z]{2,}-\d{3,}/i.test(value)
+  );
 }
 
 function getTokenVariants(token: string) {
   const variants = new Set<string>([token]);
   const endings = ["orna", "arna", "erna", "ande", "ning", "ningar", "heten", "heter", "na", "en", "et", "or", "ar", "er", "a", "n", "t"];
+  const synonymMap: Record<string, string[]> = {
+    rc: ["radiostyrd", "rccar", "rccars"],
+    radiostyrd: ["rc", "rccar"],
+    rcbil: ["rc", "radiostyrd", "bil", "bilar"],
+    bil: ["car"],
+    bilar: ["bil", "car"],
+    car: ["bil", "bilar"]
+  };
 
   for (const ending of endings) {
     if (token.length > ending.length + 2 && token.endsWith(ending)) {
       variants.add(token.slice(0, -ending.length));
+    }
+  }
+
+  for (const synonym of synonymMap[token] ?? []) {
+    variants.add(synonym);
+  }
+
+  if (token.length >= 2 && token.length <= 4) {
+    for (let index = 0; index < token.length - 1; index += 1) {
+      const swapped =
+        token.slice(0, index) +
+        token[index + 1] +
+        token[index] +
+        token.slice(index + 2);
+      if (swapped !== token) {
+        variants.add(swapped);
+      }
     }
   }
 

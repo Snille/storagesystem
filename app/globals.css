@@ -182,13 +182,19 @@ main { max-width: 1180px; margin: 0 auto; padding: 24px; }
 }
 
 .location-meta > .location-chip {
-  font-size: 1.17rem;
-  line-height: 1.05;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.location-meta > .location-chip .location-chip-label {
   color: var(--muted);
 }
 
 .location-meta > .location-chip .location-chip-value {
-  color: var(--text);
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .inline-meta {

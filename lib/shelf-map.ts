@@ -1,5 +1,6 @@
 import { getCurrentSessionByBox } from "@/lib/data-store";
 import { parseBoxId, parseLocationId, type LocationKind, type ParsedLocation } from "@/lib/location-schema";
+import { compareParsedLocations } from "@/lib/location-sort";
 import type { BoxRecord, InventoryData, PhotoRecord, SessionRecord } from "@/lib/types";
 
 export type ShelfBoxEntry = {
@@ -155,7 +156,18 @@ export function getShelfUnits(data: InventoryData): ShelfUnit[] {
         slots
       };
     })
-    .sort((a, b) => a.title.localeCompare(b.title, "sv"));
+    .sort((a, b) => {
+      const left = a.boxes[0]?.location;
+      const right = b.boxes[0]?.location;
+
+      if (left && right) {
+        return compareParsedLocations(left, right);
+      }
+
+      if (left) return -1;
+      if (right) return 1;
+      return a.title.localeCompare(b.title, "sv", { numeric: true, sensitivity: "base" });
+    });
 }
 
 export function getShelfSystemCount(data: InventoryData) {

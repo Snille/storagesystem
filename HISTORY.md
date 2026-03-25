@@ -1,5 +1,44 @@
 # History
 
+## v1.1.2 - 2026-03-25
+
+Punktrelease med fokus på platslogik, AI-matchning, sökning och stabilitet i registreringsflödet.
+
+### Platser och sortering
+
+- Översikten sorterar nu lådor i fysisk ordning: `Ivar`, sedan `Bänk`, sedan `Skåp`.
+- `Lagerplats` använder samma gemensamma platsordning för platsenheter.
+- Ny hjälpare för gemensam platssortering i `lib/location-sort.ts`.
+
+### Ny låda / inventering
+
+- `Aktuell plats` ligger nu före `Etikett / lådnamn` i formuläret.
+- Nya lådor får inte längre råka skriva över en befintlig låda på samma exakta plats.
+- Servern stoppar nu sparning om platsen redan används av en annan låda och skickar tillbaka en tydlig varning.
+- Nästa lediga bokstav på en plats räknas nu fram utifrån den generella platsmodellen i stället för äldre IVAR-antaganden.
+
+### AI och analys
+
+- `Lageralbum` matchar nu AI-förslag korrekt även för `Bänk` och `Skåp`.
+- Analyslogiken använder nu samma platsnormalisering och platsjämförelse som resten av appen.
+- Appnamnet i webbläsarfliken är ändrat från `Hyllsystem` till `Lagersystem`.
+
+### Bilder och sessioner
+
+- Fixat ett fel där två bilder i samma session kunde få samma `photoId`.
+- Fixat följdfelet där `Analysera bild` kunde fylla flera analystextrutor samtidigt.
+- Tooltip med analystext används nu konsekvent på bilder där analystext finns.
+
+### Sökning
+
+- Förbättrad heuristik för bindestrecksord så sökningar som `rc-bil` inte längre feltolkas som filnamn.
+- Lagt till bättre stöd för korta felskrivningar och synonymvarianter som `cr-bil`, `rc-bil` och `radiostyrd`.
+
+### UI och polish
+
+- Fixat platschippen så `Ivar`, `Hylla` och `Plats` får konsekvent storlek och vita bold-värden.
+- Dokumentationen uppdaterad för ny platslogik, sökbeteende, AI-matchning och skydd mot dubbletter.
+
 ## v1.1.1 - 2026-03-24
 
 Punktrelease med fokus på registreringsflöde, bildinformation och dokumentationssynk.

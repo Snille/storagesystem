@@ -2,7 +2,7 @@
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
-Aktuell version: `v1.1.1`
+Aktuell version: `v1.1.2`
 
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
@@ -13,6 +13,12 @@ Appen är byggd för ett praktiskt arbetsflöde:
 3. koppla bilderna till rätt låda i appen
 4. låt AI föreslå etikett, plats, innehåll och bildroller
 5. sök senare efter saker som finns i verkstan
+
+Sedan `v1.1.x` täcker appen inte längre bara hyllor utan hela lagerstrukturen i verkstan:
+
+- `Ivar`
+- `Bänk`
+- `Skåp`
 
 ## Översikt
 
@@ -111,6 +117,13 @@ Den visar:
 - alla kopplade bilder för respektive låda i sökresultat
 - statistik för registrerade lådor, aktuella platser och kopplade bilder
 
+Lådorna i översikten sorteras nu i fysisk ordning:
+
+- först `Ivar`
+- därefter `Bänk`
+- sist `Skåp`
+- inom varje platsenhet sorteras lådorna i platsordning
+
 Sökningen använder:
 
 - lådnamn
@@ -120,6 +133,12 @@ Sökningen använder:
 - sessionsnoteringar
 - sökord
 - bildspecifika analystexter
+
+Sökningen är också mer tolerant än tidigare och klarar nu bättre:
+
+- bindestrecksord som `rc-bil`
+- korta felskrivningar som `cr-bil`
+- enklare synonymvarianter som `radiostyrd` och `rc`
 
 ### `Lagerplats`
 
@@ -131,6 +150,13 @@ Här kan man:
 - se lådor grupperade per hylla eller yta
 - klicka direkt på en låda för att öppna låd-vyn
 - se den visuella hyllstrukturen för respektive `Ivar`
+
+För `Ivar` visas nu en mer fysisk hyllvy med:
+
+- sammanhängande sidostolpar
+- hyllplan
+- hyll-etiketter direkt på hyllplanet
+- bara de platser som faktiskt används på respektive hylla
 
 ### `Bilder att koppla`
 
@@ -151,15 +177,17 @@ Sidan används för att registrera en ny låda eller uppdatera en befintlig sess
 
 Här kan man:
 
+- välja eller ändra aktuell plats först
 - se och justera lådnamn, sammanfattning och sökord
 - välja platskategori: `Ivar`, `Bänk`, `Skåp`
-- välja eller ändra aktuell plats
 - skriva noteringar och spara sessionen direkt under `Sökord`
 - ändra bildroller och bildordning
 - analysera enskilda bilder direkt
 - redigera eller rensa analystext per bild
 - låta markerade album-bilder följa med när man sparar, även utan att först trycka på `Lägg till valda bilder`
 - spara sessionen och gå tillbaka till översikten
+
+När du skapar en helt ny låda skyddar appen nu också mot att råka skriva över en redan existerande låda på samma exakta plats. Då stoppas sparningen och du får välja annan bokstav eller redigera den befintliga lådan i stället.
 
 För befintliga lådor går det också att klicka på `Ändra plats` för att flytta lådan i systemet utan att tappa historiken.
 
@@ -173,6 +201,8 @@ Visar en enskild låda med:
 - historik
 - möjlighet att lägga till fler okopplade bilder
 - möjlighet att släppa en felkopplad bild
+
+Bildspecifik analys använder nu alltid unika bild-ID:n inom varje session, vilket gör att analystextrutor inte längre kan råka dela state mellan två olika bilder.
 
 ### `Inställningar`
 
@@ -190,6 +220,8 @@ Här kan man ändra:
 - modell och API-inställningar
 - promptar för analys
 - rensningsfraser och andra filter för AI-svar
+
+Rensnings- och filterinställningarna är tänkta för att kunna trimma bort återkommande brus från olika modeller utan att behöva göra kodändringar.
 
 ## Immich-integration
 
@@ -320,6 +352,8 @@ Exempel på status:
 
 Det finns även timeout-hantering för långsamma anrop.
 
+Matchningen i `Lageralbum` använder nu samma platsmodell som resten av appen, vilket gör att AI-förslag fungerar bättre även för `Bänk` och `Skåp`.
+
 ### Promptar
 
 Promptarna är redigerbara i appen och sparas i `data/app-settings.json`.
@@ -341,6 +375,8 @@ Vid översiktsanalys försöker den:
 - om en plats redan har bilder kopplade på `A`, föreslå nästa lediga `B` eller `C` när det passar bättre
 
 Det hjälper särskilt när flera små lådor står på samma plats i hyllan.
+
+För nya lådor används samma platsmodell också för att räkna fram nästa lediga bokstav på en plats, oavsett om platsen ligger i `Ivar`, `Bänk` eller `Skåp`.
 
 ## Platsenheter
 
@@ -365,6 +401,8 @@ Det ger några fördelar:
 - appen kan falla tillbaka till placeholder om en bild tagits bort i Immich
 - analystext kan visas både i lightbox och som hover-tooltip på bilder där text finns
 
+Tooltip-visning används nu genomgående på bilder där analystext finns, så att man snabbare kan få kontext utan att alltid öppna lightboxen.
+
 Om en bild tas bort från albumet:
 
 - inventarieposten ligger kvar
@@ -380,6 +418,8 @@ Appen har stöd för:
 - grön accentpalett
 - svensk terminologi i gränssnittet
 - bakgrundsillustration i `public/background-hills.svg`
+
+Appnamnet i fliken är nu `Lagersystem` för att spegla att appen inte längre bara hanterar hyllor.
 
 ## Lokal utveckling
 
@@ -482,6 +522,7 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 - `lib/analysis-jobs.ts`: statusjobb för analys
 - `lib/data-store.ts`: läs/skriv av inventariedata
 - `lib/immich.ts`: Immich-hämtning
+- `lib/location-sort.ts`: fysisk sortering av lådor och platsenheter
 - `lib/location-schema.ts`: parsing och generering av plats-ID för `Ivar`, `Bänk` och `Skåp`
 - `lib/location-presentation.ts`: svensk presentation av platsinfo i UI:t
 - `lib/shelf-map.ts`: grupperar lådor till platsenheter, rader och platser

@@ -29,14 +29,17 @@ type HomeBoxCardProps = {
 };
 
 function renderLocationChip(value: string) {
-  const [label, detail] = value.split(": ");
-  if (!detail) {
+  const match = value.match(/^([^:]+?)(?::\s*|\s+)(.+)$/);
+  if (!match) {
     return <span className="location-chip">{value}</span>;
   }
 
+  const [, label, detail] = match;
+
   return (
     <span className="location-chip">
-      {label}: <span className="location-chip-value">{detail}</span>
+      <span className="location-chip-label">{label}:</span>{" "}
+      <span className="location-chip-value">{detail}</span>
     </span>
   );
 }

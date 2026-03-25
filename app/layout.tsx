@@ -13,7 +13,7 @@ import { ThemeController } from "@/app/theme-controller";
 const inlineGlobalCss = readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
 
 export const metadata: Metadata = {
-  title: "Hyllsystem",
+  title: "Lagersystem",
   description: "Inventarieapp kopplad till Immich och JSON."
 };
 

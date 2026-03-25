@@ -34,10 +34,25 @@ type SessionFormProps = {
     summary: string;
     itemKeywords: string;
     notes: string;
+    duplicateWarning: string;
   };
   initialPhotos: PhotoDraft[];
   availablePhotos: AvailablePhoto[];
+  existingBoxes: Array<{
+    boxId: string;
+    label: string;
+    currentLocationId: string;
+  }>;
 };
+
+function normalizeComparableText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
 
 const roleOptions: PhotoRole[] = ["label", "location", "inside", "spread", "detail"];
 
@@ -54,7 +69,7 @@ function formatLocationDisplay(locationId: string, boxId = "") {
   return [location.system, location.shelf, location.slot].filter(Boolean).join(" ");
 }
 
-export function SessionForm({ defaults, initialPhotos, availablePhotos }: SessionFormProps) {
+export function SessionForm({ defaults, initialPhotos, availablePhotos, existingBoxes }: SessionFormProps) {
   const [photos, setPhotos] = useState<PhotoDraft[]>(initialPhotos);
   const [boxId, setBoxId] = useState(defaults.boxId);
   const [sessionId, setSessionId] = useState(defaults.sessionId);
@@ -178,6 +193,23 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
     { value: "TOP", label: "Ovanpå" },
     { value: "UNDER", label: "Under" }
   ];
+  const duplicateBoxes = useMemo(() => {
+    if (isExistingBox || !currentLocationId || !label.trim()) {
+      return [];
+    }
+
+    const normalizedLocation = parseLocationId(currentLocationId)?.normalizedId ?? currentLocationId.trim();
+    const normalizedLabel = normalizeComparableText(label);
+
+    return existingBoxes.filter((box) => {
+      const boxLocation = parseLocationId(box.currentLocationId)?.normalizedId ?? box.currentLocationId.trim();
+      return (
+        boxLocation === normalizedLocation &&
+        normalizeComparableText(box.label) === normalizedLabel
+      );
+    });
+  }, [currentLocationId, existingBoxes, isExistingBox, label]);
+  const hasDuplicateWarning = Boolean(defaults.duplicateWarning.trim());
 
   function updateRole(immichAssetId: string, photoRole: PhotoRole) {
     setPhotos((current) =>
@@ -351,16 +383,6 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
       <input type="hidden" name="currentLocationId" value={currentLocationId} />
       <input type="hidden" name="photoPayload" value={photoPayload} />
       <label>
-        Etikett / lådnamn
-        <input
-          name="label"
-          placeholder="Adaptrar"
-          value={label}
-          onChange={(event) => setLabel(event.target.value)}
-          required
-        />
-      </label>
-      <label>
         Aktuell plats
         {isExistingBox && !isEditingLocation ? (
           <>
@@ -498,6 +520,16 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
           </div>
         ) : null}
       </label>
+      <label>
+        Etikett / lådnamn
+        <input
+          name="label"
+          placeholder="Adaptrar"
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          required
+        />
+      </label>
       <input type="hidden" name="createdAt" value={defaults.createdAt} />
       <label>
         Sammanfattning
@@ -527,6 +559,13 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos }: Sessio
           onChange={(event) => setNotes(event.target.value)}
         />
       </label>
+      {duplicateBoxes.length > 0 || hasDuplicateWarning ? (
+        <div className="callout">
+          {defaults.duplicateWarning ||
+            `Det finns redan ${duplicateBoxes.length === 1 ? "en låda" : "lådor"} med samma namn på den här platsen.`}{" "}
+          Välj en annan bokstav eller redigera den befintliga lådan istället.
+        </div>
+      ) : null}
       <div>
         <button type="submit">Spara session</button>
       </div>

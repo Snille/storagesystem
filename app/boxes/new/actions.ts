@@ -5,6 +5,15 @@ import { readInventoryData, upsertBoxSession } from "@/lib/data-store";
 import { buildLocationId, normalizeLocationUnit, parseLocationId } from "@/lib/location-schema";
 import type { PhotoRole } from "@/lib/types";
 
+function normalizeComparableText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function normalizeList(value: FormDataEntryValue | null) {
   return String(value ?? "")
     .split(/[,\n]/)
@@ -60,6 +69,33 @@ function extractVariantLetter(value: string) {
   return match?.[1]?.toUpperCase() ?? "";
 }
 
+function sameLocationBase(left: string, right: string) {
+  const parsedLeft = parseLocationId(left);
+  const parsedRight = parseLocationId(right);
+
+  if (!parsedLeft || !parsedRight) {
+    return left.trim().toLowerCase() === right.trim().toLowerCase();
+  }
+
+  return (
+    parsedLeft.kind === parsedRight.kind &&
+    parsedLeft.unitId === parsedRight.unitId &&
+    parsedLeft.rowId === parsedRight.rowId &&
+    parsedLeft.slot === parsedRight.slot
+  );
+}
+
+function sameExactLocation(left: string, right: string) {
+  const parsedLeft = parseLocationId(left);
+  const parsedRight = parseLocationId(right);
+
+  if (!parsedLeft || !parsedRight) {
+    return left.trim().toLowerCase() === right.trim().toLowerCase();
+  }
+
+  return parsedLeft.normalizedId === parsedRight.normalizedId;
+}
+
 async function generateBoxId(locationId: string, preferredVariant = "") {
   const parsed = parseLocationId(locationId);
   if (!parsed) {
@@ -69,9 +105,9 @@ async function generateBoxId(locationId: string, preferredVariant = "") {
   const inventory = await readInventoryData();
   const existingVariants = new Set(
     inventory.boxes
-      .filter((box) => box.currentLocationId.toLowerCase() === locationId.toLowerCase())
-      .map((box) => box.boxId.match(/-([A-Z])$/i)?.[1]?.toUpperCase())
-      .filter(Boolean)
+      .filter((box) => sameLocationBase(box.currentLocationId, locationId))
+      .map((box) => parseLocationId(box.currentLocationId)?.variant || box.boxId.match(/-([A-Z])$/i)?.[1]?.toUpperCase())
+      .filter((variant): variant is string => Boolean(variant))
   );
 
   const variant =
@@ -98,6 +134,34 @@ function generateSessionId() {
   return `INV-${stamp}`;
 }
 
+function buildNewBoxRedirectUrl(params: {
+  boxId: string;
+  label: string;
+  currentLocationId: string;
+  sessionId: string;
+  createdAt: string;
+  summary: string;
+  itemKeywords: string;
+  notes: string;
+  photoPayload: string;
+  duplicateWarning?: string;
+}) {
+  const search = new URLSearchParams();
+
+  if (params.boxId) search.set("boxId", params.boxId);
+  if (params.label) search.set("label", params.label);
+  if (params.currentLocationId) search.set("currentLocationId", params.currentLocationId);
+  if (params.sessionId) search.set("sessionId", params.sessionId);
+  if (params.createdAt) search.set("createdAt", params.createdAt);
+  if (params.summary) search.set("summary", params.summary);
+  if (params.itemKeywords) search.set("itemKeywords", params.itemKeywords);
+  if (params.notes) search.set("notes", params.notes);
+  if (params.photoPayload) search.set("photoPayload", params.photoPayload);
+  if (params.duplicateWarning) search.set("duplicateWarning", params.duplicateWarning);
+
+  return `/boxes/new?${search.toString()}`;
+}
+
 export async function saveBoxSession(formData: FormData) {
   const submittedBoxId = String(formData.get("boxId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
@@ -107,16 +171,74 @@ export async function saveBoxSession(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim();
   const submittedSessionId = String(formData.get("sessionId") ?? "").trim();
   const createdAt = String(formData.get("createdAt") ?? "").trim();
+  const photoPayloadRaw = String(formData.get("photoPayload") ?? "").trim();
 
   if (!label || !currentLocationId || !summary) {
     throw new Error("Etikett, aktuell plats och sammanfattning måste anges.");
+  }
+
+  const inventory = await readInventoryData();
+  const parsedLocation = parseLocationId(currentLocationId);
+  const exactLocationConflicts = !submittedBoxId
+    ? inventory.boxes.filter((box) => sameExactLocation(box.currentLocationId, currentLocationId))
+    : [];
+
+  if (exactLocationConflicts.length > 0) {
+    redirect(
+      buildNewBoxRedirectUrl({
+        boxId: submittedBoxId,
+        label,
+        currentLocationId,
+        sessionId: submittedSessionId,
+        createdAt,
+        summary,
+        itemKeywords: String(formData.get("itemKeywords") ?? "").trim(),
+        notes,
+        photoPayload: photoPayloadRaw,
+        duplicateWarning:
+          exactLocationConflicts.length === 1
+            ? `Platsen används redan av ${exactLocationConflicts[0].label} (${exactLocationConflicts[0].boxId}). Välj en annan bokstav eller redigera den befintliga lådan istället.`
+            : `Platsen används redan av ${exactLocationConflicts.length} lådor. Välj en annan bokstav eller redigera en befintlig låda istället.`
+      })
+    );
+  }
+
+  const normalizedLabel = normalizeComparableText(label);
+  const conflictingBoxes = inventory.boxes.filter((box) => {
+    if (submittedBoxId && box.boxId === submittedBoxId) {
+      return false;
+    }
+
+    return (
+      sameExactLocation(box.currentLocationId, currentLocationId) &&
+      normalizeComparableText(box.label) === normalizedLabel
+    );
+  });
+
+  if (conflictingBoxes.length > 0) {
+    redirect(
+      buildNewBoxRedirectUrl({
+        boxId: submittedBoxId,
+        label,
+        currentLocationId,
+        sessionId: submittedSessionId,
+        createdAt,
+        summary,
+        itemKeywords: String(formData.get("itemKeywords") ?? "").trim(),
+        notes,
+        photoPayload: photoPayloadRaw,
+        duplicateWarning:
+          conflictingBoxes.length === 1
+            ? `Det finns redan en låda med samma namn på den här platsen: ${conflictingBoxes[0].label} (${conflictingBoxes[0].boxId}). Välj en annan bokstav eller redigera den befintliga lådan istället.`
+            : `Det finns redan ${conflictingBoxes.length} lådor med samma namn på den här platsen. Välj en annan bokstav eller redigera en befintlig låda istället.`
+      })
+    );
   }
 
   const boxId =
     submittedBoxId || (await generateBoxId(currentLocationId, extractVariantLetter(currentLocationInput)));
   const sessionId = submittedSessionId || generateSessionId();
 
-  const photoPayloadRaw = String(formData.get("photoPayload") ?? "").trim();
   const photos = photoPayloadRaw
     ? (JSON.parse(photoPayloadRaw) as Array<{
         immichAssetId: string;

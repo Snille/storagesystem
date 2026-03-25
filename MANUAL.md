@@ -2,7 +2,7 @@
 
 Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
 
-Aktuell version: `v1.1.1`
+Aktuell version: `v1.1.2`
 
 ## Tanken med systemet
 
@@ -70,6 +70,12 @@ På startsidan kan du:
 - hovra på bilder med analystext för att läsa en snabb beskrivning direkt
 - se hur många aktuella platser som finns i systemet
 
+Lådorna visas i fysisk ordning i översikten:
+
+- först `Ivar`
+- sedan `Bänk`
+- sist `Skåp`
+
 Sökningen hittar inte bara lådnamn, utan även:
 
 - sammanfattningar
@@ -89,6 +95,8 @@ Här kan du:
 - klicka dig in på rätt platsenhet
 - se lådor grupperade per hylla eller yta
 - öppna en låda direkt från platsvyn
+
+I `Ivar`-vyn visas bara de platser som faktiskt används på respektive hylla. Om en hylla har 2 platser visas 2, och om en annan har 4 så visas 4 där.
 
 Det här är särskilt bra när du vill hitta något utifrån hur verkstaden faktiskt ser ut, snarare än genom fritextsökning.
 
@@ -114,12 +122,18 @@ Du kan:
 - justera lådnamn
 - välja platskategori: `Ivar`, `Bänk` eller `Skåp`
 - välja eller ändra aktuell plats
+- välja plats innan du skriver lådnamnet
 - skriva noteringar och spara sessionen direkt efter `Sökord`
 - ändra bildordning
 - ändra bildroller
 - analysera enskilda bilder
 - redigera analystexten manuellt
 - låta markerade album-bilder följa med automatiskt när du sparar, även om du inte först trycker på `Lägg till valda bilder`
+
+Om du försöker skapa en ny låda på en plats som redan är upptagen stoppas sparningen. Då ska du i stället:
+
+- välja en annan bokstav
+- eller öppna och redigera den befintliga lådan
 
 För en befintlig låda kan du använda `Ändra plats` om lådan flyttats i verkstaden.
 
@@ -139,6 +153,8 @@ Du kan:
 - släppa en felkopplad bild
 - öppna historik
 
+Om en bild har analystext kan du också se den direkt som tooltip när du hovrar på bilden i olika delar av appen.
+
 Historiken finns kvar även om lådan flyttas till en ny plats.
 
 ## När AI:n inte blir rätt
@@ -157,6 +173,14 @@ Bra att tänka på:
 - etikettbilden bör vara tydlig och nära
 - 2 till 6 bilder brukar ge bäst översiktsanalys
 - för många bilder samtidigt kan göra analysen långsammare eller sämre
+
+Sökningen är också mer tolerant än tidigare, så den kan ofta förstå både:
+
+- `rc-bil`
+- `cr-bil`
+- `radiostyrd`
+
+som samma typ av låda eller innehåll.
 
 ## Inställningar
 

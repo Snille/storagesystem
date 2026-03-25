@@ -16,6 +16,7 @@ type NewBoxPageProps = {
     photoRows?: string;
     photoPayload?: string;
     notes?: string;
+    duplicateWarning?: string;
   }>;
 };
 
@@ -93,6 +94,11 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
             sessionen.
           </div>
         ) : null}
+        {params.duplicateWarning ? (
+          <div className="callout">
+            {params.duplicateWarning}
+          </div>
+        ) : null}
       </section>
 
       <section className="panel">
@@ -107,10 +113,16 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
               createdAt: params.createdAt ?? "",
               summary: params.summary ?? "",
               itemKeywords: params.itemKeywords ?? "",
-              notes: params.notes ?? ""
+              notes: params.notes ?? "",
+              duplicateWarning: params.duplicateWarning ?? ""
             }}
             initialPhotos={initialPhotos}
             availablePhotos={availablePhotos}
+            existingBoxes={data.boxes.map((box) => ({
+              boxId: box.boxId,
+              label: box.label,
+              currentLocationId: box.currentLocationId
+            }))}
           />
         </form>
       </section>
