@@ -193,6 +193,22 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     { value: "TOP", label: "Ovanpå" },
     { value: "UNDER", label: "Under" }
   ];
+  const exactLocationConflicts = useMemo(() => {
+    if (!currentLocationId) {
+      return [];
+    }
+
+    const normalizedLocation = parseLocationId(currentLocationId)?.normalizedId ?? currentLocationId.trim();
+
+    return existingBoxes.filter((box) => {
+      if (boxId && box.boxId === boxId) {
+        return false;
+      }
+
+      const boxLocation = parseLocationId(box.currentLocationId)?.normalizedId ?? box.currentLocationId.trim();
+      return boxLocation === normalizedLocation;
+    });
+  }, [boxId, currentLocationId, existingBoxes]);
   const duplicateBoxes = useMemo(() => {
     if (!currentLocationId || !label.trim()) {
       return [];
@@ -521,6 +537,13 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
             >
               Avbryt
             </button>
+          </div>
+        ) : null}
+        {exactLocationConflicts.length > 0 ? (
+          <div className="callout" style={{ marginTop: 10 }}>
+            {exactLocationConflicts.length === 1
+              ? `Varning: platsen används redan av ${exactLocationConflicts[0].label} (${exactLocationConflicts[0].boxId}). Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.`
+              : `Varning: platsen används redan av ${exactLocationConflicts.length} lådor. Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.`}
           </div>
         ) : null}
       </label>
