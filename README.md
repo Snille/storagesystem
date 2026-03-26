@@ -2,7 +2,7 @@
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
-Aktuell version: `v1.2.0`
+Aktuell version: `v1.2.1`
 
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
@@ -226,6 +226,7 @@ Här kan man ändra:
 - rensningsfraser och andra filter för AI-svar
 - ladda ner backup av lokal data
 - exportera etikettkatalogen till Excel
+- importera etikettkatalog från en exporterad `.xlsx`-fil
 
 Rensnings- och filterinställningarna är tänkta för att kunna trimma bort återkommande brus från olika modeller utan att behöva göra kodändringar.
 
@@ -553,13 +554,13 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 - `lib/shelf-map.ts`: grupperar lådor till platsenheter, rader och platser
 - `lib/settings.ts`: läs/skriv av appinställningar
 
-## Import av etikettkatalog
+## Import och export av etikettkatalog
 
 Projektet innehåller även ett importscript för etikettregister:
 
 - `scripts/import_label_catalog.py`
 
-Det används för att bygga upp grundkatalogen över lådor och platser från Excel-underlag.
+Det används nu för att läsa in Excel-filer som kommer från appens egen export, så att import och export bygger på samma format.
 
 Det finns nu också ett exportscript:
 
@@ -576,6 +577,8 @@ python scripts/export_label_catalog.py
 Det skapar som standard `data/Hyllsystem - Namnetiketter-export.xlsx`, men du kan också ange egen sökväg som första argument.
 
 Från och med `v1.2.0` finns exporten också direkt i appen under `Inställningar` i samma avsnitt som backup. Nedladdningar får tidsstämpel i filnamnet, till exempel `hyllsystem-etikettkatalog-2026-03-26-104924.xlsx`.
+
+Från och med `v1.2.1` finns även importen direkt i appen under `Inställningar`. Den förutsätter en `.xlsx`-fil från appens egen export och uppdaterar lådor och aktuella sessioner utan att rensa bort kopplade bilder.
 
 ## Lokal testning
 

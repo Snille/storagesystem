@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections import Counter, defaultdict
-from dataclasses import dataclass
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,58 +11,14 @@ from openpyxl import load_workbook
 
 
 ROOT = Path(__file__).resolve().parent.parent
-XLSX_PATH = ROOT / "data" / "Hyllsystem - Namnetiketter.xlsx"
 INVENTORY_PATH = ROOT / "data" / "inventory.json"
 
-
-@dataclass
-class LabelRow:
-    name: str
-    description: str
-    raw_location: str
-    location_id: str
-    suffix: str
-    box_id: str
-
-
-LOCATION_RE = re.compile(r"Ivar:\s*([A-ZÅÄÖ])\s*,\s*Hylla:\s*(\d+)\s*,\s*Plats:\s*(\d+)", re.IGNORECASE)
-BOX_ID_RE = re.compile(r"^IVAR-([A-ZÅÄÖ]-H\d+-P\d+)-([A-Z])$")
-
-
-def load_catalog_rows() -> list[LabelRow]:
-    workbook = load_workbook(XLSX_PATH, data_only=True)
-    sheet = workbook.active
-    by_location: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
-
-    for row in sheet.iter_rows(min_row=2, values_only=True):
-      name, description, raw_location = row[:3]
-      if not name or not raw_location:
-          continue
-      match = LOCATION_RE.search(str(raw_location))
-      if not match:
-          continue
-      ivar = match.group(1).upper()
-      shelf = int(match.group(2))
-      slot = int(match.group(3))
-      location_id = f"{ivar}-H{shelf}-P{slot}"
-      by_location[location_id].append((str(name).strip(), str(description or "").strip(), str(raw_location).strip()))
-
-    result: list[LabelRow] = []
-    for location_id, items in by_location.items():
-      for index, (name, description, raw_location) in enumerate(items):
-        suffix = chr(ord("A") + index)
-        result.append(
-          LabelRow(
-            name=name,
-            description=description,
-            raw_location=raw_location,
-            location_id=location_id,
-            suffix=suffix,
-            box_id=f"IVAR-{location_id}-{suffix}",
-          )
-        )
-
-    return result
+REQUIRED_HEADERS = {
+    "Namn",
+    "Plats",
+    "Box-ID",
+    "Plats-ID",
+}
 
 
 def load_inventory() -> dict[str, Any]:
@@ -78,18 +33,112 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def slugify_keywords(*values: str) -> list[str]:
-    text = " ".join(values).lower()
-    tokens = re.findall(r"[a-zåäö0-9]{3,}", text)
+def normalize_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def parse_keywords(value: str) -> list[str]:
     seen: list[str] = []
-    for token in tokens:
-      if token not in seen:
-        seen.append(token)
-    return seen[:12]
+    for part in value.split(","):
+        keyword = part.strip()
+        if keyword and keyword not in seen:
+            seen.append(keyword)
+    return seen
 
 
-def merge_catalog() -> dict[str, int]:
-    rows = load_catalog_rows()
+def parse_location_display(raw_location: str) -> str:
+    trimmed = raw_location.strip()
+
+    ivar_match = re.match(r"^Ivar:\s*([A-Z0-9-]+)\s*,\s*Hylla:\s*(\d+)\s*,\s*Plats:\s*(\d+)([A-Z])?$", trimmed, re.IGNORECASE)
+    if ivar_match:
+        unit = ivar_match.group(1).upper()
+        shelf = ivar_match.group(2)
+        slot = ivar_match.group(3)
+        variant = ivar_match.group(4).upper() if ivar_match.group(4) else ""
+        return f"IVAR:{unit}:H{shelf}:P{slot}{f':{variant}' if variant else ''}"
+
+    bench_match = re.match(
+        r"^Bänk:\s*([A-Z0-9-]+)\s*,\s*Yta:\s*(Ovanpå|Under)\s*,\s*Plats:\s*(\d+)([A-Z])?$",
+        trimmed,
+        re.IGNORECASE,
+    )
+    if bench_match:
+        unit = bench_match.group(1).upper()
+        row = "UNDER" if bench_match.group(2).lower() == "under" else "TOP"
+        slot = bench_match.group(3)
+        variant = bench_match.group(4).upper() if bench_match.group(4) else ""
+        return f"BENCH:{unit}:{row}:P{slot}{f':{variant}' if variant else ''}"
+
+    cabinet_match = re.match(r"^Skåp:\s*([A-Z0-9-]+)\s*,\s*Hylla:\s*(\d+)\s*,\s*Plats:\s*(\d+)([A-Z])?$", trimmed, re.IGNORECASE)
+    if cabinet_match:
+        unit = cabinet_match.group(1).upper()
+        shelf = cabinet_match.group(2)
+        slot = cabinet_match.group(3)
+        variant = cabinet_match.group(4).upper() if cabinet_match.group(4) else ""
+        return f"CABINET:{unit}:H{shelf}:P{slot}{f':{variant}' if variant else ''}"
+
+    legacy_match = re.match(r"^([A-Z])-H(\d+)-P(\d+)(?:-([A-Z]))?$", trimmed, re.IGNORECASE)
+    if legacy_match:
+        unit = legacy_match.group(1).upper()
+        shelf = legacy_match.group(2)
+        slot = legacy_match.group(3)
+        variant = legacy_match.group(4).upper() if legacy_match.group(4) else ""
+        return f"IVAR:{unit}:H{shelf}:P{slot}{f':{variant}' if variant else ''}"
+
+    return trimmed
+
+
+def load_catalog_rows(xlsx_path: Path) -> list[dict[str, str]]:
+    workbook = load_workbook(xlsx_path, data_only=True)
+    sheet = workbook.active
+    headers = [normalize_text(cell) for cell in next(sheet.iter_rows(min_row=1, max_row=1, values_only=True))]
+    missing_headers = sorted(REQUIRED_HEADERS - set(headers))
+    if missing_headers:
+        raise RuntimeError(
+            "Excel-filen använder inte exportformatet från appen. Saknade kolumner: "
+            + ", ".join(missing_headers)
+        )
+
+    header_index = {header: index for index, header in enumerate(headers)}
+    rows: list[dict[str, str]] = []
+
+    for values in sheet.iter_rows(min_row=2, values_only=True):
+        name = normalize_text(values[header_index["Namn"]])
+        box_id = normalize_text(values[header_index["Box-ID"]])
+        location_id = normalize_text(values[header_index["Plats-ID"]])
+        raw_location = normalize_text(values[header_index["Plats"]])
+
+        if not name and not box_id and not location_id:
+            continue
+
+        normalized_location_id = location_id or parse_location_display(raw_location)
+        if not box_id:
+            raise RuntimeError("Box-ID saknas i en eller flera rader. Import kräver exportformatet från appen.")
+        if not normalized_location_id:
+            raise RuntimeError(f"Plats-ID saknas eller kunde inte tolkas för raden med box {box_id}.")
+
+        rows.append(
+            {
+                "label": name or box_id,
+                "box_id": box_id,
+                "location_id": normalized_location_id,
+                "box_notes": normalize_text(values[header_index.get("Beskrivning", -1)]) if "Beskrivning" in header_index else "",
+                "summary": normalize_text(values[header_index.get("Sammanfattning", -1)]) if "Sammanfattning" in header_index else "",
+                "keywords": normalize_text(values[header_index.get("Nyckelord", -1)]) if "Nyckelord" in header_index else "",
+                "session_notes": normalize_text(values[header_index.get("Sessionsanteckningar", -1)]) if "Sessionsanteckningar" in header_index else "",
+                "session_id": normalize_text(values[header_index.get("Session-ID", -1)]) if "Session-ID" in header_index else "",
+                "created_at": normalize_text(values[header_index.get("Skapad", -1)]) if "Skapad" in header_index else "",
+                "updated_at": normalize_text(values[header_index.get("Uppdaterad", -1)]) if "Uppdaterad" in header_index else "",
+            }
+        )
+
+    return rows
+
+
+def merge_catalog(xlsx_path: Path) -> dict[str, int]:
+    rows = load_catalog_rows(xlsx_path)
     inventory = load_inventory()
     timestamp = now_iso()
 
@@ -97,159 +146,102 @@ def merge_catalog() -> dict[str, int]:
     sessions: list[dict[str, Any]] = inventory["sessions"]
     photos: list[dict[str, Any]] = inventory["photos"]
 
-    rows_by_location: dict[str, list[LabelRow]] = defaultdict(list)
-    for row in rows:
-        rows_by_location[row.location_id].append(row)
-
-    boxes_by_location: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for box in boxes:
-        boxes_by_location[box["currentLocationId"]].append(box)
-
-    sessions_by_box = defaultdict(list)
-    for session in sessions:
-        sessions_by_box[session["boxId"]].append(session)
+    boxes_by_id = {box["boxId"]: box for box in boxes}
+    sessions_by_id = {session["sessionId"]: session for session in sessions}
 
     created_boxes = 0
     updated_boxes = 0
     created_sessions = 0
-    reassigned_boxes = 0
-    box_id_changes: dict[str, str] = {}
-    rebuilt_boxes: list[dict[str, Any]] = []
-    seen_box_object_ids: set[int] = set()
+    updated_sessions = 0
 
-    for location_id, location_rows in rows_by_location.items():
-        location_boxes = boxes_by_location.get(location_id, [])
-        exact_matches: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-        for box in location_boxes:
-            exact_matches[(box["label"].strip().lower(), location_id)].append(box)
+    for row in rows:
+        existing_box = boxes_by_id.get(row["box_id"])
+        created_at = row["created_at"] or timestamp
+        updated_at = row["updated_at"] or timestamp
 
-        used_objects: set[int] = set()
-        used_box_ids: set[str] = set()
-        preserved_box_ids_by_row: dict[str, str] = {}
+        if existing_box:
+            existing_box["label"] = row["label"]
+            existing_box["currentLocationId"] = row["location_id"]
+            existing_box["notes"] = row["box_notes"] or None
+            existing_box["updatedAt"] = updated_at
+            box = existing_box
+            updated_boxes += 1
+        else:
+            box = {
+                "boxId": row["box_id"],
+                "label": row["label"],
+                "currentLocationId": row["location_id"],
+                "notes": row["box_notes"] or None,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+            }
+            boxes.append(box)
+            boxes_by_id[box["boxId"]] = box
+            created_boxes += 1
 
-        # Preserve already-established box IDs when they are valid and unique for this location.
-        for row in location_rows:
-            key = (row.name.strip().lower(), location_id)
-            candidates = [box for box in exact_matches.get(key, []) if id(box) not in used_objects]
-            if not candidates:
-                continue
-            existing_box = candidates[0]
-            match = BOX_ID_RE.match(existing_box["boxId"])
-            if match and match.group(1) == location_id and existing_box["boxId"] not in used_box_ids:
-                preserved_box_ids_by_row[row.name] = existing_box["boxId"]
-                used_objects.add(id(existing_box))
-                used_box_ids.add(existing_box["boxId"])
-
-        used_objects.clear()
-        used_box_ids.clear()
-
-        for row in location_rows:
-            key = (row.name.strip().lower(), location_id)
-            candidates = [box for box in exact_matches.get(key, []) if id(box) not in used_objects]
-            existing_box = candidates[0] if candidates else None
-            desired_box_id = preserved_box_ids_by_row.get(row.name, row.box_id)
-            if desired_box_id in used_box_ids:
-                next_suffix_ord = ord("A")
-                while True:
-                    candidate = f"IVAR-{location_id}-{chr(next_suffix_ord)}"
-                    next_suffix_ord += 1
-                    if candidate not in used_box_ids:
-                        desired_box_id = candidate
-                        break
-
-            if existing_box:
-                old_box_id = existing_box["boxId"]
-                existing_box["boxId"] = desired_box_id
-                existing_box["label"] = row.name
-                existing_box["currentLocationId"] = row.location_id
-                existing_box["notes"] = row.description or existing_box.get("notes")
-                existing_box["updatedAt"] = timestamp
-                if old_box_id != desired_box_id:
-                    box_id_changes[old_box_id] = desired_box_id
-                    reassigned_boxes += 1
-                box = existing_box
-                updated_boxes += 1
-            else:
-                box = {
-                    "boxId": desired_box_id,
-                    "label": row.name,
-                    "currentLocationId": row.location_id,
-                    "notes": row.description or None,
-                    "createdAt": timestamp,
-                    "updatedAt": timestamp,
-                }
-                created_boxes += 1
-
-            rebuilt_boxes.append(box)
-            seen_box_object_ids.add(id(box))
-            used_objects.add(id(box))
-            used_box_ids.add(desired_box_id)
-
-            if not sessions_by_box.get(desired_box_id):
-                session_id = f"CATALOG-{row.location_id}-{row.suffix}"
-                sessions.append(
-                    {
-                        "sessionId": session_id,
-                        "boxId": desired_box_id,
-                        "createdAt": timestamp,
-                        "summary": row.description or f"Importerad från etikettkatalog: {row.name}",
-                        "itemKeywords": slugify_keywords(row.name, row.description),
-                        "notes": f"Importerad från Excel-katalog. Ursprunglig platssträng: {row.raw_location}",
-                        "isCurrent": True,
-                    }
-                )
-                created_sessions += 1
-
-        # Preserve boxes that exist locally but were not present in the Excel file.
-        next_suffix_ord = ord("A") + len(location_rows)
-        for box in location_boxes:
-            if id(box) in used_objects:
-                continue
-            if box["boxId"] in used_box_ids:
-                old_box_id = box["boxId"]
-                while True:
-                    candidate = f"IVAR-{location_id}-{chr(next_suffix_ord)}"
-                    next_suffix_ord += 1
-                    if candidate not in used_box_ids:
-                        break
-                box["boxId"] = candidate
-                box["updatedAt"] = timestamp
-                box_id_changes[old_box_id] = candidate
-                reassigned_boxes += 1
-                used_box_ids.add(candidate)
-            rebuilt_boxes.append(box)
-            seen_box_object_ids.add(id(box))
-
-    for box in boxes:
-        if id(box) not in seen_box_object_ids:
-            rebuilt_boxes.append(box)
-
-    if box_id_changes:
         for session in sessions:
-            session["boxId"] = box_id_changes.get(session["boxId"], session["boxId"])
+            if session["boxId"] == box["boxId"]:
+                session["isCurrent"] = False
 
-    duplicate_counts = Counter(box["boxId"] for box in rebuilt_boxes)
-    duplicates = [box_id for box_id, count in duplicate_counts.items() if count > 1]
-    if duplicates:
-        raise RuntimeError(f"Duplicerade boxId efter import: {duplicates}")
+        session_id = row["session_id"] or f"IMPORT-{box['boxId']}"
+        summary = row["summary"] or row["box_notes"] or f"Importerad från etikettkatalog: {row['label']}"
+        session_notes = row["session_notes"] or "Importerad från Excel-export."
+        item_keywords = parse_keywords(row["keywords"])
 
-    inventory["boxes"] = sorted(rebuilt_boxes, key=lambda item: item["boxId"])
+        existing_session = sessions_by_id.get(session_id)
+        if existing_session:
+            existing_session["boxId"] = box["boxId"]
+            existing_session["createdAt"] = existing_session.get("createdAt") or created_at
+            existing_session["summary"] = summary
+            existing_session["itemKeywords"] = item_keywords
+            existing_session["notes"] = session_notes
+            existing_session["isCurrent"] = True
+            updated_sessions += 1
+        else:
+            session = {
+                "sessionId": session_id,
+                "boxId": box["boxId"],
+                "createdAt": created_at,
+                "summary": summary,
+                "itemKeywords": item_keywords,
+                "notes": session_notes,
+                "isCurrent": True,
+            }
+            sessions.append(session)
+            sessions_by_id[session_id] = session
+            created_sessions += 1
+
+    inventory["boxes"] = sorted(boxes, key=lambda item: item["boxId"])
     inventory["sessions"] = sorted(sessions, key=lambda item: item["sessionId"])
     inventory["photos"] = photos
-
     save_inventory(inventory)
 
     return {
-      "catalog_rows": len(rows),
-      "created_boxes": created_boxes,
-      "updated_boxes": updated_boxes,
-      "reassigned_boxes": reassigned_boxes,
-      "created_sessions": created_sessions,
-      "total_boxes": len(inventory["boxes"]),
-      "total_sessions": len(inventory["sessions"]),
+        "catalog_rows": len(rows),
+        "created_boxes": created_boxes,
+        "updated_boxes": updated_boxes,
+        "created_sessions": created_sessions,
+        "updated_sessions": updated_sessions,
+        "total_boxes": len(inventory["boxes"]),
+        "total_sessions": len(inventory["sessions"]),
+        "total_photos": len(inventory["photos"]),
     }
 
 
-if __name__ == "__main__":
-    summary = merge_catalog()
+def main() -> int:
+    if len(sys.argv) < 2:
+        raise SystemExit("Ange sökvägen till en exporterad Excel-fil som första argument.")
+
+    xlsx_path = Path(sys.argv[1])
+    if not xlsx_path.is_absolute():
+        xlsx_path = (ROOT / xlsx_path).resolve()
+    if not xlsx_path.exists():
+        raise SystemExit(f"Excel-filen hittades inte: {xlsx_path}")
+
+    summary = merge_catalog(xlsx_path)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

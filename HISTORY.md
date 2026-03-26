@@ -1,5 +1,15 @@
 # History
 
+## v1.2.1 - 2026-03-26
+
+Punktrelease som knyter ihop etikettkatalogens import och export via samma Excel-format.
+
+### Import av etikettkatalog
+
+- Ny import i `Inställningar` där du kan välja en exporterad `.xlsx`-fil direkt från datorn.
+- Importen bygger nu på appens aktuella exportformat i stället för den äldre manuella Excel-mallen.
+- Importflödet uppdaterar lådor och aktuella sessioner men låter kopplade bilder ligga kvar.
+
 ## v1.2.0 - 2026-03-26
 
 Releasen samlar exportfunktioner, översiktsbild, lokal testning, UI-polish och dokumentationssynk i en gemensam versionshöjning.

@@ -48,11 +48,14 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
   const [modelsStatus, setModelsStatus] = useState(initialModels.length > 0 ? "" : "Ingen modellista laddad ännu.");
   const [albumsStatus, setAlbumsStatus] = useState(initialAlbums.length > 0 ? "" : "Ingen albumlista laddad ännu.");
   const [backupStatus, setBackupStatus] = useState("");
+  const [catalogImportStatus, setCatalogImportStatus] = useState("");
   const [isSaving, startSaving] = useTransition();
   const [isLoadingModels, startLoadingModels] = useTransition();
   const [isLoadingAlbums, startLoadingAlbums] = useTransition();
   const [isImportingBackup, startImportingBackup] = useTransition();
+  const [isImportingCatalog, startImportingCatalog] = useTransition();
   const backupFileRef = useRef<HTMLInputElement | null>(null);
+  const catalogFileRef = useRef<HTMLInputElement | null>(null);
 
   const activeConnection = useMemo(() => {
     if (settings.ai.provider === "openai") return settings.ai.openai;
@@ -205,6 +208,47 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
         router.refresh();
       } catch (error) {
         setBackupStatus(error instanceof Error ? error.message : "Kunde inte läsa in backupen.");
+      }
+    });
+  }
+
+  async function importCatalog(file: File) {
+    setCatalogImportStatus(`Importerar ${file.name}...`);
+
+    startImportingCatalog(async () => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/settings/import-label-catalog", {
+          method: "POST",
+          body: formData
+        });
+
+        const json = (await response.json()) as {
+          ok?: boolean;
+          error?: string;
+          summary?: {
+            catalog_rows: number;
+            created_boxes: number;
+            updated_boxes: number;
+            created_sessions: number;
+            updated_sessions: number;
+          };
+        };
+        if (!response.ok || !json.ok || !json.summary) {
+          throw new Error(json.error || "Kunde inte importera etikettkatalogen.");
+        }
+
+        setCatalogImportStatus(
+          `Import klar: ${json.summary.catalog_rows} rader, ${json.summary.created_boxes} nya lådor, ${json.summary.updated_boxes} uppdaterade lådor, ${json.summary.created_sessions} nya sessioner och ${json.summary.updated_sessions} uppdaterade sessioner.`
+        );
+        if (catalogFileRef.current) {
+          catalogFileRef.current.value = "";
+        }
+        router.refresh();
+      } catch (error) {
+        setCatalogImportStatus(error instanceof Error ? error.message : "Kunde inte importera etikettkatalogen.");
       }
     });
   }
@@ -550,16 +594,42 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
               }}
             />
           </label>
+          <label>
+            Importera etikettkatalog
+            <input
+              ref={catalogFileRef}
+              type="file"
+              accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  void importCatalog(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="grid two">
           <div className="panel-quiet">
             <strong>Backup och export</strong>
             <p className="muted" style={{ marginTop: 8 }}>
               Backupen innehåller inventariet, sessionshistorik, analystexter, etikettmallar och övriga appinställningar i en zip-fil. Excel-exporten ger en läsbar katalog med lådor, platser, sammanfattningar och nyckelord.
             </p>
           </div>
+          <div className="panel-quiet">
+            <strong>Excel-import</strong>
+            <p className="muted" style={{ marginTop: 8 }}>
+              Importen utgår från appens nuvarande exportformat. Den uppdaterar lådor och aktuella sessioner från filen, men låter kopplade bilder ligga kvar i inventariet.
+            </p>
+          </div>
         </div>
 
         <div className="action-row">
           <span className="muted">{isImportingBackup ? "Läser in backup..." : backupStatus}</span>
+        </div>
+        <div className="action-row">
+          <span className="muted">{isImportingCatalog ? "Importerar Excel..." : catalogImportStatus}</span>
         </div>
       </section>
 
