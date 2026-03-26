@@ -193,7 +193,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 24px; }
 }
 
 .location-meta > .location-chip .location-chip-value {
-  color: #ffffff;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -384,6 +384,30 @@ button, .button {
   word-break: normal;
 }
 
+.overview-card {
+  display: block;
+}
+
+.overview-image-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--photo-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.overview-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  object-position: center;
+}
+
 .shelf-unit-grid {
   display: grid;
   gap: 16px;
@@ -467,6 +491,25 @@ button, .button {
 
 .shelf-structure::after {
   right: -6px;
+}
+
+.shelf-structure-cabinet::before,
+.shelf-structure-cabinet::after {
+  background:
+    linear-gradient(180deg, #fdfcf8 0%, #efe8d8 45%, #dfd5c2 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.9),
+    inset -1px 0 0 rgba(131, 119, 98, 0.2),
+    0 8px 20px rgba(34, 30, 22, 0.08);
+}
+
+.shelf-structure-bench {
+  padding: 0;
+}
+
+.shelf-structure-bench::before,
+.shelf-structure-bench::after {
+  display: none;
 }
 
 .shelf-row {
@@ -609,7 +652,7 @@ button, .button {
 .shelf-deck-label {
   position: absolute;
   left: 18px;
-  bottom: -18px;
+  bottom: calc(100% + 2px);
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -624,6 +667,51 @@ button, .button {
   box-shadow:
     0 8px 18px rgba(0, 0, 0, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.shelf-structure-cabinet .shelf-deck {
+  background:
+    linear-gradient(180deg, #fbfaf6 0%, #ece4d5 48%, #ddd1bd 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 6px 16px rgba(55, 48, 36, 0.12);
+}
+
+.shelf-structure-cabinet .shelf-deck-label {
+  border-color: rgba(132, 122, 103, 0.26);
+  background: linear-gradient(180deg, #ffffff 0%, #f2ecdf 100%);
+  color: #383127;
+}
+
+.shelf-structure-bench .shelf-row {
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.shelf-structure-bench .shelf-row-grid {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.shelf-structure-bench .shelf-deck {
+  margin: 0;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #d6d0c4 0%, #b5ac9e 55%, #938979 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.shelf-structure-bench .shelf-deck-label {
+  left: 8px;
+}
+
+.shelf-structure-bench .shelf-deck-label-below {
+  bottom: auto;
+  top: calc(100% + 2px);
 }
 
 .thumb-strip {

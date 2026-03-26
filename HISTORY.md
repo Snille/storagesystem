@@ -1,5 +1,35 @@
 # History
 
+## v1.2.0 - 2026-03-26
+
+Releasen samlar exportfunktioner, översiktsbild, lokal testning, UI-polish och dokumentationssynk i en gemensam versionshöjning.
+
+### Export och backup
+
+- Ny Excel-export av etikettkatalogen via `scripts/export_label_catalog.py`.
+- Ny export-endpoint i appen och knapp under `Inställningar` i samma avsnitt som backup.
+- Backup- och Excel-filer får nu tidsstämpel i filnamnet i formatet `YYYY-MM-DD-HHMMSS`.
+- Fixat Excel-exporten så att workbook-metadata inte längre ger reparationsdialog i Excel.
+
+### Immich och översikt
+
+- Albumomslaget i valt Immich-album används nu som `Översiktsbild` på startsidan.
+- `Översiktsbild` kan öppnas i egen lightbox från översikten.
+- Albumomslaget filtreras bort från `Bilder att koppla` så att det inte blandas in bland okopplade lådbilder.
+
+### Lagerplats och tema
+
+- `Lagerplats` har nu tydligare visuell skillnad mellan `Ivar`, `Skåp` och `Bänk`.
+- `Bänk` visar endast själva bänkplanet där det är relevant i strukturen.
+- Hyll- och bänketiketter har justerats till godkänd position direkt mot hyllplanet.
+- Platschippens värden följer nu tema bättre och blir mörka i ljust läge.
+
+### Drift och dokumentation
+
+- Ny guide i `LOCAL-TESTING.md` för lokal körning och felsökning.
+- `scripts/start-local.ps1` växlar bara Node-version via `nvm use` när det verkligen behövs.
+- README, MANUAL och Home Assistant-dokumentationen uppdaterade för nya exportflöden, översiktsbild och utökad metadata.
+
 ## v1.1.2 - 2026-03-25
 
 Punktrelease med fokus på platslogik, AI-matchning, sökning och stabilitet i registreringsflödet.

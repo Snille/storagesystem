@@ -523,12 +523,15 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
       <section className="panel shell">
         <div>
           <h2>Backup</h2>
-          <p>Ladda ner eller läs in all lokal JSON-data som inte ligger i Immich.</p>
+          <p>Ladda ner backup eller exportera etikettkatalogen till Excel från samma ställe.</p>
         </div>
 
         <div className="action-row">
           <a className="button" href="/api/settings/backup">
             Ladda ner backup
+          </a>
+          <a className="button" href="/api/settings/export-label-catalog">
+            Exportera Excel
           </a>
         </div>
 
@@ -548,9 +551,9 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             />
           </label>
           <div className="panel-quiet">
-            <strong>Ingår i backupen</strong>
+            <strong>Backup och export</strong>
             <p className="muted" style={{ marginTop: 8 }}>
-              Inventariet, sessionshistorik, analystexter, etikettmallar och övriga appinställningar i en zip-fil.
+              Backupen innehåller inventariet, sessionshistorik, analystexter, etikettmallar och övriga appinställningar i en zip-fil. Excel-exporten ger en läsbar katalog med lådor, platser, sammanfattningar och nyckelord.
             </p>
           </div>
         </div>

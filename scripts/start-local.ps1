@@ -20,18 +20,27 @@ if ($installedVersions -notmatch [regex]::Escape($nodeVersion)) {
   & $nvmExe install $nodeVersion
 }
 
-Write-Host "Aktiverar Node $nodeVersion..." -ForegroundColor Cyan
-& $nvmExe use $nodeVersion
-
 $nodeExe = Join-Path $nodeInstallDir "node.exe"
 $npmCmd = Join-Path $nodeInstallDir "npm.cmd"
 
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+  Write-Host "Aktiverar Node $nodeVersion..." -ForegroundColor Cyan
+  & $nvmExe use $nodeVersion
+}
+else {
+  $currentNodeVersion = (& node -v).TrimStart("v")
+  if ($currentNodeVersion -ne $nodeVersion) {
+    Write-Host "Aktiverar Node $nodeVersion..." -ForegroundColor Cyan
+    & $nvmExe use $nodeVersion
+  }
+}
+
 if (-not (Test-Path $nodeExe)) {
-  throw "node.exe hittades inte på $nodeExe efter 'nvm use'."
+  throw "node.exe hittades inte på $nodeExe."
 }
 
 if (-not (Test-Path $npmCmd)) {
-  throw "npm.cmd hittades inte på $npmCmd efter 'nvm use'."
+  throw "npm.cmd hittades inte på $npmCmd."
 }
 
 Write-Host "Node version:" -ForegroundColor DarkGray

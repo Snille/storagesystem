@@ -43,14 +43,20 @@ Paketet lägger till:
 - `input_text.hyllsystem_last_query`
 - `input_text.hyllsystem_last_answer`
 - `input_text.hyllsystem_last_location`
-- två enkla templatesensorer för senaste svar/plats
+- `input_text.hyllsystem_last_box_id`
+- `input_text.hyllsystem_last_source`
+- `input_text.hyllsystem_last_summary`
+- `input_text.hyllsystem_last_keywords`
+- `input_number.hyllsystem_last_match_count`
+- templatesensorer för svar, plats, box-id, källa, sammanfattning, nyckelord och antal träffar
 
 När scriptet körs:
 
 1. en fråga skickas till `/api/public/ask`
 2. svaret sparas i hjälpare
 3. svaret läses upp via TTS
-4. ett event `hyllsystem_result` skickas i Home Assistant
+4. metadata som `source`, `match_count`, `summary` och `item_keywords` sparas också
+5. ett event `hyllsystem_result` skickas i Home Assistant
 
 ## Exempel: kalla scriptet manuellt
 
@@ -85,6 +91,14 @@ Du kan använda eventet för att:
 - vrida servo/stegmotor
 - visa text på display
 
+Eventet innehåller nu även:
+
+- `source`
+- `match_count`
+- `summary`
+- `item_keywords`
+- `raw`
+
 ```yaml
 alias: Hyllsystem - Skicka resultat vidare
 triggers:
@@ -106,8 +120,5 @@ När du vill koppla på fysisk hårdvara skulle jag bygga vidare så här:
 1. knapp eller röstinput in i Home Assistant
 2. `script.hyllsystem_fraga_verkstan`
 3. event `hyllsystem_result`
-4. automation som skickar plats eller `box_id` till:
-   - ESPHome-display
-   - laserpekare
-   - servo/stegmotor
-   - högtalare
+4. automation som skickar plats, `box_id`, `summary` eller `item_keywords` vidare
+5. mottagare som ESPHome-display, laserpekare, servo/stegmotor eller högtalare

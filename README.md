@@ -2,7 +2,7 @@
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
-Aktuell version: `v1.1.2`
+Aktuell version: `v1.2.0`
 
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
@@ -113,9 +113,11 @@ Startsidan används främst för sök.
 Den visar:
 
 - sökruta med text eller röst
+- `Översiktsbild` från albumomslaget i Immich, öppningsbar i egen lightbox
 - lådkort med plats, sammanfattning, sökord och bilder
 - alla kopplade bilder för respektive låda i sökresultat
 - statistik för registrerade lådor, aktuella platser och kopplade bilder
+- aktuell appversion direkt i översikten
 
 Lådorna i översikten sorteras nu i fysisk ordning:
 
@@ -171,6 +173,8 @@ Här kan man:
 - koppla direkt till en sannolik befintlig låda
 - gå vidare till registreringssidan med förifylld data
 
+Albumomslaget i Immich används nu som `Översiktsbild` på startsidan och visas därför inte längre bland okopplade bilder i den här vyn.
+
 ### `Ny låda / inventering`
 
 Sidan används för att registrera en ny låda eller uppdatera en befintlig session.
@@ -220,6 +224,8 @@ Här kan man ändra:
 - modell och API-inställningar
 - promptar för analys
 - rensningsfraser och andra filter för AI-svar
+- ladda ner backup av lokal data
+- exportera etikettkatalogen till Excel
 
 Rensnings- och filterinställningarna är tänkta för att kunna trimma bort återkommande brus från olika modeller utan att behöva göra kodändringar.
 
@@ -247,6 +253,8 @@ Stöd finns för både:
 - `Share key`
 
 Det aktiva albumet väljs i `Inställningar`.
+
+Om albumet har ett omslag i Immich används den bilden automatiskt som `Översiktsbild` på startsidan.
 
 ## DYMO och etiketter
 
@@ -303,9 +311,26 @@ Tillgängliga endpoints:
 
 Svarar med:
 
+- `query`
 - `answer`
 - `source` (`ai` eller `search`)
+- `count`
 - `matches`
+
+Varje objekt i `matches` innehåller idag bland annat:
+
+- `boxId`
+- `label`
+- `locationId`
+- `location`
+- `boxNotes`
+- `sessionId`
+- `sessionCreatedAt`
+- `summary`
+- `sessionNotes`
+- `itemKeywords`
+- `photos`
+- `score`
 
 - `GET /api/public/boxes/IVAR-B-H3-P2-A`
   detaljer om en viss låda
@@ -535,6 +560,32 @@ Projektet innehåller även ett importscript för etikettregister:
 - `scripts/import_label_catalog.py`
 
 Det används för att bygga upp grundkatalogen över lådor och platser från Excel-underlag.
+
+Det finns nu också ett exportscript:
+
+- `scripts/export_label_catalog.py`
+
+Det skriver ut en ny Excel-fil från aktuell `inventory.json`, med de klassiska kolumnerna `Namn`, `Beskrivning` och `Plats` plus kompletterande metadata som `Box-ID`, `Plats-ID`, `Sammanfattning` och `Nyckelord`.
+
+Exempel:
+
+```bash
+python scripts/export_label_catalog.py
+```
+
+Det skapar som standard `data/Hyllsystem - Namnetiketter-export.xlsx`, men du kan också ange egen sökväg som första argument.
+
+Från och med `v1.2.0` finns exporten också direkt i appen under `Inställningar` i samma avsnitt som backup. Nedladdningar får tidsstämpel i filnamnet, till exempel `hyllsystem-etikettkatalog-2026-03-26-104924.xlsx`.
+
+## Lokal testning
+
+För lokal körning finns ett PowerShell-script:
+
+- `scripts/start-local.ps1`
+
+Det säkerställer rätt Node-version, installerar beroenden om det behövs och startar sedan utvecklingsservern på `http://localhost:3000`.
+
+Mer detaljer finns i [LOCAL-TESTING.md](/c:/Users/eripet/Coding/Hyllsystem/LOCAL-TESTING.md).
 
 ## Framtida utveckling
 

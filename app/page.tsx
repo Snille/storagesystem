@@ -1,7 +1,8 @@
 import { HomeSearchForm } from "@/app/home-search-form";
 import { HomeBoxCard } from "@/app/home-box-card";
+import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
+import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
 import { compareBoxesByLocation } from "@/lib/location-sort";
 import { searchInventory } from "@/lib/search";
@@ -14,10 +15,11 @@ type HomeProps = {
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
-  const [data, albumAssets] = await Promise.all([
+  const [data, album] = await Promise.all([
     readInventoryData(),
-    query ? fetchAlbumAssets().catch(() => []) : Promise.resolve([])
+    fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" }))
   ]);
+  const albumAssets = query ? album.assets : [];
   const sessionsByBox = getCurrentSessionByBox(data);
   const currentSessions = [...sessionsByBox.values()];
   const currentLocationCount = new Set(
@@ -37,6 +39,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const assetFileNamesById = new Map(albumAssets.map((asset) => [asset.id, asset.originalFileName]));
   const results = query ? searchInventory(data, query, assetFileNamesById) : [];
   const sortedBoxes = [...data.boxes].sort(compareBoxesByLocation);
+  const overviewAsset = album.albumThumbnailAssetId ? album.assets.find((asset) => asset.id === album.albumThumbnailAssetId) : null;
 
   return (
     <div className="shell">
@@ -97,6 +100,24 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
         </div>
       </section>
+
+      {overviewAsset ? (
+        <section className="panel overview-panel">
+          <h2>Översiktsbild</h2>
+          <div className="overview-card">
+            <ImageLightboxButton
+              alt={overviewAsset.originalFileName}
+              buttonClassName="overview-image-button"
+              imageClassName="overview-image"
+              thumbnailUrl={getAssetThumbnailUrl(overviewAsset.id)}
+              originalUrl={getAssetOriginalUrl(overviewAsset.id)}
+              overlayTitle={album.albumName ? `${album.albumName} - översikt` : "Översiktsbild"}
+              overlayMeta={new Date(overviewAsset.fileCreatedAt).toLocaleString("sv-SE")}
+              overlayNote="Albumomslag i Immich. Används som översiktsbild över verkstaden."
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="panel">
         <h2>Aktuella lådor</h2>

@@ -29,6 +29,16 @@ async function request<T>(url: string): Promise<T> {
 }
 
 export async function fetchAlbumAssets(): Promise<ImmichAsset[]> {
+  const album = await fetchAlbumDetails();
+  return [...album.assets].sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
+}
+
+export async function fetchAlbumDetails(): Promise<{
+  id: string;
+  albumName?: string;
+  albumThumbnailAssetId?: string;
+  assets: ImmichAsset[];
+}> {
   const config = getImmichConfig();
 
   if (!config.albumId) {
@@ -36,11 +46,21 @@ export async function fetchAlbumAssets(): Promise<ImmichAsset[]> {
   }
 
   const query = config.apiKey ? "" : `?key=${config.shareKey ?? ""}`;
-  const album = await request<{ assets: ImmichAsset[] }>(
+  const album = await request<{
+    id: string;
+    albumName?: string;
+    albumThumbnailAssetId?: string;
+    assets: ImmichAsset[];
+  }>(
     `${config.baseUrl}/api/albums/${config.albumId}${query}`
   );
 
-  return [...album.assets].sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
+  return {
+    id: album.id,
+    albumName: album.albumName,
+    albumThumbnailAssetId: album.albumThumbnailAssetId,
+    assets: [...album.assets].sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt))
+  };
 }
 
 export function getAssetThumbnailUrl(assetId: string) {

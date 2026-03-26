@@ -2,7 +2,7 @@
 
 Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
 
-Aktuell version: `v1.1.2`
+Aktuell version: `v1.2.0`
 
 ## Tanken med systemet
 
@@ -65,10 +65,13 @@ På startsidan kan du:
 
 - söka efter saker i verkstan
 - använda röstsökning
+- öppna `Översiktsbild` i egen lightbox
 - öppna en låda genom att klicka på lådkortet
 - klicka på bilder för att se dem i lightbox
 - hovra på bilder med analystext för att läsa en snabb beskrivning direkt
 - se hur många aktuella platser som finns i systemet
+
+`Översiktsbild` hämtas automatiskt från albumomslaget i valt Immich-album.
 
 Lådorna visas i fysisk ordning i översikten:
 
@@ -103,6 +106,8 @@ Det här är särskilt bra när du vill hitta något utifrån hur verkstaden fak
 ## Bilder att koppla
 
 Den här sidan visar bara bilder som ännu inte är kopplade till någon låda.
+
+Albumomslaget i Immich visas inte här, eftersom det används som översiktsbild på startsidan.
 
 Här kan du:
 
@@ -193,6 +198,8 @@ På sidan `Inställningar` kan du ändra:
 - AI-provider och modell
 - promptar som styr modellen
 - rensningsfraser och andra filter som städar AI-svar
+- ladda ner backup
+- exportera etikettkatalogen till Excel
 
 Det här är särskilt användbart om du testar olika modeller i LM Studio.
 

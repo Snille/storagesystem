@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
 import { inventorySchema, readInventoryData, writeInventoryData } from "@/lib/data-store";
+import { buildExportTimestamp } from "@/lib/export-filenames";
 import { readAppSettings, writeAppSettings } from "@/lib/settings";
 import { z } from "zod";
 
@@ -132,6 +133,7 @@ export async function GET() {
   try {
     const [appSettings, inventoryData] = await Promise.all([readAppSettings(), readInventoryData()]);
     const backup = buildBackupPayload(appSettings, inventoryData);
+    const timestamp = buildExportTimestamp();
     const zip = new JSZip();
     zip.file("hyllsystem-backup.json", JSON.stringify(backup, null, 2));
     const archive = await zip.generateAsync({
@@ -144,7 +146,7 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="hyllsystem-backup-${new Date().toISOString().slice(0, 10)}.zip"`
+        "Content-Disposition": `attachment; filename="hyllsystem-backup-${timestamp}.zip"`
       }
     });
   } catch (error) {

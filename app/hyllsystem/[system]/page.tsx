@@ -23,6 +23,7 @@ export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) 
 
   const rows = [...unit.rows].sort((a, b) => a.rowSortKey - b.rowSortKey);
   const isBench = unit.kind === "bench";
+  const structureClassName = `shelf-structure shelf-structure-${unit.kind}`;
 
   return (
     <div className="shell">
@@ -40,8 +41,8 @@ export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) 
 
       <section className="panel">
         <h2>Platser i {unit.title}</h2>
-        <div className="shelf-structure">
-          {rows.map((row) => (
+        <div className={structureClassName}>
+          {rows.map((row, rowIndex) => (
             (() => {
               const shelfPositions = unit.positions
                 .filter((position) => position.rowId === row.rowId)
@@ -50,6 +51,9 @@ export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) 
               if (shelfPositions.length === 0) {
                 return null;
               }
+
+              const showDeck = !isBench || rowIndex < rows.length - 1;
+              const nextRowLabel = rows[rowIndex + 1]?.rowLabel;
 
               return (
                 <section className="shelf-row" key={row.rowId}>
@@ -98,9 +102,14 @@ export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) 
                       </article>
                     ))}
                   </div>
-                  <div className="shelf-deck">
-                    <span className="shelf-deck-label">{row.rowLabel}</span>
-                  </div>
+                  {showDeck ? (
+                    <div className="shelf-deck">
+                      <span className={`shelf-deck-label${isBench ? " shelf-deck-label-above" : ""}`}>{row.rowLabel}</span>
+                      {isBench && nextRowLabel ? (
+                        <span className="shelf-deck-label shelf-deck-label-below">{nextRowLabel}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </section>
               );
             })()
