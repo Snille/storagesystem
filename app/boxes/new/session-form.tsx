@@ -194,7 +194,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     { value: "UNDER", label: "Under" }
   ];
   const duplicateBoxes = useMemo(() => {
-    if (isExistingBox || !currentLocationId || !label.trim()) {
+    if (!currentLocationId || !label.trim()) {
       return [];
     }
 
@@ -202,13 +202,17 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     const normalizedLabel = normalizeComparableText(label);
 
     return existingBoxes.filter((box) => {
+      if (boxId && box.boxId === boxId) {
+        return false;
+      }
+
       const boxLocation = parseLocationId(box.currentLocationId)?.normalizedId ?? box.currentLocationId.trim();
       return (
         boxLocation === normalizedLocation &&
         normalizeComparableText(box.label) === normalizedLabel
       );
     });
-  }, [currentLocationId, existingBoxes, isExistingBox, label]);
+  }, [boxId, currentLocationId, existingBoxes, label]);
   const hasDuplicateWarning = Boolean(defaults.duplicateWarning.trim());
 
   function updateRole(immichAssetId: string, photoRole: PhotoRole) {

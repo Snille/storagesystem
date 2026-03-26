@@ -178,10 +178,13 @@ export async function saveBoxSession(formData: FormData) {
   }
 
   const inventory = await readInventoryData();
-  const parsedLocation = parseLocationId(currentLocationId);
-  const exactLocationConflicts = !submittedBoxId
-    ? inventory.boxes.filter((box) => sameExactLocation(box.currentLocationId, currentLocationId))
-    : [];
+  const exactLocationConflicts = inventory.boxes.filter((box) => {
+    if (submittedBoxId && box.boxId === submittedBoxId) {
+      return false;
+    }
+
+    return sameExactLocation(box.currentLocationId, currentLocationId);
+  });
 
   if (exactLocationConflicts.length > 0) {
     redirect(
