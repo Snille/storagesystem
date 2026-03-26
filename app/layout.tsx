@@ -5,7 +5,8 @@ import path from "node:path";
 import Link from "next/link";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
-import { fetchAlbumAssets } from "@/lib/immich";
+import { getUnmappedInboxAssets } from "@/lib/album-assets";
+import { fetchAlbumDetails } from "@/lib/immich";
 import { readAppSettings } from "@/lib/settings";
 import { getShelfSystemCount } from "@/lib/shelf-map";
 import { ThemeController } from "@/app/theme-controller";
@@ -19,8 +20,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const settings = await readAppSettings();
-  const [assets, data, albums] = await Promise.all([
-    fetchAlbumAssets(),
+  const [album, data, albums] = await Promise.all([
+    fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
     readInventoryData(),
     fetchAvailableAlbums({
       baseUrl: settings.immich.baseUrl,
@@ -36,7 +37,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       .filter((photo) => currentSessionIds.has(photo.sessionId))
       .map((photo) => photo.immichAssetId)
   );
-  const inboxCount = assets.filter((asset) => !mappedAssetIds.has(asset.id)).length;
+  const inboxCount = getUnmappedInboxAssets(album, mappedAssetIds).length;
   const albumLabel =
     albums.find((album) => album.id === settings.immich.albumId)?.label ||
     settings.immich.accountLabel ||
