@@ -334,7 +334,7 @@ export async function printLabelViaDymo(payload: LabelPrintPayload) {
   }
 
   const data = labelPrintSchema.parse(payload);
-  const tempFilePath = path.join(os.tmpdir(), `hyllsystem-label-${Date.now()}.ps`);
+  const tempFilePath = path.join(os.tmpdir(), `lagersystem-label-${Date.now()}.ps`);
   const queueCheck = await runCommand("lpstat", ["-p", DEFAULT_DYMO_QUEUE]);
 
   if (!queueCheck.stdout.toString("utf8").includes(DEFAULT_DYMO_QUEUE)) {

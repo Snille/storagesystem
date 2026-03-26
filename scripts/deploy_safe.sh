@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${1:-/opt/hyllsystem}"
-SERVICE_NAME="${2:-hyllsystem.service}"
+APP_DIR="${1:-/opt/lagersystem}"
+SERVICE_NAME="${2:-lagersystem.service}"
 STAGING_DIR=".next-deploy"
 PREVIOUS_DIR=".next-prev"
 

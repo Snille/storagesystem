@@ -30,8 +30,8 @@ function runCommand(command: string, args: string[], cwd: string) {
 }
 
 export async function exportLabelCatalogWorkbook() {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "hyllsystem-export-"));
-  const outputPath = path.join(tempDir, "hyllsystem-etikettkatalog.xlsx");
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "lagersystem-export-"));
+  const outputPath = path.join(tempDir, "lagersystem-katalog.xlsx");
 
   try {
     try {

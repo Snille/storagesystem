@@ -14,7 +14,7 @@ from openpyxl.styles import Font
 
 ROOT = Path(__file__).resolve().parent.parent
 INVENTORY_PATH = ROOT / "data" / "inventory.json"
-DEFAULT_OUTPUT_PATH = ROOT / "data" / "Hyllsystem - Namnetiketter-export.xlsx"
+DEFAULT_OUTPUT_PATH = ROOT / "data" / "Lagersystem - Katalog-export.xlsx"
 
 
 def load_inventory() -> dict[str, Any]:
@@ -145,7 +145,7 @@ def write_workbook(rows: list[dict[str, str]], output_path: Path) -> None:
     sheet = workbook.active
     sheet.title = "Etiketter"
     timestamp = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
-    workbook.properties.creator = "Hyllsystem"
+    workbook.properties.creator = "Lagersystem"
     workbook.properties.created = timestamp
     workbook.properties.modified = timestamp
 

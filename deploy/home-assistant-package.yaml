@@ -1,51 +1,51 @@
 # Exempelpaket för Home Assistant
-# Lägg filen i /config/packages/Verkstad.yaml
+# Lägg filen i /config/packages/lagersystem.yaml
 # och se till att "packages: !include_dir_named packages" finns i configuration.yaml
 
 input_text:
-  Verkstad_last_query:
-    name: Verkstad senast fråga
+  lagersystem_last_query:
+    name: Lagersystem senaste fråga
     max: 255
-  Verkstad_last_answer:
-    name: Verkstad senaste svar
+  lagersystem_last_answer:
+    name: Lagersystem senaste svar
     max: 255
-  Verkstad_last_location:
-    name: Verkstad senaste plats
+  lagersystem_last_location:
+    name: Lagersystem senaste plats
     max: 255
-  Verkstad_last_box_id:
-    name: Verkstad senaste box-id
+  lagersystem_last_box_id:
+    name: Lagersystem senaste box-id
     max: 255
-  Verkstad_last_source:
-    name: Verkstad senaste svarskälla
+  lagersystem_last_source:
+    name: Lagersystem senaste svarskälla
     max: 64
-  Verkstad_last_summary:
-    name: Verkstad senaste sammanfattning
+  lagersystem_last_summary:
+    name: Lagersystem senaste sammanfattning
     max: 255
-  Verkstad_last_keywords:
-    name: Verkstad senaste nyckelord
+  lagersystem_last_keywords:
+    name: Lagersystem senaste nyckelord
     max: 255
 
 input_number:
-  Verkstad_last_match_count:
-    name: Verkstad senaste antal träffar
+  lagersystem_last_match_count:
+    name: Lagersystem senaste antal träffar
     min: 0
     max: 25
     step: 1
     mode: box
 
 rest_command:
-  Verkstad_ask:
-    url: !secret Verkstad_api_url
+  lagersystem_ask:
+    url: !secret lagersystem_api_url
     method: POST
     content_type: application/json
     headers:
-      x-api-key: !secret Verkstad_api_key
+      x-api-key: !secret lagersystem_api_key
     payload: >-
       {{ {"query": query} | to_json }}
 
 script:
-  Verkstad_fraga_verkstan:
-    alias: Verkstad - Fråga verkstan
+  lagersystem_fraga:
+    alias: Lagersystem - Fråga
     mode: restart
     fields:
       query:
@@ -64,53 +64,53 @@ script:
         then:
           - stop: Ingen fråga angavs.
 
-      - action: rest_command.Verkstad_ask
+      - action: rest_command.lagersystem_ask
         data:
           query: "{{ effective_query }}"
-        response_variable: Verkstad_response
+        response_variable: lagersystem_response
 
       - variables:
-          Verkstad_payload: >-
-            {% if Verkstad_response.content is mapping %}
-              {{ Verkstad_response.content }}
+          lagersystem_payload: >-
+            {% if lagersystem_response.content is mapping %}
+              {{ lagersystem_response.content }}
             {% else %}
-              {{ Verkstad_response.content | from_json }}
+              {{ lagersystem_response.content | from_json }}
             {% endif %}
-          Verkstad_answer: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_answer: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {{ payload.answer | default('Jag hittade inget tydligt svar.') }}
-          Verkstad_source: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_source: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {{ payload.source | default('okand') }}
-          Verkstad_match_count: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_match_count: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {{ payload.count | default(0) | int(0) }}
-          Verkstad_location: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_location: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {% if payload.matches is defined and payload.matches | count > 0 %}
               {% set match = payload.matches[0] %}
               {{ match.location.system }}, {{ match.location.shelf }}, {{ match.location.slot }}
             {% else %}
               Okänd plats
             {% endif %}
-          Verkstad_box_id: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_box_id: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {% if payload.matches is defined and payload.matches | count > 0 %}
               {% set match = payload.matches[0] %}
               {{ match.boxId }}
             {% else %}
               okand
             {% endif %}
-          Verkstad_summary: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_summary: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {% if payload.matches is defined and payload.matches | count > 0 %}
               {% set match = payload.matches[0] %}
               {{ match.summary | default('') }}
             {% else %}
               {{ '' }}
             {% endif %}
-          Verkstad_keywords: >-
-            {% set payload = Verkstad_response.content if Verkstad_response.content is mapping else (Verkstad_response.content | from_json) %}
+          lagersystem_keywords: >-
+            {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
             {% if payload.matches is defined and payload.matches | count > 0 %}
               {% set match = payload.matches[0] %}
             {% endif %}
@@ -122,99 +122,99 @@ script:
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_query
+          entity_id: input_text.lagersystem_last_query
         data:
           value: "{{ effective_query[:255] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_answer
+          entity_id: input_text.lagersystem_last_answer
         data:
-          value: "{{ Verkstad_answer[:255] }}"
+          value: "{{ lagersystem_answer[:255] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_location
+          entity_id: input_text.lagersystem_last_location
         data:
-          value: "{{ Verkstad_location[:255] }}"
+          value: "{{ lagersystem_location[:255] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_box_id
+          entity_id: input_text.lagersystem_last_box_id
         data:
-          value: "{{ Verkstad_box_id[:255] }}"
+          value: "{{ lagersystem_box_id[:255] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_source
+          entity_id: input_text.lagersystem_last_source
         data:
-          value: "{{ Verkstad_source[:64] }}"
+          value: "{{ lagersystem_source[:64] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_summary
+          entity_id: input_text.lagersystem_last_summary
         data:
-          value: "{{ Verkstad_summary[:255] }}"
+          value: "{{ lagersystem_summary[:255] }}"
 
       - action: input_text.set_value
         target:
-          entity_id: input_text.Verkstad_last_keywords
+          entity_id: input_text.lagersystem_last_keywords
         data:
-          value: "{{ Verkstad_keywords[:255] }}"
+          value: "{{ lagersystem_keywords[:255] }}"
 
       - action: input_number.set_value
         target:
-          entity_id: input_number.Verkstad_last_match_count
+          entity_id: input_number.lagersystem_last_match_count
         data:
-          value: "{{ Verkstad_match_count }}"
+          value: "{{ lagersystem_match_count }}"
 
       # Byt ut entiteterna nedan mot din egen TTS- och media player-setup.
       - action: tts.speak
         target:
-          entity_id: !secret Verkstad_tts_entity
+          entity_id: !secret lagersystem_tts_entity
         data:
-          media_player_entity_id: !secret Verkstad_media_player
-          message: "{{ Verkstad_answer }}"
+          media_player_entity_id: !secret lagersystem_media_player
+          message: "{{ lagersystem_answer }}"
 
       # Exempel på event vidare till annan automation, MQTT-bridge eller ESPHome-logik.
-      - event: Verkstad_result
+      - event: lagersystem_result
         event_data:
           query: "{{ effective_query }}"
-          answer: "{{ Verkstad_answer }}"
-          source: "{{ Verkstad_source }}"
-          match_count: "{{ Verkstad_match_count }}"
-          location: "{{ Verkstad_location }}"
-          box_id: "{{ Verkstad_box_id }}"
-          summary: "{{ Verkstad_summary }}"
-          item_keywords: "{{ Verkstad_keywords }}"
-          raw: "{{ Verkstad_payload }}"
+          answer: "{{ lagersystem_answer }}"
+          source: "{{ lagersystem_source }}"
+          match_count: "{{ lagersystem_match_count }}"
+          location: "{{ lagersystem_location }}"
+          box_id: "{{ lagersystem_box_id }}"
+          summary: "{{ lagersystem_summary }}"
+          item_keywords: "{{ lagersystem_keywords }}"
+          raw: "{{ lagersystem_payload }}"
 
 template:
   - sensor:
-      - name: Verkstad senaste svar
-        unique_id: Verkstad_latest_answer
-        state: "{{ states('input_text.Verkstad_last_answer') }}"
+      - name: Lagersystem senaste svar
+        unique_id: lagersystem_latest_answer
+        state: "{{ states('input_text.lagersystem_last_answer') }}"
 
-      - name: Verkstad senaste plats
-        unique_id: Verkstad_latest_location
-        state: "{{ states('input_text.Verkstad_last_location') }}"
+      - name: Lagersystem senaste plats
+        unique_id: lagersystem_latest_location
+        state: "{{ states('input_text.lagersystem_last_location') }}"
 
-      - name: Verkstad senaste box-id
-        unique_id: Verkstad_latest_box_id
-        state: "{{ states('input_text.Verkstad_last_box_id') }}"
+      - name: Lagersystem senaste box-id
+        unique_id: lagersystem_latest_box_id
+        state: "{{ states('input_text.lagersystem_last_box_id') }}"
 
-      - name: Verkstad senaste svarskalla
-        unique_id: Verkstad_latest_source
-        state: "{{ states('input_text.Verkstad_last_source') }}"
+      - name: Lagersystem senaste svarskälla
+        unique_id: lagersystem_latest_source
+        state: "{{ states('input_text.lagersystem_last_source') }}"
 
-      - name: Verkstad senaste sammanfattning
-        unique_id: Verkstad_latest_summary
-        state: "{{ states('input_text.Verkstad_last_summary') }}"
+      - name: Lagersystem senaste sammanfattning
+        unique_id: lagersystem_latest_summary
+        state: "{{ states('input_text.lagersystem_last_summary') }}"
 
-      - name: Verkstad senaste nyckelord
-        unique_id: Verkstad_latest_keywords
-        state: "{{ states('input_text.Verkstad_last_keywords') }}"
+      - name: Lagersystem senaste nyckelord
+        unique_id: lagersystem_latest_keywords
+        state: "{{ states('input_text.lagersystem_last_keywords') }}"
 
-      - name: Verkstad senaste antal traffar
-        unique_id: Verkstad_latest_match_count
-        state: "{{ states('input_number.Verkstad_last_match_count') | int(0) }}"
+      - name: Lagersystem senaste antal träffar
+        unique_id: lagersystem_latest_match_count
+        state: "{{ states('input_number.lagersystem_last_match_count') | int(0) }}"

@@ -1,8 +1,8 @@
-# Hyllsystem
+# Lagersystem
 
 Praktisk användning finns beskriven i [MANUAL.md](/c:/Users/eripet/Coding/Hyllsystem/MANUAL.md). README:n nedan är den tekniska översikten.
 
-Aktuell version: `v1.2.1`
+Aktuell version: `v1.3.0`
 
 En webbapp för att inventera verkstadslådor med Immich som bildlager, JSON som datalager och AI-stöd för att känna igen etiketter, innehåll och sannolik låda/plats.
 
@@ -225,8 +225,8 @@ Här kan man ändra:
 - promptar för analys
 - rensningsfraser och andra filter för AI-svar
 - ladda ner backup av lokal data
-- exportera etikettkatalogen till Excel
-- importera etikettkatalog från en exporterad `.xlsx`-fil
+- exportera katalogen till Excel
+- importera katalog från en exporterad `.xlsx`-fil
 
 Rensnings- och filterinställningarna är tänkta för att kunna trimma bort återkommande brus från olika modeller utan att behöva göra kodändringar.
 
@@ -288,7 +288,7 @@ Mer praktisk information finns i [deploy/DYMO_CUPS.md](/c:/Users/eripet/Coding/H
 
 Appen har också ett enkelt integrations-API under `app/api/public/*` för till exempel Home Assistant.
 
-Om `HYLLSYSTEM_API_KEY` är satt i miljön måste anrop skicka nyckeln som:
+Om `LAGERSYSTEM_API_KEY` är satt i miljön måste anrop skicka nyckeln som:
 
 - `x-api-key: ...`
 - eller `Authorization: Bearer ...`
@@ -491,7 +491,7 @@ npm run typecheck
 
 Nuvarande produktionsmiljö är en Ubuntu-server där appen körs från:
 
-- `/opt/hyllsystem`
+- `/opt/lagersystem`
 
 Typiskt flöde:
 
@@ -511,9 +511,9 @@ Det minskar risken för fel som:
 Exempel på servern:
 
 ```bash
-cd /opt/hyllsystem
+cd /opt/lagersystem
 chmod +x scripts/deploy_safe.sh
-sudo ./scripts/deploy_safe.sh /opt/hyllsystem hyllsystem.service
+sudo ./scripts/deploy_safe.sh /opt/lagersystem lagersystem.service
 ```
 
 Skriptet bygger först till en tillfällig katalog (`.next-deploy`) och byter sedan atomiskt över till den nya `.next`-mappen innan tjänsten startas om. Det minskar risken för tillfälliga `500`-fel medan builden pågår.
@@ -554,7 +554,7 @@ Paketet använder det publika REST-API:t och är tänkt som grund för:
 - `lib/shelf-map.ts`: grupperar lådor till platsenheter, rader och platser
 - `lib/settings.ts`: läs/skriv av appinställningar
 
-## Import och export av etikettkatalog
+## Import och export av katalog
 
 Projektet innehåller även ett importscript för etikettregister:
 
@@ -574,9 +574,9 @@ Exempel:
 python scripts/export_label_catalog.py
 ```
 
-Det skapar som standard `data/Hyllsystem - Namnetiketter-export.xlsx`, men du kan också ange egen sökväg som första argument.
+Det skapar som standard `data/Lagersystem - Katalog-export.xlsx`, men du kan också ange egen sökväg som första argument.
 
-Från och med `v1.2.0` finns exporten också direkt i appen under `Inställningar` i samma avsnitt som backup. Nedladdningar får tidsstämpel i filnamnet, till exempel `hyllsystem-etikettkatalog-2026-03-26-104924.xlsx`.
+Från och med `v1.2.0` finns exporten också direkt i appen under `Inställningar` i samma avsnitt som backup. Nedladdningar får tidsstämpel i filnamnet, till exempel `lagersystem-katalog-2026-03-26-104924.xlsx`.
 
 Från och med `v1.2.1` finns även importen direkt i appen under `Inställningar`. Den förutsätter en `.xlsx`-fil från appens egen export och uppdaterar lådor och aktuella sessioner utan att rensa bort kopplade bilder.
 

@@ -11,12 +11,12 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="hyllsystem-etikettkatalog-${timestamp}.xlsx"`
+        "Content-Disposition": `attachment; filename="lagersystem-katalog-${timestamp}.xlsx"`
       }
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte exportera etikettkatalogen." },
+      { error: error instanceof Error ? error.message : "Kunde inte exportera katalogen." },
       { status: 500 }
     );
   }

@@ -2,7 +2,7 @@
 
 Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
 
-Aktuell version: `v1.2.1`
+Aktuell version: `v1.3.0`
 
 ## Tanken med systemet
 
@@ -199,8 +199,8 @@ På sidan `Inställningar` kan du ändra:
 - promptar som styr modellen
 - rensningsfraser och andra filter som städar AI-svar
 - ladda ner backup
-- exportera etikettkatalogen till Excel
-- importera etikettkatalog från en exporterad Excel-fil
+- exportera katalogen till Excel
+- importera katalog från en exporterad Excel-fil
 
 Det här är särskilt användbart om du testar olika modeller i LM Studio.
 

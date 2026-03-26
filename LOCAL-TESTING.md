@@ -100,4 +100,4 @@ Stäng den andra processen som använder porten, eller starta om terminalen och 
 ## Rekommendation
 
 För snabb UI-testning är `.\scripts\start-local.ps1` rätt sätt att köra projektet lokalt.
-För verifiering i riktig miljö används i stället serverdeployen till `/opt/hyllsystem`.
+För verifiering i riktig miljö används i stället serverdeployen till `/opt/lagersystem`.

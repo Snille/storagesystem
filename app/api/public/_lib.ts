@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export function requirePublicApiKey(request: Request) {
-  const expectedKey = process.env.HYLLSYSTEM_API_KEY?.trim();
+  const expectedKey = process.env.LAGERSYSTEM_API_KEY?.trim();
 
   if (!expectedKey) {
     return null;

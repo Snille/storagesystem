@@ -5,25 +5,25 @@ Den här appen har ett publikt REST-API som passar bra för Home Assistant.
 ## Filer
 
 - paket: [home-assistant-package.yaml](/c:/Users/eripet/Coding/Hyllsystem/deploy/home-assistant-package.yaml)
-- systemd-tjänst för appen: [hyllsystem.service](/c:/Users/eripet/Coding/Hyllsystem/deploy/hyllsystem.service)
+- systemd-tjänst för appen: [lagersystem.service](/c:/Users/eripet/Coding/Hyllsystem/deploy/lagersystem.service)
 
 ## Förberedelser
 
-1. Sätt `HYLLSYSTEM_API_KEY` i appens `.env.local` på servern.
+1. Sätt `LAGERSYSTEM_API_KEY` i appens `.env.local` på servern.
 2. Starta om appen.
 3. Lägg följande i `secrets.yaml` i Home Assistant:
 
 ```yaml
-hyllsystem_api_url: "https://hylla.snille.net/api/public/ask"
-hyllsystem_api_key: "DIN_NYCKEL"
-hyllsystem_tts_entity: "tts.google_translate_sv"
-hyllsystem_media_player: "media_player.verkstad"
+lagersystem_api_url: "https://hylla.snille.net/api/public/ask"
+lagersystem_api_key: "DIN_NYCKEL"
+lagersystem_tts_entity: "tts.google_translate_sv"
+lagersystem_media_player: "media_player.lager"
 ```
 
 4. Lägg paketfilen i:
 
 ```text
-/config/packages/hyllsystem.yaml
+/config/packages/lagersystem.yaml
 ```
 
 5. Se till att `packages` är aktiverat i `configuration.yaml`:
@@ -39,15 +39,15 @@ homeassistant:
 
 Paketet lägger till:
 
-- `script.hyllsystem_fraga_verkstan`
-- `input_text.hyllsystem_last_query`
-- `input_text.hyllsystem_last_answer`
-- `input_text.hyllsystem_last_location`
-- `input_text.hyllsystem_last_box_id`
-- `input_text.hyllsystem_last_source`
-- `input_text.hyllsystem_last_summary`
-- `input_text.hyllsystem_last_keywords`
-- `input_number.hyllsystem_last_match_count`
+- `script.lagersystem_fraga`
+- `input_text.lagersystem_last_query`
+- `input_text.lagersystem_last_answer`
+- `input_text.lagersystem_last_location`
+- `input_text.lagersystem_last_box_id`
+- `input_text.lagersystem_last_source`
+- `input_text.lagersystem_last_summary`
+- `input_text.lagersystem_last_keywords`
+- `input_number.lagersystem_last_match_count`
 - templatesensorer för svar, plats, box-id, källa, sammanfattning, nyckelord och antal träffar
 
 När scriptet körs:
@@ -56,12 +56,12 @@ När scriptet körs:
 2. svaret sparas i hjälpare
 3. svaret läses upp via TTS
 4. metadata som `source`, `match_count`, `summary` och `item_keywords` sparas också
-5. ett event `hyllsystem_result` skickas i Home Assistant
+5. ett event `lagersystem_result` skickas i Home Assistant
 
 ## Exempel: kalla scriptet manuellt
 
 ```yaml
-action: script.hyllsystem_fraga_verkstan
+action: script.lagersystem_fraga
 data:
   query: "Var finns skarvdosorna?"
 ```
@@ -71,14 +71,14 @@ data:
 Låt din ESPHome-knapp exponeras i Home Assistant och skapa sedan en automation:
 
 ```yaml
-alias: Hyllsystem - Fråga från verkstadsknapp
+alias: Lagersystem - Fråga från knapp
 triggers:
   - trigger: state
-    entity_id: input_button.verkstad_fraga
+    entity_id: input_button.lagersystem_fraga
 actions:
-  - action: script.hyllsystem_fraga_verkstan
+  - action: script.lagersystem_fraga
     data:
-      query: "{{ states('input_text.verkstad_fraga_text') }}"
+      query: "{{ states('input_text.lagersystem_fraga_text') }}"
 mode: restart
 ```
 
@@ -100,14 +100,14 @@ Eventet innehåller nu även:
 - `raw`
 
 ```yaml
-alias: Hyllsystem - Skicka resultat vidare
+alias: Lagersystem - Skicka resultat vidare
 triggers:
   - trigger: event
-    event_type: hyllsystem_result
+    event_type: lagersystem_result
 actions:
   - action: mqtt.publish
     data:
-      topic: verkstad/hyllsystem/result
+      topic: lagersystem/result
       payload: >-
         {{ trigger.event.data | to_json }}
 mode: queued
@@ -118,7 +118,7 @@ mode: queued
 När du vill koppla på fysisk hårdvara skulle jag bygga vidare så här:
 
 1. knapp eller röstinput in i Home Assistant
-2. `script.hyllsystem_fraga_verkstan`
-3. event `hyllsystem_result`
+2. `script.lagersystem_fraga`
+3. event `lagersystem_result`
 4. automation som skickar plats, `box_id`, `summary` eller `item_keywords` vidare
 5. mottagare som ESPHome-display, laserpekare, servo/stegmotor eller högtalare

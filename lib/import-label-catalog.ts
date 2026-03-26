@@ -42,7 +42,7 @@ export type LabelCatalogImportSummary = {
 };
 
 export async function importLabelCatalogWorkbook(fileName: string, fileBuffer: Buffer) {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "hyllsystem-import-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "lagersystem-import-"));
   const inputPath = path.join(tempDir, fileName.replace(/[^a-zA-Z0-9._-]+/g, "_") || "label-catalog.xlsx");
 
   try {

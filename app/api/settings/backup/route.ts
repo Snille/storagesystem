@@ -115,7 +115,7 @@ async function parseBackupFromBody(request: Request): Promise<BackupPayload> {
   if (isZip) {
     const zip = await JSZip.loadAsync(buffer);
     const jsonEntry =
-      zip.file("hyllsystem-backup.json") ??
+      zip.file("lagersystem-backup.json") ??
       Object.values(zip.files).find((entry) => !entry.dir && entry.name.toLowerCase().endsWith(".json"));
 
     if (!jsonEntry) {
@@ -135,7 +135,7 @@ export async function GET() {
     const backup = buildBackupPayload(appSettings, inventoryData);
     const timestamp = buildExportTimestamp();
     const zip = new JSZip();
-    zip.file("hyllsystem-backup.json", JSON.stringify(backup, null, 2));
+    zip.file("lagersystem-backup.json", JSON.stringify(backup, null, 2));
     const archive = await zip.generateAsync({
       type: "nodebuffer",
       compression: "DEFLATE",
@@ -146,7 +146,7 @@ export async function GET() {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="hyllsystem-backup-${timestamp}.zip"`
+        "Content-Disposition": `attachment; filename="lagersystem-backup-${timestamp}.zip"`
       }
     });
   } catch (error) {

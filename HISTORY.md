@@ -1,10 +1,26 @@
 # History
 
+## v1.3.0 - 2026-03-26
+
+Namngivningsrelease som gör appen och integrationerna mer generella och konsekventa.
+
+### Namn och integrationer
+
+- Appnamn, filnamn och API-relaterade benämningar använder nu `Lagersystem` i stället för `Hyllsystem` eller `Verkstad` där det var användar- och integrationssynligt.
+- Publika API:t skyddas nu med `LAGERSYSTEM_API_KEY`.
+- Home Assistant-paket och dokumentation använder nu konsekvent `lagersystem_*` och eventet `lagersystem_result`.
+- Backup och Excel-export använder nu filnamn som börjar med `lagersystem-`.
+
+### Drift
+
+- Deployscriptets standardvärden pekar nu på `/opt/lagersystem` och `lagersystem.service`.
+- Ny servicefil för `lagersystem.service` med uppdaterad arbetskatalog.
+
 ## v1.2.1 - 2026-03-26
 
-Punktrelease som knyter ihop etikettkatalogens import och export via samma Excel-format.
+Punktrelease som knyter ihop katalogens import och export via samma Excel-format.
 
-### Import av etikettkatalog
+### Import av katalog
 
 - Ny import i `Inställningar` där du kan välja en exporterad `.xlsx`-fil direkt från datorn.
 - Importen bygger nu på appens aktuella exportformat i stället för den äldre manuella Excel-mallen.
@@ -16,7 +32,7 @@ Releasen samlar exportfunktioner, översiktsbild, lokal testning, UI-polish och 
 
 ### Export och backup
 
-- Ny Excel-export av etikettkatalogen via `scripts/export_label_catalog.py`.
+- Ny Excel-export av katalogen via `scripts/export_label_catalog.py`.
 - Ny export-endpoint i appen och knapp under `Inställningar` i samma avsnitt som backup.
 - Backup- och Excel-filer får nu tidsstämpel i filnamnet i formatet `YYYY-MM-DD-HHMMSS`.
 - Fixat Excel-exporten så att workbook-metadata inte längre ger reparationsdialog i Excel.

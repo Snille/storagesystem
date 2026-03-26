@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, summary });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte importera etikettkatalogen." },
+      { error: error instanceof Error ? error.message : "Kunde inte importera katalogen." },
       { status: 500 }
     );
   }

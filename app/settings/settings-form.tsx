@@ -220,7 +220,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch("/api/settings/import-label-catalog", {
+        const response = await fetch("/api/settings/import-catalog", {
           method: "POST",
           body: formData
         });
@@ -237,7 +237,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           };
         };
         if (!response.ok || !json.ok || !json.summary) {
-          throw new Error(json.error || "Kunde inte importera etikettkatalogen.");
+          throw new Error(json.error || "Kunde inte importera katalogen.");
         }
 
         setCatalogImportStatus(
@@ -248,7 +248,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
         }
         router.refresh();
       } catch (error) {
-        setCatalogImportStatus(error instanceof Error ? error.message : "Kunde inte importera etikettkatalogen.");
+        setCatalogImportStatus(error instanceof Error ? error.message : "Kunde inte importera katalogen.");
       }
     });
   }
@@ -339,7 +339,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             <input
               value={settings.immich.accountLabel}
               onChange={(event) => patchImmich({ accountLabel: event.target.value })}
-              placeholder="Till exempel Mimer eller Verkstad"
+              placeholder="Till exempel Mimer eller Lager"
             />
           </label>
 
@@ -567,14 +567,14 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
       <section className="panel shell">
         <div>
           <h2>Backup</h2>
-          <p>Ladda ner backup eller exportera etikettkatalogen till Excel från samma ställe.</p>
+          <p>Ladda ner backup eller exportera katalogen till Excel från samma ställe.</p>
         </div>
 
         <div className="action-row">
           <a className="button" href="/api/settings/backup">
             Ladda ner backup
           </a>
-          <a className="button" href="/api/settings/export-label-catalog">
+          <a className="button" href="/api/settings/export-catalog">
             Exportera Excel
           </a>
         </div>
@@ -595,7 +595,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             />
           </label>
           <label>
-            Importera etikettkatalog
+            Importera katalog
             <input
               ref={catalogFileRef}
               type="file"

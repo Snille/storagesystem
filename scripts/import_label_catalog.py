@@ -184,7 +184,7 @@ def merge_catalog(xlsx_path: Path) -> dict[str, int]:
                 session["isCurrent"] = False
 
         session_id = row["session_id"] or f"IMPORT-{box['boxId']}"
-        summary = row["summary"] or row["box_notes"] or f"Importerad från etikettkatalog: {row['label']}"
+        summary = row["summary"] or row["box_notes"] or f"Importerad från katalog: {row['label']}"
         session_notes = row["session_notes"] or "Importerad från Excel-export."
         item_keywords = parse_keywords(row["keywords"])
 

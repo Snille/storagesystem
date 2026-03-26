@@ -1,12 +1,12 @@
 [Unit]
-Description=Hyllsystem Next.js app
+Description=Lagersystem Next.js app
 After=network.target
 
 [Service]
 Type=simple
 User=mimer
 Group=mimer
-WorkingDirectory=/opt/hyllsystem
+WorkingDirectory=/opt/lagersystem
 Environment=NODE_ENV=production
 Environment=PORT=3000
 ExecStart=/usr/bin/npm run start -- --hostname 0.0.0.0 --port 3000

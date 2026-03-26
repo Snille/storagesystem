@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    service: "hyllsystem",
+    service: "lagersystem",
     date: new Date().toISOString()
   });
 }

@@ -84,7 +84,7 @@ export default async function Home({ searchParams }: HomeProps) {
       </section>
 
       <section className="hero">
-        <h1>Verkstadsinventarie med Immich som bildlager</h1>
+        <h1>Lagerinventarie med Immich som bildlager</h1>
         <div className="grid three">
           <div className="stat">
             <strong>{data.boxes.length}</strong>
@@ -113,7 +113,7 @@ export default async function Home({ searchParams }: HomeProps) {
               originalUrl={getAssetOriginalUrl(overviewAsset.id)}
               overlayTitle={album.albumName ? `${album.albumName} - översikt` : "Översiktsbild"}
               overlayMeta={new Date(overviewAsset.fileCreatedAt).toLocaleString("sv-SE")}
-              overlayNote="Albumomslag i Immich. Används som översiktsbild över verkstaden."
+              overlayNote="Albumomslag i Immich. Används som översiktsbild över miljön."
             />
           </div>
         </section>
