@@ -14,7 +14,7 @@ Den här appen har ett publikt REST-API som passar bra för Home Assistant.
 3. Lägg följande i `secrets.yaml` i Home Assistant:
 
 ```yaml
-lagersystem_api_url: "https://hylla.snille.net/api/public/ask"
+lagersystem_api_url: "https://lager.yourdomain.com/api/public/ask"
 lagersystem_api_key: "DIN_NYCKEL"
 lagersystem_tts_entity: "tts.google_translate_sv"
 lagersystem_media_player: "media_player.lager"
