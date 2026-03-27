@@ -1,4 +1,3 @@
-import { saveBoxSession } from "@/app/boxes/new/actions";
 import { SessionForm } from "@/app/boxes/new/session-form";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
@@ -107,7 +106,7 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
 
       <section className="panel">
         <h2>Registrera eller uppdatera</h2>
-        <form action={saveBoxSession}>
+        <form action="/api/boxes/save-session" method="post">
           <SessionForm
             defaults={{
               boxId: params.boxId ?? "",

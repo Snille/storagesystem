@@ -1,6 +1,3 @@
-"use server";
-
-import { redirect } from "next/navigation";
 import { readInventoryData, upsertBoxSession } from "@/lib/data-store";
 import { buildLocationId, normalizeLocationUnit, parseLocationId } from "@/lib/location-schema";
 import type { PhotoRole } from "@/lib/types";
@@ -162,7 +159,7 @@ function buildNewBoxRedirectUrl(params: {
   return `/boxes/new?${search.toString()}`;
 }
 
-export async function saveBoxSession(formData: FormData) {
+export async function saveBoxSessionFromFormData(formData: FormData) {
   const submittedBoxId = String(formData.get("boxId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   const currentLocationInput = String(formData.get("currentLocationId") ?? "").trim();
@@ -187,8 +184,8 @@ export async function saveBoxSession(formData: FormData) {
   });
 
   if (exactLocationConflicts.length > 0) {
-    redirect(
-      buildNewBoxRedirectUrl({
+    return {
+      redirectTo: buildNewBoxRedirectUrl({
         boxId: submittedBoxId,
         label,
         currentLocationId,
@@ -203,7 +200,7 @@ export async function saveBoxSession(formData: FormData) {
             ? `Platsen används redan av ${exactLocationConflicts[0].label} (${exactLocationConflicts[0].boxId}). Välj en annan bokstav eller redigera den befintliga lådan istället.`
             : `Platsen används redan av ${exactLocationConflicts.length} lådor. Välj en annan bokstav eller redigera en befintlig låda istället.`
       })
-    );
+    };
   }
 
   const normalizedLabel = normalizeComparableText(label);
@@ -219,8 +216,8 @@ export async function saveBoxSession(formData: FormData) {
   });
 
   if (conflictingBoxes.length > 0) {
-    redirect(
-      buildNewBoxRedirectUrl({
+    return {
+      redirectTo: buildNewBoxRedirectUrl({
         boxId: submittedBoxId,
         label,
         currentLocationId,
@@ -235,7 +232,7 @@ export async function saveBoxSession(formData: FormData) {
             ? `Det finns redan en låda med samma namn på den här platsen: ${conflictingBoxes[0].label} (${conflictingBoxes[0].boxId}). Välj en annan bokstav eller redigera den befintliga lådan istället.`
             : `Det finns redan ${conflictingBoxes.length} lådor med samma namn på den här platsen. Välj en annan bokstav eller redigera en befintlig låda istället.`
       })
-    );
+    };
   }
 
   const boxId =
@@ -283,5 +280,5 @@ export async function saveBoxSession(formData: FormData) {
     photos
   });
 
-  redirect("/");
+  return { redirectTo: "/" };
 }
