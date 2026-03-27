@@ -17,16 +17,18 @@ type InboxWorkspaceProps = {
   assets: ImmichAsset[];
   thumbnailUrls: Record<string, string>;
   originalUrls: Record<string, string>;
+  locale: string;
+  ui: Record<string, string>;
 };
 
 const INBOX_PAGE_SIZE = 48;
 
-function formatDateTime(value?: string) {
+function formatDateTime(value: string | undefined, locale: string, missingTime: string) {
   if (!value) {
-    return "Tid saknas";
+    return missingTime;
   }
 
-  return new Date(value).toLocaleString("sv-SE");
+  return new Date(value).toLocaleString(locale);
 }
 
 function renderLocationMeta(locationId: string, boxId = "") {
@@ -112,8 +114,14 @@ function getPrimaryMatchCandidate(suggestion: AnalysisSuggestion) {
 export function InboxWorkspace({
   assets,
   thumbnailUrls,
-  originalUrls
+  originalUrls,
+  locale,
+  ui
 }: InboxWorkspaceProps) {
+  const t = (key: string, fallback: string, values?: Record<string, string | number>) => {
+    const template = ui[key] ?? fallback;
+    return template.replace(/\{(\w+)\}/g, (_, token: string) => String(values?.[token] ?? `{${token}}`));
+  };
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState<string>("");
@@ -208,13 +216,13 @@ export function InboxWorkspace({
 
   async function runAnalysis() {
     if (selectedIds.length === 0) {
-      setAnalysisError("Välj minst en bild först.");
+      setAnalysisError(t("selectImageFirst", "Välj minst en bild först."));
       return;
     }
 
     setIsAnalyzing(true);
     setAnalysisStartedAt(Date.now());
-    setAnalysisStatus("Startar analys...");
+    setAnalysisStatus(t("startingAnalysis", "Startar analys..."));
     setAnalysisError("");
     setSuggestion(null);
 
@@ -229,7 +237,7 @@ export function InboxWorkspace({
 
       const startPayload = (await startResponse.json()) as { jobId?: string; error?: string };
       if (!startResponse.ok || startPayload.error || !startPayload.jobId) {
-        throw new Error(startPayload.error ?? "Analysen misslyckades.");
+        throw new Error(startPayload.error ?? t("analysisFailed", "Analysen misslyckades."));
       }
 
       const jobId = startPayload.jobId;
@@ -249,13 +257,13 @@ export function InboxWorkspace({
           | { error?: string };
 
         if (!statusResponse.ok) {
-          throw new Error("error" in statusPayload ? statusPayload.error : "Analysen misslyckades.");
+          throw new Error("error" in statusPayload ? statusPayload.error : t("analysisFailed", "Analysen misslyckades."));
         }
 
         const currentMessage =
           "message" in statusPayload && typeof statusPayload.message === "string"
             ? statusPayload.message
-            : "Analyserar...";
+            : t("analyzing", "Analyserar...");
         setAnalysisStatus(currentMessage);
 
         if ("phase" in statusPayload && statusPayload.phase === "completed" && statusPayload.result) {
@@ -264,11 +272,11 @@ export function InboxWorkspace({
         }
 
         if ("phase" in statusPayload && statusPayload.phase === "failed") {
-          throw new Error(statusPayload.error || statusPayload.message || "Analysen misslyckades.");
+          throw new Error(statusPayload.error || statusPayload.message || t("analysisFailed", "Analysen misslyckades."));
         }
       }
     } catch (error) {
-      setAnalysisError(error instanceof Error ? error.message : "Analysen misslyckades.");
+      setAnalysisError(error instanceof Error ? error.message : t("analysisFailed", "Analysen misslyckades."));
     } finally {
       setIsAnalyzing(false);
       setAnalysisStartedAt(null);
@@ -279,58 +287,55 @@ export function InboxWorkspace({
   return (
     <div className="shell">
       <section className="hero">
-        <h1>Bilder att koppla</h1>
-        <p>
-          Här visas bara nya bilder som ännu inte är kopplade till någon låda. Markera de bilder
-          som hör till samma låda och låt appen föreslå en inventeringssession.
-        </p>
+        <h1>{t("title", "Bilder att koppla")}</h1>
+        <p>{t("intro", "Här visas bara nya bilder som ännu inte är kopplade till någon låda. Markera de bilder som hör till samma låda och låt appen föreslå en inventeringssession.")}</p>
         <div className="action-row">
           <button type="button" onClick={runAnalysis} disabled={isAnalyzing}>
-            {isAnalyzing ? "Analyserar..." : "Analysera markerade bilder"}
+            {isAnalyzing ? t("analyzingButton", "Analyserar...") : t("analyzeSelection", "Analysera markerade bilder")}
           </button>
-          <span className="muted">{selectedIds.length} valda bilder</span>
+          <span className="muted">{t("selectedCount", "{count} valda bilder", { count: selectedIds.length })}</span>
         </div>
         {isAnalyzing && analysisStatus ? (
           <div className="callout">
             <strong>{analysisStatus}</strong>
             {analysisElapsedSeconds > 0 ? (
               <span className="muted" style={{ display: "block", marginTop: 6 }}>
-                {analysisElapsedSeconds} s
+                {t("secondsElapsed", "({seconds} s)", { seconds: analysisElapsedSeconds })}
               </span>
             ) : null}
           </div>
         ) : null}
         {selectedIds.length > 6 ? (
           <div className="callout" style={{ marginTop: 12 }}>
-            Många bilder markerade. För bäst träffsäkerhet och snabbare svar rekommenderas oftast 2 till 6 bilder per analys.
+            {t("manySelectedWarning", "Många bilder markerade. För bäst träffsäkerhet och snabbare svar rekommenderas oftast 2 till 6 bilder per analys.")}
           </div>
         ) : null}
         {analysisError ? <div className="callout">{analysisError}</div> : null}
         {suggestion ? (
           <div className="panel" style={{ marginTop: 18 }}>
-            <h2>AI-förslag</h2>
+            <h2>{t("aiSuggestion", "AI-förslag")}</h2>
             <div className="meta" style={{ marginBottom: 12 }}>
-              <span>Källa: {suggestion.source}</span>
-              <span>Tillit: {suggestion.confidence}</span>
-              <span>Session: {suggestion.sessionId}</span>
+              <span>{t("source", "Källa: {value}", { value: suggestion.source })}</span>
+              <span>{t("confidence", "Tillit: {value}", { value: suggestion.confidence })}</span>
+              <span>{t("session", "Session: {value}", { value: suggestion.sessionId })}</span>
             </div>
             <div className="grid two">
               <div className="card">
                 <div className="meta card-meta" style={{ marginBottom: 8 }}>
-                  <h3 style={{ margin: 0 }}>Förslag</h3>
-                  {primaryMatch ? <span className="meta-count">{primaryMatch.score} p</span> : null}
+                  <h3 style={{ margin: 0 }}>{t("suggestion", "Förslag")}</h3>
+                  {primaryMatch ? <span className="meta-count">{t("points", "{count} p", { count: primaryMatch.score })}</span> : null}
                 </div>
                 <p>
-                  <strong>Lådnamn:</strong> {suggestion.suggestedLabel || "Ej identifierat ännu"}
+                  <strong>{t("boxName", "Lådnamn:")}</strong> {suggestion.suggestedLabel || t("unidentified", "Ej identifierat ännu")}
                 </p>
                 <p>
-                  <strong>Plats:</strong>
+                  <strong>{t("location", "Plats:")}</strong>
                   {suggestion.suggestedLocationId ? (
                     <span className="meta card-meta inline-meta" style={{ marginLeft: 10 }}>
                       {renderLocationMeta(suggestion.suggestedLocationId, suggestion.suggestedBoxId)}
                     </span>
                   ) : (
-                    " Ej identifierad ännu"
+                    ` ${t("unidentified", "Ej identifierat ännu")}`
                   )}
                 </p>
                 <p>{suggestion.suggestedSummary}</p>
@@ -344,13 +349,13 @@ export function InboxWorkspace({
                 {quickAttachHref ? (
                   <p style={{ marginTop: 18 }}>
                     <a className="button secondary" href={quickAttachHref}>
-                      Koppla låda
+                      {t("attachBox", "Koppla låda")}
                     </a>
                   </p>
                 ) : null}
               </div>
               <div className="card">
-                <h3>Bildroller och ordning</h3>
+                <h3>{t("imageRolesAndOrder", "Bildroller och ordning")}</h3>
                 <div className="card-list">
                   {suggestion.suggestedPhotos.map((photo, index) => (
                     <article className="card" key={photo.immichAssetId}>
@@ -361,16 +366,16 @@ export function InboxWorkspace({
                           onClick={() =>
                             openLightbox({
                               id: photo.immichAssetId,
-                              alt: `Bild ${index + 1}`,
+                              alt: t("imageNumber", "Bild {count}", { count: index + 1 }),
                               originalUrl: originalUrls[photo.immichAssetId],
-                              title: `Bild ${index + 1}`,
-                              meta: formatDateTime(photo.capturedAt)
+                              title: t("imageNumber", "Bild {count}", { count: index + 1 }),
+                              meta: formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))
                             })
                           }
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            alt={`Bild ${index + 1}`}
+                            alt={t("imageNumber", "Bild {count}", { count: index + 1 })}
                             className="analysis-thumb"
                             src={thumbnailUrls[photo.immichAssetId]}
                             loading="lazy"
@@ -379,11 +384,11 @@ export function InboxWorkspace({
                         </button>
                         <div className="shell" style={{ gap: 12, minWidth: 0 }}>
                           <div className="meta">
-                            <span>Bild {index + 1}</span>
-                            <span>{formatDateTime(photo.capturedAt)}</span>
+                            <span>{t("imageNumber", "Bild {count}", { count: index + 1 })}</span>
+                            <span>{formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}</span>
                           </div>
                           <label className="inline-field">
-                            Roll
+                            {t("role", "Roll")}
                             <select
                               value={photo.photoRole}
                               onChange={(event) => updatePhotoRole(photo.immichAssetId, event.target.value as PhotoRole)}
@@ -397,10 +402,10 @@ export function InboxWorkspace({
                           </label>
                           <div className="action-row">
                             <button type="button" className="button secondary" onClick={() => movePhoto(photo.immichAssetId, -1)}>
-                              Flytta upp
+                              {t("moveUp", "Flytta upp")}
                             </button>
                             <button type="button" className="button secondary" onClick={() => movePhoto(photo.immichAssetId, 1)}>
-                              Flytta ner
+                              {t("moveDown", "Flytta ner")}
                             </button>
                           </div>
                         </div>
@@ -412,16 +417,16 @@ export function InboxWorkspace({
             </div>
             {suggestion.matchCandidates.length > 0 ? (
               <div className="card" style={{ marginTop: 16 }}>
-                <h3>Sannolika befintliga lådor</h3>
+                <h3>{t("likelyBoxes", "Sannolika befintliga lådor")}</h3>
                 <div className="card-list">
                   {suggestion.matchCandidates.map((candidate) => (
                     <article className="card" key={candidate.boxId}>
                       <div className="meta card-meta">
                         {renderLocationMeta(candidate.currentLocationId, candidate.boxId)}
-                        <span className="meta-count">{candidate.score} p</span>
+                        <span className="meta-count">{t("points", "{count} p", { count: candidate.score })}</span>
                       </div>
                       <strong>{candidate.label}</strong>
-                      <p>{candidate.summary || "Ingen aktuell sammanfattning ännu."}</p>
+                      <p>{candidate.summary || t("currentSummaryMissing", "Ingen aktuell sammanfattning ännu.")}</p>
                       <div className="pill-row">
                         {candidate.reasons.map((reason) => (
                           <span className="pill" key={`${candidate.boxId}-${reason}`}>
@@ -431,7 +436,7 @@ export function InboxWorkspace({
                       </div>
                       <p style={{ marginTop: 12 }}>
                         <a className="button secondary" href={buildCandidateDraftHref(suggestion, candidate)}>
-                          Koppla till befintlig låda
+                          {t("attachExistingBox", "Koppla till befintlig låda")}
                         </a>
                       </p>
                     </article>
@@ -442,7 +447,7 @@ export function InboxWorkspace({
             {suggestion.suggestedNotes ? <p className="muted">{suggestion.suggestedNotes}</p> : null}
             <p style={{ marginTop: 14 }}>
               <a className="button" href={buildDraftHref(suggestion)}>
-                Skapa session från förslaget
+                {t("createSessionFromSuggestion", "Skapa session från förslaget")}
               </a>
             </p>
           </div>
@@ -450,12 +455,15 @@ export function InboxWorkspace({
       </section>
 
       <section className="panel">
-        <h2>Senaste bilderna i albumet</h2>
+        <h2>{t("latestAlbumImages", "Senaste bilderna i albumet")}</h2>
         {assets.length > 0 ? (
           <>
             <div className="meta" style={{ marginBottom: 14 }}>
               <span>
-                Visar {Math.min(visibleAssets.length, reversedAssets.length)} av {reversedAssets.length} bilder
+                {t("showingOfCount", "Visar {visible} av {total} bilder", {
+                  visible: Math.min(visibleAssets.length, reversedAssets.length),
+                  total: reversedAssets.length
+                })}
               </span>
             </div>
             <div className="photo-grid">
@@ -473,7 +481,7 @@ export function InboxWorkspace({
                   onClick={() => toggleAsset(asset.id)}
                   aria-pressed={selected}
                 >
-                  {selected ? "Vald" : "Välj"}
+                  {selected ? t("selected", "Vald") : t("select", "Välj")}
                 </button>
                 <button
                   type="button"
@@ -483,11 +491,11 @@ export function InboxWorkspace({
                       id: asset.id,
                       alt: asset.originalFileName,
                       originalUrl: originalUrls[asset.id],
-                      title: "Bild",
-                      meta: new Date(asset.fileCreatedAt).toLocaleString("sv-SE")
+                      title: t("image", "Bild"),
+                      meta: new Date(asset.fileCreatedAt).toLocaleString(locale)
                     })
                   }
-                  aria-label={`Visa större bild: ${asset.originalFileName}`}
+                  aria-label={t("openLargeImage", "Visa större bild: {name}", { name: asset.originalFileName })}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -499,7 +507,7 @@ export function InboxWorkspace({
                 </button>
                 <div className="body">
                   <div className="meta">
-                    <span>{new Date(asset.fileCreatedAt).toLocaleString("sv-SE")}</span>
+                    <span>{new Date(asset.fileCreatedAt).toLocaleString(locale)}</span>
                   </div>
                 </div>
               </article>
@@ -513,13 +521,13 @@ export function InboxWorkspace({
                   className="button secondary"
                   onClick={() => setVisibleCount((current) => current + INBOX_PAGE_SIZE)}
                 >
-                  Visa fler bilder
+                  {t("showMoreImages", "Visa fler bilder")}
                 </button>
               </div>
             ) : null}
           </>
         ) : (
-          <div className="empty">Inboxen är tom just nu. Alla bilder i albumet är redan kopplade eller så väntar vi på nästa import från mobilen.</div>
+          <div className="empty">{t("empty", "Inboxen är tom just nu. Alla bilder i albumet är redan kopplade eller så väntar vi på nästa import från mobilen.")}</div>
         )}
       </section>
 
@@ -530,7 +538,7 @@ export function InboxWorkspace({
               type="button"
               className="lightbox-close"
               onClick={() => setActivePhoto(null)}
-              aria-label="Stäng bildvisning"
+              aria-label={t("closeImageView", "Stäng bildvisning")}
             >
               X
             </button>

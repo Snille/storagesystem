@@ -17,17 +17,23 @@ type PhotoLightboxProps = {
   boxLabel: string;
   photos: LightboxPhoto[];
   gridClassName?: string;
+  locale: string;
+  ui: Record<string, string>;
 };
 
-function formatDateTime(value?: string) {
+function formatDateTime(value: string | undefined, locale: string, missingTime: string) {
   if (!value) {
-    return "Tid saknas";
+    return missingTime;
   }
 
-  return new Date(value).toLocaleString("sv-SE");
+  return new Date(value).toLocaleString(locale);
 }
 
-export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightboxProps) {
+export function PhotoLightbox({ boxLabel, photos, gridClassName, locale, ui }: PhotoLightboxProps) {
+  const t = (key: string, fallback: string, values?: Record<string, string | number>) => {
+    const template = ui[key] ?? fallback;
+    return template.replace(/\{(\w+)\}/g, (_, token: string) => String(values?.[token] ?? `{${token}}`));
+  };
   const [photoItems, setPhotoItems] = useState<LightboxPhoto[]>(photos);
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
   const [photoNotes, setPhotoNotes] = useState<Record<string, string>>(
@@ -83,7 +89,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
   async function analyzePhoto(photoId: string, assetId: string) {
     setAnalyzingPhotoId(photoId);
     setPhotoErrors((current) => ({ ...current, [photoId]: "" }));
-    setPhotoStatuses((current) => ({ ...current, [photoId]: "Startar bildanalys..." }));
+    setPhotoStatuses((current) => ({ ...current, [photoId]: t("startPhotoAnalysis", "Startar bildanalys...") }));
     setPhotoStatusStartedAt((current) => ({ ...current, [photoId]: Date.now() }));
 
     try {
@@ -97,7 +103,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
 
       const startPayload = (await startResponse.json()) as { jobId?: string; error?: string };
       if (!startResponse.ok || startPayload.error || !startPayload.jobId) {
-        throw new Error(startPayload.error ?? "Bildanalysen misslyckades.");
+        throw new Error(startPayload.error ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
       }
 
       while (true) {
@@ -113,12 +119,12 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
         };
 
         if (!statusResponse.ok) {
-          throw new Error(statusPayload.error ?? "Bildanalysen misslyckades.");
+          throw new Error(statusPayload.error ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
         }
 
         setPhotoStatuses((current) => ({
           ...current,
-          [photoId]: statusPayload.message ?? "Analyserar bild..."
+          [photoId]: statusPayload.message ?? t("analyzingPhoto", "Analyserar bild...")
         }));
 
         if (statusPayload.phase === "completed") {
@@ -135,14 +141,14 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
         }
 
         if (statusPayload.phase === "failed") {
-          throw new Error(statusPayload.error ?? statusPayload.message ?? "Bildanalysen misslyckades.");
+          throw new Error(statusPayload.error ?? statusPayload.message ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
         }
       }
 
     } catch (error) {
       setPhotoErrors((current) => ({
         ...current,
-        [photoId]: error instanceof Error ? error.message : "Bildanalysen misslyckades."
+        [photoId]: error instanceof Error ? error.message : t("photoAnalysisFailed", "Bildanalysen misslyckades.")
       }));
     } finally {
       setAnalyzingPhotoId(null);
@@ -169,7 +175,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
 
       const payload = (await response.json()) as { error?: string };
       if (!response.ok || payload.error) {
-        throw new Error(payload.error ?? "Kunde inte rensa bildanalysen.");
+        throw new Error(payload.error ?? t("clearAnalysisFailed", "Kunde inte rensa bildanalysen."));
       }
 
       setPhotoNotes((current) => ({
@@ -201,7 +207,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
 
       const payload = (await response.json()) as { ok?: boolean; notes?: string; error?: string };
       if (!response.ok || payload.error || !payload.ok) {
-        throw new Error(payload.error ?? "Kunde inte spara analystexten.");
+        throw new Error(payload.error ?? t("saveTextFailed", "Kunde inte spara analystexten."));
       }
 
       setPhotoNotes((current) => ({
@@ -211,7 +217,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
     } catch (error) {
       setPhotoErrors((current) => ({
         ...current,
-        [photoId]: error instanceof Error ? error.message : "Kunde inte spara analystexten."
+        [photoId]: error instanceof Error ? error.message : t("saveTextFailed", "Kunde inte spara analystexten.")
       }));
     } finally {
       setSavingPhotoId(null);
@@ -239,7 +245,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
 
       const payload = (await response.json()) as { error?: string };
       if (!response.ok || payload.error) {
-        throw new Error(payload.error ?? "Kunde inte släppa bilden.");
+        throw new Error(payload.error ?? t("releaseImageFailed", "Kunde inte släppa bilden."));
       }
 
       setPhotoItems((current) => current.filter((photo) => photo.photoId !== photoId));
@@ -275,7 +281,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
               type="button"
               className="photo-open"
               onClick={() => setActivePhotoId(photo.photoId)}
-              aria-label={`Visa större bild för ${boxLabel} ${presentPhotoRole(photo.photoRole)}`}
+              aria-label={`${t("closeImageView", "Visa större bild")}: ${boxLabel} ${presentPhotoRole(photo.photoRole)}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -287,9 +293,9 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
             </button>
             <div className="body">
               <strong>{presentPhotoRole(photo.photoRole)}</strong>
-              <p className="muted" style={{ marginTop: 6 }}>{formatDateTime(photo.capturedAt)}</p>
+              <p className="muted" style={{ marginTop: 6 }}>{formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}</p>
               <label className="inline-field">
-                Analystext
+                {t("analysisText", "Analystext")}
                 <textarea
                   value={draftNotes[photo.photoId] ?? ""}
                   onChange={(event) =>
@@ -303,7 +309,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
               {photoStatuses[photo.photoId] ? (
                 <p className="muted">
                   {photoStatuses[photo.photoId]}
-                  {photoElapsedSeconds[photo.photoId] ? ` (${photoElapsedSeconds[photo.photoId]} s)` : ""}
+                  {photoElapsedSeconds[photo.photoId] ? ` ${t("secondsElapsed", "({seconds} s)", { seconds: photoElapsedSeconds[photo.photoId] })}` : ""}
                 </p>
               ) : null}
               {photoErrors[photo.photoId] ? <p className="callout">{photoErrors[photo.photoId]}</p> : null}
@@ -314,7 +320,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                   onClick={() => analyzePhoto(photo.photoId, photo.immichAssetId)}
                   disabled={analyzingPhotoId === photo.photoId}
                 >
-                  {analyzingPhotoId === photo.photoId ? "Analyserar..." : "Analysera bild"}
+                  {analyzingPhotoId === photo.photoId ? t("analyzingImage", "Analyserar...") : t("analyzeImage", "Analysera bild")}
                 </button>
                 <button
                   type="button"
@@ -322,7 +328,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                   onClick={() => savePhotoNotes(photo.photoId)}
                   disabled={savingPhotoId === photo.photoId}
                 >
-                  {savingPhotoId === photo.photoId ? "Sparar..." : "Spara text"}
+                  {savingPhotoId === photo.photoId ? t("saving", "Sparar...") : t("saveText", "Spara text")}
                 </button>
                 <button
                   type="button"
@@ -331,7 +337,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                   disabled={savingPhotoId === photo.photoId}
                   style={{ marginLeft: "auto" }}
                 >
-                  Återställ
+                  {t("reset", "Återställ")}
                 </button>
               </div>
               {photoNotes[photo.photoId] ? (
@@ -342,7 +348,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                     onClick={() => clearPhotoAnalysis(photo.photoId)}
                     disabled={analyzingPhotoId === photo.photoId}
                   >
-                    Rensa analys
+                    {t("clearAnalysis", "Rensa analys")}
                   </button>
                 </p>
               ) : null}
@@ -353,7 +359,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                   onClick={() => releasePhoto(photo.photoId)}
                   disabled={analyzingPhotoId === photo.photoId}
                 >
-                  Släpp bild
+                  {t("releaseImage", "Släpp bild")}
                 </button>
               </p>
             </div>
@@ -368,17 +374,17 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
               type="button"
               className="lightbox-close"
               onClick={() => setActivePhotoId(null)}
-              aria-label="Stäng bildvisning"
+              aria-label={t("closeImageView", "Stäng bildvisning")}
             >
               X
             </button>
             <div className="lightbox-meta">
               <strong>{boxLabel}</strong>
               <span>{presentPhotoRole(activePhoto.photoRole)}</span>
-              <span>{formatDateTime(activePhoto.capturedAt)}</span>
+              <span>{formatDateTime(activePhoto.capturedAt, locale, t("missingTime", "Tid saknas"))}</span>
             </div>
             <label className="inline-field">
-              Analystext
+              {t("analysisText", "Analystext")}
               <textarea
                 value={draftNotes[activePhoto.photoId] ?? ""}
                 onChange={(event) =>
@@ -392,7 +398,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
             {photoStatuses[activePhoto.photoId] ? (
               <p className="muted">
                 {photoStatuses[activePhoto.photoId]}
-                {photoElapsedSeconds[activePhoto.photoId] ? ` (${photoElapsedSeconds[activePhoto.photoId]} s)` : ""}
+                {photoElapsedSeconds[activePhoto.photoId] ? ` ${t("secondsElapsed", "({seconds} s)", { seconds: photoElapsedSeconds[activePhoto.photoId] })}` : ""}
               </p>
             ) : null}
             {photoErrors[activePhoto.photoId] ? <p className="callout">{photoErrors[activePhoto.photoId]}</p> : null}
@@ -403,7 +409,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                 onClick={() => analyzePhoto(activePhoto.photoId, activePhoto.immichAssetId)}
                 disabled={analyzingPhotoId === activePhoto.photoId}
               >
-                {analyzingPhotoId === activePhoto.photoId ? "Analyserar..." : "Analysera bild"}
+                {analyzingPhotoId === activePhoto.photoId ? t("analyzingImage", "Analyserar...") : t("analyzeImage", "Analysera bild")}
               </button>
               <button
                 type="button"
@@ -411,7 +417,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                 onClick={() => savePhotoNotes(activePhoto.photoId)}
                 disabled={savingPhotoId === activePhoto.photoId}
               >
-                {savingPhotoId === activePhoto.photoId ? "Sparar..." : "Spara text"}
+                {savingPhotoId === activePhoto.photoId ? t("saving", "Sparar...") : t("saveText", "Spara text")}
               </button>
               <button
                 type="button"
@@ -420,7 +426,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                 disabled={savingPhotoId === activePhoto.photoId}
                 style={{ marginLeft: "auto" }}
               >
-                Återställ
+                {t("reset", "Återställ")}
               </button>
             </div>
             {photoNotes[activePhoto.photoId] ? (
@@ -431,7 +437,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                   onClick={() => clearPhotoAnalysis(activePhoto.photoId)}
                   disabled={analyzingPhotoId === activePhoto.photoId}
                 >
-                  Rensa analys
+                  {t("clearAnalysis", "Rensa analys")}
                 </button>
               </p>
             ) : null}
@@ -442,7 +448,7 @@ export function PhotoLightbox({ boxLabel, photos, gridClassName }: PhotoLightbox
                 onClick={() => releasePhoto(activePhoto.photoId)}
                 disabled={analyzingPhotoId === activePhoto.photoId}
               >
-                Släpp bild
+                {t("releaseImage", "Släpp bild")}
               </button>
             </p>
             <div className="lightbox-image-wrap">

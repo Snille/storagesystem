@@ -43,6 +43,8 @@ type SessionFormProps = {
     label: string;
     currentLocationId: string;
   }>;
+  locale: string;
+  ui: Record<string, string>;
 };
 
 function normalizeComparableText(value: string) {
@@ -56,12 +58,12 @@ function normalizeComparableText(value: string) {
 
 const roleOptions: PhotoRole[] = ["label", "location", "inside", "spread", "detail"];
 
-function formatDateTime(value?: string) {
+function formatDateTime(value: string | undefined, locale: string, missingTime: string) {
   if (!value) {
-    return "Tid saknas";
+    return missingTime;
   }
 
-  return new Date(value).toLocaleString("sv-SE");
+  return new Date(value).toLocaleString(locale);
 }
 
 function formatLocationDisplay(locationId: string, boxId = "") {
@@ -69,7 +71,11 @@ function formatLocationDisplay(locationId: string, boxId = "") {
   return [location.system, location.shelf, location.slot].filter(Boolean).join(" ");
 }
 
-export function SessionForm({ defaults, initialPhotos, availablePhotos, existingBoxes }: SessionFormProps) {
+export function SessionForm({ defaults, initialPhotos, availablePhotos, existingBoxes, locale, ui }: SessionFormProps) {
+  const t = (key: string, fallback: string, values?: Record<string, string | number>) => {
+    const template = ui[key] ?? fallback;
+    return template.replace(/\{(\w+)\}/g, (_, token: string) => String(values?.[token] ?? `{${token}}`));
+  };
   const [photos, setPhotos] = useState<PhotoDraft[]>(initialPhotos);
   const [boxId, setBoxId] = useState(defaults.boxId);
   const [sessionId, setSessionId] = useState(defaults.sessionId);
@@ -190,8 +196,8 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
   const slotOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
   const variantOptions = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
   const benchZones: Array<{ value: BenchZone; label: string }> = [
-    { value: "TOP", label: "Ovanpå" },
-    { value: "UNDER", label: "Under" }
+    { value: "TOP", label: t("benchTop", "Ovanpå") },
+    { value: "UNDER", label: t("benchUnder", "Under") }
   ];
   const exactLocationConflicts = useMemo(() => {
     if (!currentLocationId) {
@@ -306,7 +312,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
   async function analyzePhoto(assetId: string) {
     setAnalyzingPhotoId(assetId);
     setPhotoErrors((current) => ({ ...current, [assetId]: "" }));
-    setPhotoStatuses((current) => ({ ...current, [assetId]: "Startar bildanalys..." }));
+    setPhotoStatuses((current) => ({ ...current, [assetId]: t("startPhotoAnalysis", "Startar bildanalys...") }));
     setPhotoStatusStartedAt((current) => ({ ...current, [assetId]: Date.now() }));
 
     try {
@@ -320,7 +326,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
 
       const startPayload = (await startResponse.json()) as { jobId?: string; error?: string };
       if (!startResponse.ok || startPayload.error || !startPayload.jobId) {
-        throw new Error(startPayload.error ?? "Bildanalysen misslyckades.");
+        throw new Error(startPayload.error ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
       }
 
       while (true) {
@@ -336,12 +342,12 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
         };
 
         if (!statusResponse.ok) {
-          throw new Error(statusPayload.error ?? "Bildanalysen misslyckades.");
+          throw new Error(statusPayload.error ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
         }
 
         setPhotoStatuses((current) => ({
           ...current,
-          [assetId]: statusPayload.message ?? "Analyserar bild..."
+          [assetId]: statusPayload.message ?? t("analyzingPhoto", "Analyserar bild...")
         }));
 
         if (statusPayload.phase === "completed") {
@@ -358,13 +364,13 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
         }
 
         if (statusPayload.phase === "failed") {
-          throw new Error(statusPayload.error ?? statusPayload.message ?? "Bildanalysen misslyckades.");
+          throw new Error(statusPayload.error ?? statusPayload.message ?? t("photoAnalysisFailed", "Bildanalysen misslyckades."));
         }
       }
     } catch (error) {
       setPhotoErrors((current) => ({
         ...current,
-        [assetId]: error instanceof Error ? error.message : "Bildanalysen misslyckades."
+        [assetId]: error instanceof Error ? error.message : t("photoAnalysisFailed", "Bildanalysen misslyckades.")
       }));
     } finally {
       setAnalyzingPhotoId(null);
@@ -403,7 +409,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
       <input type="hidden" name="currentLocationId" value={currentLocationId} />
       <input type="hidden" name="photoPayload" value={photoPayload} />
       <label>
-        Aktuell plats
+        {t("locationLabel", "Aktuell plats")}
         {isExistingBox && !isEditingLocation ? (
           <>
             <div className="card" style={{ padding: 12 }}>
@@ -416,12 +422,12 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                   </>
                 </div>
               ) : (
-                <span className="muted">Ingen plats vald ännu.</span>
+                <span className="muted">{t("noLocationSelected", "Ingen plats vald ännu.")}</span>
               )}
             </div>
             <div className="action-row" style={{ marginTop: 10 }}>
               <button type="button" className="button secondary" onClick={() => setIsEditingLocation(true)}>
-                Ändra plats
+                {t("changeLocation", "Ändra plats")}
               </button>
             </div>
           </>
@@ -429,7 +435,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
           <>
             <div className="grid three">
               <label>
-                Platskategori
+                {t("locationCategory", "Platskategori")}
                 <select
                   value={locationKind}
                   onChange={(event) => {
@@ -439,16 +445,16 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                   }}
                   required
                 >
-                  <option value="ivar">Ivar</option>
-                  <option value="bench">Bänk</option>
-                  <option value="cabinet">Skåp</option>
+                  <option value="ivar">{t("ivar", "Ivar")}</option>
+                  <option value="bench">{t("bench", "Bänk")}</option>
+                  <option value="cabinet">{t("cabinet", "Skåp")}</option>
                 </select>
               </label>
               <label>
-                {locationKind === "ivar" ? "Ivar" : locationKind === "bench" ? "Bänk" : "Skåp"}
+                {locationKind === "ivar" ? t("ivar", "Ivar") : locationKind === "bench" ? t("bench", "Bänk") : t("cabinet", "Skåp")}
                 {locationKind === "ivar" ? (
                   <select value={locationUnit} onChange={(event) => setLocationUnit(event.target.value)} required>
-                    <option value="">Välj Ivar</option>
+                    <option value="">{t("selectIvar", "Välj Ivar")}</option>
                     {knownSystems.map((system) => (
                       <option key={system} value={system}>
                         {system}
@@ -465,7 +471,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                 )}
               </label>
               <label>
-                {locationKind === "bench" ? "Yta" : "Hylla"}
+                {locationKind === "bench" ? t("surface", "Yta") : t("shelf", "Hylla")}
                 {locationKind === "bench" ? (
                   <select value={locationRow} onChange={(event) => setLocationRow(event.target.value)} required>
                     {benchZones.map((zone) => (
@@ -480,7 +486,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                     onChange={(event) => setLocationRow(`H${event.target.value}`)}
                     required
                   >
-                    <option value="">Välj hylla</option>
+                    <option value="">{t("selectShelf", "Välj hylla")}</option>
                     {shelfOptions.map((shelf) => (
                       <option key={shelf} value={shelf}>
                         {shelf}
@@ -492,9 +498,9 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
             </div>
             <div className="grid three" style={{ marginTop: 10 }}>
               <label>
-                Plats
+                {t("place", "Plats")}
                 <select value={locationSlot} onChange={(event) => setLocationSlot(event.target.value)} required>
-                  <option value="">Välj plats</option>
+                  <option value="">{t("selectSlot", "Välj plats")}</option>
                   {slotOptions.map((slot) => (
                     <option key={slot} value={slot}>
                       {slot}
@@ -503,9 +509,9 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                 </select>
               </label>
               <label>
-                Bokstav
+                {t("letter", "Bokstav")}
                 <select value={locationVariant} onChange={(event) => setLocationVariant(event.target.value)}>
-                  <option value="">Ingen</option>
+                  <option value="">{t("noLetter", "Ingen")}</option>
                   {variantOptions.map((variant) => (
                     <option key={variant} value={variant}>
                       {variant}
@@ -519,7 +525,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
         {isExistingBox && isEditingLocation ? (
           <div className="action-row" style={{ marginTop: 10 }}>
             <button type="button" className="button secondary" onClick={() => setIsEditingLocation(false)}>
-              Klar med plats
+              {t("doneWithLocation", "Klar med plats")}
             </button>
             <button
               type="button"
@@ -535,23 +541,28 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                 setIsEditingLocation(false);
               }}
             >
-              Avbryt
+              {t("cancel", "Avbryt")}
             </button>
           </div>
         ) : null}
         {exactLocationConflicts.length > 0 ? (
           <div className="callout" style={{ marginTop: 10 }}>
             {exactLocationConflicts.length === 1
-              ? `Varning: platsen används redan av ${exactLocationConflicts[0].label} (${exactLocationConflicts[0].boxId}). Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.`
-              : `Varning: platsen används redan av ${exactLocationConflicts.length} lådor. Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.`}
+              ? t("exactConflictOne", "Varning: platsen används redan av {label} ({boxId}). Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.", {
+                  label: exactLocationConflicts[0].label,
+                  boxId: exactLocationConflicts[0].boxId
+                })
+              : t("exactConflictMany", "Varning: platsen används redan av {count} lådor. Om du sparar som ny låda måste du välja en annan bokstav eller en annan plats.", {
+                  count: exactLocationConflicts.length
+                })}
           </div>
         ) : null}
       </label>
       <label>
-        Etikett / lådnamn
+        {t("labelName", "Etikett / lådnamn")}
         <input
           name="label"
-          placeholder="Adaptrar"
+          placeholder={t("labelPlaceholder", "Adaptrar")}
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           required
@@ -559,29 +570,29 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
       </label>
       <input type="hidden" name="createdAt" value={defaults.createdAt} />
       <label>
-        Sammanfattning
+        {t("summary", "Sammanfattning")}
         <textarea
           name="summary"
-          placeholder="Kort beskrivning av vad lådan innehåller just nu."
+          placeholder={t("summaryPlaceholder", "Kort beskrivning av vad lådan innehåller just nu.")}
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           required
         />
       </label>
       <label>
-        Sökord
+        {t("keywords", "Sökord")}
         <textarea
           name="itemKeywords"
-          placeholder="adaptrar, usb, ljud, rca, bnc"
+          placeholder={t("keywordsPlaceholder", "adaptrar, usb, ljud, rca, bnc")}
           value={itemKeywords}
           onChange={(event) => setItemKeywords(event.target.value)}
         />
       </label>
       <label>
-        Noteringar
+        {t("notes", "Noteringar")}
         <textarea
           name="notes"
-          placeholder="Valfria noteringar om lådan eller inventeringen."
+          placeholder={t("notesPlaceholder", "Valfria noteringar om lådan eller inventeringen.")}
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
         />
@@ -589,40 +600,41 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
       {duplicateBoxes.length > 0 || hasDuplicateWarning ? (
         <div className="callout">
           {defaults.duplicateWarning ||
-            `Det finns redan ${duplicateBoxes.length === 1 ? "en låda" : "lådor"} med samma namn på den här platsen.`}{" "}
-          Välj en annan bokstav eller redigera den befintliga lådan istället.
+            (duplicateBoxes.length === 1
+              ? t("duplicateOne", "Det finns redan en låda med samma namn på den här platsen. Välj en annan bokstav eller redigera den befintliga lådan istället.")
+              : t("duplicateMany", "Det finns redan lådor med samma namn på den här platsen. Välj en annan bokstav eller redigera den befintliga lådan istället."))}
         </div>
       ) : null}
       <div>
-        <button type="submit">Spara session</button>
+        <button type="submit">{t("saveSession", "Spara session")}</button>
       </div>
 
       <input type="hidden" name="photoRows" value={photoRows} />
 
       <section className="panel" style={{ padding: 18 }}>
-        <h3>Immich-bilder</h3>
+        <h3>{t("imagesTitle", "Immich-bilder")}</h3>
         {photos.length > 0 ? (
           <div className="card-list">
             {photos.map((photo, index) => (
               <article className="card" key={photo.immichAssetId}>
                 <div className="analysis-photo-row session-photo-row">
                   <ImageLightboxButton
-                    alt={`Bild ${index + 1}`}
+                    alt={t("imageNumber", "Bild {count}", { count: index + 1 })}
                     buttonClassName="analysis-image-button session-photo-button"
                     imageClassName="analysis-thumb session-photo-thumb"
                     thumbnailUrl={photo.thumbnailUrl}
                     originalUrl={photo.originalUrl}
-                    overlayTitle={`Bild ${index + 1}`}
-                    overlayMeta={formatDateTime(photo.capturedAt)}
+                    overlayTitle={t("imageNumber", "Bild {count}", { count: index + 1 })}
+                    overlayMeta={formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}
                     overlayNote={draftPhotoNotes[photo.immichAssetId] ?? ""}
                   />
                   <div className="shell session-photo-controls" style={{ gap: 12, minWidth: 0 }}>
                     <div className="meta">
-                      <span>Bild {index + 1}</span>
-                      <span>{formatDateTime(photo.capturedAt)}</span>
+                      <span>{t("imageNumber", "Bild {count}", { count: index + 1 })}</span>
+                      <span>{formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}</span>
                     </div>
                     <label className="inline-field">
-                      Roll
+                      {t("role", "Roll")}
                       <select
                         value={photo.photoRole}
                         onChange={(event) => updateRole(photo.immichAssetId, event.target.value as PhotoRole)}
@@ -636,17 +648,17 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                     </label>
                     <div className="action-row">
                       <button type="button" className="button secondary" onClick={() => movePhoto(photo.immichAssetId, -1)}>
-                        Flytta upp
+                        {t("moveUp", "Flytta upp")}
                       </button>
                       <button type="button" className="button secondary" onClick={() => movePhoto(photo.immichAssetId, 1)}>
-                        Flytta ner
+                        {t("moveDown", "Flytta ner")}
                       </button>
                       <button type="button" className="button secondary" onClick={() => removePhoto(photo.immichAssetId)}>
-                        Ta bort bild
+                        {t("removeImage", "Ta bort bild")}
                       </button>
                     </div>
                     <label className="inline-field">
-                      Analystext
+                      {t("analysisText", "Analystext")}
                       <textarea
                         value={draftPhotoNotes[photo.immichAssetId] ?? ""}
                         onChange={(event) =>
@@ -660,7 +672,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                     {photoStatuses[photo.immichAssetId] ? (
                       <p className="muted">
                         {photoStatuses[photo.immichAssetId]}
-                        {photoElapsedSeconds[photo.immichAssetId] ? ` (${photoElapsedSeconds[photo.immichAssetId]} s)` : ""}
+                        {photoElapsedSeconds[photo.immichAssetId] ? ` ${t("secondsElapsed", "({seconds} s)", { seconds: photoElapsedSeconds[photo.immichAssetId] })}` : ""}
                       </p>
                     ) : null}
                     {photoErrors[photo.immichAssetId] ? (
@@ -673,14 +685,14 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                         onClick={() => analyzePhoto(photo.immichAssetId)}
                         disabled={analyzingPhotoId === photo.immichAssetId}
                       >
-                        {analyzingPhotoId === photo.immichAssetId ? "Analyserar..." : "Analysera bild"}
+                        {analyzingPhotoId === photo.immichAssetId ? t("analyzingImage", "Analyserar...") : t("analyzeImage", "Analysera bild")}
                       </button>
                       <button
                         type="button"
                         className="button secondary"
                         onClick={() => resetPhotoNotes(photo.immichAssetId)}
                       >
-                        Återställ
+                        {t("reset", "Återställ")}
                       </button>
                       {(draftPhotoNotes[photo.immichAssetId] ?? "") ? (
                         <button
@@ -688,7 +700,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                           className="button secondary"
                           onClick={() => clearPhotoAnalysis(photo.immichAssetId)}
                         >
-                          Rensa analys
+                          {t("clearAnalysis", "Rensa analys")}
                         </button>
                       ) : null}
                     </div>
@@ -698,20 +710,20 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
             ))}
           </div>
         ) : (
-          <div className="empty">Inga bilder valda ännu.</div>
+          <div className="empty">{t("noImagesSelected", "Inga bilder valda ännu.")}</div>
         )}
 
         <div className="section-header" style={{ marginTop: 18 }}>
-          <h3>Välj bilder från albumet</h3>
+          <h3>{t("selectImagesFromAlbum", "Välj bilder från albumet")}</h3>
           <div className="action-row">
-            <span className="muted">{selectedAvailableIds.length} valda bilder</span>
+            <span className="muted">{t("selectedCount", "{count} valda bilder", { count: selectedAvailableIds.length })}</span>
             <button
               type="button"
               className="button"
               onClick={addSelectedPhotos}
               disabled={selectedAvailableIds.length === 0}
             >
-              Lägg till valda bilder
+              {t("addSelectedImages", "Lägg till valda bilder")}
             </button>
           </div>
         </div>
@@ -726,30 +738,29 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                     className={`button secondary select-toggle${selected ? " selected" : ""}`}
                     onClick={() => toggleAvailablePhoto(photo.immichAssetId)}
                   >
-                    {selected ? "Vald" : "Välj"}
+                    {selected ? t("selected", "Vald") : t("select", "Välj")}
                   </button>
                   <ImageLightboxButton
-                    alt="Tillgänglig album-bild"
+                    alt={t("availableAlbumImage", "Tillgänglig album-bild")}
                     buttonClassName="photo-open"
                     thumbnailUrl={photo.thumbnailUrl}
                     originalUrl={photo.originalUrl}
-                    overlayTitle="Album-bild"
-                    overlayMeta={formatDateTime(photo.capturedAt)}
+                    overlayTitle={t("albumImage", "Album-bild")}
+                    overlayMeta={formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}
                   />
                   <div className="body">
-                    <p className="muted">{formatDateTime(photo.capturedAt)}</p>
+                    <p className="muted">{formatDateTime(photo.capturedAt, locale, t("missingTime", "Tid saknas"))}</p>
                   </div>
                 </article>
               );
             })}
           </div>
         ) : (
-          <div className="empty">Det finns inga lediga bilder kvar att välja just nu.</div>
+          <div className="empty">{t("noAvailableImages", "Det finns inga lediga bilder kvar att välja just nu.")}</div>
         )}
         {selectedAvailableIds.length > 0 ? (
           <p className="muted" style={{ marginTop: 12 }}>
-            Markerade album-bilder följer med när du sparar sessionen, även om du inte först klickar på
-            &nbsp;`Lägg till valda bilder`.
+            {t("markedImagesFollow", "Markerade album-bilder följer med när du sparar sessionen, även om du inte först klickar på `Lägg till valda bilder`.")}
           </p>
         ) : null}
       </section>
