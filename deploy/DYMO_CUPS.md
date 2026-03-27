@@ -1,15 +1,15 @@
 # DYMO Through CUPS
 
-This project currently uses a `DYMO LabelWriter 5XL` through `CUPS` on the Ubuntu server.
+This project currently uses a `DYMO LabelWriter 5XL` through `CUPS` on a Linux server.
 
-## Current Server Configuration
+## Example Server Configuration
 
-- server: `10.0.0.33`
+- server: `your-linux-server`
 - printer: `DYMO LabelWriter 5XL`
-- printer IP: `10.0.0.76`
+- printer IP: `printer-on-your-lan`
 - protocol: `RAW socket 9100`
 - CUPS queue: `DYMO_5XL`
-- device URI: `socket://10.0.0.76:9100`
+- device URI: `socket://printer-on-your-lan:9100`
 - PPD: `/usr/share/cups/model/lw5xl.ppd`
 - filter: `/usr/lib/cups/filter/raster2dymolw_v2`
 
@@ -48,11 +48,11 @@ The `5XL` LabelWriter part was then installed correctly in CUPS.
 
 ## CUPS Queue
 
-The queue was created roughly like this:
+The queue can be created roughly like this:
 
 ```bash
 sudo lpadmin -p DYMO_5XL -E \
-  -v socket://10.0.0.76:9100 \
+  -v socket://printer-on-your-lan:9100 \
   -P /usr/share/cups/model/lw5xl.ppd
 
 sudo cupsenable DYMO_5XL
@@ -61,9 +61,9 @@ sudo cupsaccept DYMO_5XL
 
 ## Testing
 
-Communication was verified on two levels:
+Communication can be verified on two levels:
 
-- the server could reach the printer at `10.0.0.76:9100`
+- the server can reach the printer at `printer-on-your-lan:9100`
 - the CUPS log showed that a DYMO job was sent and completed
 
 Example of a simple test print:

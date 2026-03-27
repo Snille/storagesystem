@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      throw new Error("Välj en Excel-fil att importera.");
+      throw new Error("Choose an Excel file to import.");
     }
 
     if (!file.name.toLowerCase().endsWith(".xlsx")) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, summary });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte importera katalogen." },
+      { error: error instanceof Error ? error.message : "Could not import the catalog." },
       { status: 500 }
     );
   }

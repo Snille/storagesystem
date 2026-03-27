@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       } catch (error) {
         failAnalysisJob(
           job.jobId,
-          error instanceof Error ? error.message : "Analysen misslyckades."
+          error instanceof Error ? error.message : "Analysis failed."
         );
       }
     })();
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Analysen misslyckades."
+        error: error instanceof Error ? error.message : "Analysis failed."
       },
       { status: 500 }
     );
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   const jobId = searchParams.get("jobId")?.trim() ?? "";
 
   if (!jobId) {
-    return NextResponse.json({ error: "jobId måste anges." }, { status: 400 });
+    return NextResponse.json({ error: "jobId is required." }, { status: 400 });
   }
 
   const job = getAnalysisJob(jobId);

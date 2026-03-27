@@ -16,5 +16,5 @@ export function requirePublicApiKey(request: Request) {
     return null;
   }
 
-  return NextResponse.json({ error: "Ogiltig eller saknad API-nyckel." }, { status: 401 });
+  return NextResponse.json({ error: "Invalid or missing API key." }, { status: 401 });
 }

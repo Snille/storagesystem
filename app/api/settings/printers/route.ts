@@ -7,7 +7,7 @@ export async function GET() {
     return NextResponse.json({ printers });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte läsa skrivarköerna." },
+      { error: error instanceof Error ? error.message : "Could not read printer queues." },
       { status: 500 }
     );
   }

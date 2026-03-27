@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const clear = Boolean(payload.clear);
 
     if ((!photoId && clear) || (!assetId && !clear)) {
-      return NextResponse.json({ error: clear ? "photoId måste anges för rensning." : "assetId måste anges." }, { status: 400 });
+      return NextResponse.json({ error: clear ? "photoId is required when clearing notes." : "assetId is required." }, { status: 400 });
     }
 
     if (clear) {
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       } catch (error) {
         failAnalysisJob(
           job.jobId,
-          error instanceof Error ? error.message : "Bildanalysen misslyckades."
+          error instanceof Error ? error.message : "Photo analysis failed."
         );
       }
     })();
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Bildanalysen misslyckades."
+        error: error instanceof Error ? error.message : "Photo analysis failed."
       },
       { status: 500 }
     );
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   const jobId = searchParams.get("jobId")?.trim() ?? "";
 
   if (!jobId) {
-    return NextResponse.json({ error: "jobId måste anges." }, { status: 400 });
+    return NextResponse.json({ error: "jobId is required." }, { status: 400 });
   }
 
   const job = getAnalysisJob(jobId);

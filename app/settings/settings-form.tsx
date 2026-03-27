@@ -455,7 +455,7 @@ export function SettingsForm({
             <input
               value={settings.immich.baseUrl}
               onChange={(event) => patchImmich({ baseUrl: event.target.value })}
-              placeholder="https://photos.snille.net"
+              placeholder="https://photos.yourdomain.com"
             />
           </label>
         </div>
@@ -604,13 +604,13 @@ export function SettingsForm({
               onChange={(event) => patchAiSection(settings.ai.provider, { baseUrl: event.target.value })}
               placeholder={
                 settings.ai.provider === "lmstudio"
-                  ? "http://mgc.snille.net:1234/v1"
+                  ? "http://models.yourdomain.com:1234/v1"
                   : settings.ai.provider === "openai"
                     ? "https://api.openai.com/v1"
                     : settings.ai.provider === "openrouter"
                       ? "https://openrouter.ai/api/v1"
                       : settings.ai.provider === "openwebui"
-                        ? "http://llm.snille.net:8080/api"
+                        ? "http://llm.yourdomain.com:8080/api"
                         : "https://api.anthropic.com"
               }
             />

@@ -12,7 +12,7 @@ function createHeaders(): Record<string, string> {
     return { "x-share-key": config.shareKey };
   }
 
-  throw new Error("IMMICH_API_KEY eller IMMICH_SHARE_KEY måste anges.");
+  throw new Error("IMMICH_API_KEY or IMMICH_SHARE_KEY must be configured.");
 }
 
 async function request<T>(url: string): Promise<T> {
@@ -22,7 +22,7 @@ async function request<T>(url: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Immich-anrop misslyckades: ${response.status} ${response.statusText}`);
+    throw new Error(`Immich request failed: ${response.status} ${response.statusText}`);
   }
 
   return response.json() as Promise<T>;

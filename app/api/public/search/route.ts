@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get("limit") ?? "10");
 
   if (!query) {
-    return NextResponse.json({ error: "Parametern q måste anges." }, { status: 400 });
+    return NextResponse.json({ error: "The q parameter is required." }, { status: 400 });
   }
 
   const matches = await searchPublicInventory(query, Number.isFinite(limit) ? limit : 10);

@@ -6,6 +6,28 @@ function getConfiguredPrinterQueue() {
   return readAppSettingsSync().labels.printerQueue || process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL";
 }
 
+function getRawPrinterEndpoint(deviceUri: string) {
+  const fallbackHost = process.env.DYMO_PRINTER_HOST?.trim() || "";
+  const fallbackPort = Number(process.env.DYMO_PRINTER_PORT || "9100");
+
+  if (deviceUri.startsWith("socket://")) {
+    try {
+      const url = new URL(deviceUri);
+      return {
+        host: url.hostname,
+        port: url.port ? Number(url.port) : 9100
+      };
+    } catch {
+      // Fall back to env/default values below.
+    }
+  }
+
+  return {
+    host: fallbackHost,
+    port: Number.isFinite(fallbackPort) ? fallbackPort : 9100
+  };
+}
+
 type DymoPrinterState = "idle" | "processing" | "stopped" | "unknown";
 
 export type DymoPrinterStatus = {
@@ -53,7 +75,7 @@ async function runCommand(command: string, args: string[]) {
   });
 }
 
-async function queryRawPrinter(commandBytes: Buffer, responseBytes: number) {
+async function queryRawPrinter(host: string, port: number, commandBytes: Buffer, responseBytes: number) {
   return await new Promise<Buffer>((resolve, reject) => {
     const child = spawn(
       "python3",
@@ -79,8 +101,8 @@ async function queryRawPrinter(commandBytes: Buffer, responseBytes: number) {
           "s.close()",
           "sys.stdout.buffer.write(data)"
         ].join("\n"),
-        "10.0.0.76",
-        "9100",
+        host,
+        String(port),
         commandBytes.toString("hex"),
         String(responseBytes)
       ],
@@ -105,12 +127,12 @@ async function queryRawPrinter(commandBytes: Buffer, responseBytes: number) {
         return;
       }
 
-      reject(new Error(stderr.trim() || `python3 avslutades med kod ${code}.`));
+      reject(new Error(stderr.trim() || `python3 exited with code ${code}.`));
     });
   });
 }
 
-async function exchangeRawPrinter(sequence: Array<{ command: Buffer; responseBytes: number }>) {
+async function exchangeRawPrinter(host: string, port: number, sequence: Array<{ command: Buffer; responseBytes: number }>) {
   return await new Promise<Buffer[]>((resolve, reject) => {
     const child = spawn(
       "python3",
@@ -143,8 +165,8 @@ async function exchangeRawPrinter(sequence: Array<{ command: Buffer; responseByt
           "s.close()",
           "sys.stdout.write('\\n'.join(outs))"
         ].join("\n"),
-        "10.0.0.76",
-        "9100",
+        host,
+        String(port),
         ...sequence.flatMap((entry) => [entry.command.toString("hex"), String(entry.responseBytes)])
       ],
       { stdio: ["ignore", "pipe", "pipe"] }
@@ -164,7 +186,7 @@ async function exchangeRawPrinter(sequence: Array<{ command: Buffer; responseByt
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || `python3 avslutades med kod ${code}.`));
+        reject(new Error(stderr.trim() || `python3 exited with code ${code}.`));
         return;
       }
 
@@ -264,7 +286,7 @@ function parseLabelsRemaining(buffer: Buffer) {
 
 export async function readDymoPrinterStatus(queue = getConfiguredPrinterQueue()): Promise<DymoPrinterStatus> {
   if (process.platform !== "linux") {
-    throw new Error("Skrivarstatus via DYMO stöds just nu bara på Linux-servern.");
+    throw new Error("DYMO printer status is currently supported only on the Linux server.");
   }
 
   const output = await runCommand("ipptool", [
@@ -277,15 +299,22 @@ export async function readDymoPrinterStatus(queue = getConfiguredPrinterQueue())
   const stateReason = parseSingleAttribute(output, "printer-state-reasons");
   const model = parseSingleAttribute(output, "printer-make-and-model");
   const deviceUri = parseSingleAttribute(output, "device-uri");
+  const rawPrinterEndpoint = getRawPrinterEndpoint(deviceUri);
   const queuedJobs = Number(parseSingleAttribute(output, "queued-job-count") || "0");
   const mediaKeyword = parseSingleAttribute(output, "media-default");
   const mediaCollection = parseSingleAttribute(output, "media-col-default");
-  let rawVersion = await queryRawPrinter(Buffer.from([0x1b, 0x56]), 64).catch(() => Buffer.alloc(0));
-  let rawSku = await queryRawPrinter(Buffer.from([0x1b, 0x55]), 80).catch(() => Buffer.alloc(0));
-  let rawStatus = await queryRawPrinter(Buffer.from([0x1b, 0x41, 0x01]), 32).catch(() => Buffer.alloc(0));
+  let rawVersion = Buffer.alloc(0);
+  let rawSku = Buffer.alloc(0);
+  let rawStatus = Buffer.alloc(0);
 
-  if (isEmptyOrZeroBuffer(rawSku) || isEmptyOrZeroBuffer(rawStatus)) {
-    const sequence = await exchangeRawPrinter([
+  if (rawPrinterEndpoint.host) {
+    rawVersion = await queryRawPrinter(rawPrinterEndpoint.host, rawPrinterEndpoint.port, Buffer.from([0x1b, 0x56]), 64).catch(() => Buffer.alloc(0));
+    rawSku = await queryRawPrinter(rawPrinterEndpoint.host, rawPrinterEndpoint.port, Buffer.from([0x1b, 0x55]), 80).catch(() => Buffer.alloc(0));
+    rawStatus = await queryRawPrinter(rawPrinterEndpoint.host, rawPrinterEndpoint.port, Buffer.from([0x1b, 0x41, 0x01]), 32).catch(() => Buffer.alloc(0));
+  }
+
+  if (rawPrinterEndpoint.host && (isEmptyOrZeroBuffer(rawSku) || isEmptyOrZeroBuffer(rawStatus))) {
+    const sequence = await exchangeRawPrinter(rawPrinterEndpoint.host, rawPrinterEndpoint.port, [
       { command: Buffer.from([0x1b, 0x41, 0x01]), responseBytes: 32 },
       { command: Buffer.from([0x1b, 0x56]), responseBytes: 64 },
       { command: Buffer.from([0x1b, 0x55]), responseBytes: 80 }

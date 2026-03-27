@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const notes = String(payload.notes ?? "");
 
     if (!photoId) {
-      return NextResponse.json({ error: "photoId måste anges." }, { status: 400 });
+      return NextResponse.json({ error: "photoId is required." }, { status: 400 });
     }
 
     await updatePhotoNotes({ photoId, notes });
@@ -16,10 +16,9 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Kunde inte spara analystexten."
+        error: error instanceof Error ? error.message : "Could not save the analysis text."
       },
       { status: 500 }
     );
   }
 }
-

@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const photoId = String(payload.photoId ?? "").trim();
 
     if (!photoId) {
-      return NextResponse.json({ error: "photoId måste anges." }, { status: 400 });
+      return NextResponse.json({ error: "photoId is required." }, { status: 400 });
     }
 
     await removePhotoFromSession(photoId);
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Kunde inte släppa bilden."
+        error: error instanceof Error ? error.message : "Could not release the image."
       },
       { status: 500 }
     );

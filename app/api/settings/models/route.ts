@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ models });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte hämta modeller." },
+      { error: error instanceof Error ? error.message : "Could not load models." },
       { status: 500 }
     );
   }

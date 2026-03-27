@@ -10,7 +10,7 @@ async function fetchJson(url: string, init?: RequestInit) {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Kunde inte hämta modeller: ${response.status} ${text}`);
+    throw new Error(`Could not load models: ${response.status} ${text}`);
   }
 
   return response.json() as Promise<unknown>;

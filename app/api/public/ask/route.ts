@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const query = payload.query?.trim() ?? "";
 
     if (!query) {
-      return NextResponse.json({ error: "query måste anges." }, { status: 400 });
+      return NextResponse.json({ error: "query is required." }, { status: 400 });
     }
 
     const result = await answerInventoryQuestion(query);
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Kunde inte behandla frågan." },
+      { error: error instanceof Error ? error.message : "Could not process the question." },
       { status: 500 }
     );
   }

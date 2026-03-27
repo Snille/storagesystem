@@ -40,7 +40,7 @@ async function fetchLmStudioJson<T>(url: string, apiKey?: string, init?: Request
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`LM Studio-anrop misslyckades: ${response.status} ${text}`);
+    throw new Error(`LM Studio request failed: ${response.status} ${text}`);
   }
 
   return response.json() as Promise<T>;
