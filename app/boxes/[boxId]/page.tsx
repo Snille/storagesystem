@@ -43,36 +43,7 @@ export default async function BoxPage({ params }: BoxPageProps) {
   const originalUrls = Object.fromEntries(
     unassignedAssets.map((asset) => [asset.id, getAssetOriginalUrl(asset.id)])
   );
-  const editParams = new URLSearchParams();
-  editParams.set("boxId", box.boxId);
-  editParams.set("label", box.label);
-  editParams.set("currentLocationId", box.currentLocationId);
   const boxMeta = presentLocation(box.currentLocationId, box.boxId);
-  if (currentSession) {
-    editParams.set("sessionId", currentSession.sessionId);
-    editParams.set("createdAt", currentSession.createdAt);
-    editParams.set("summary", currentSession.summary);
-    editParams.set("itemKeywords", currentSession.itemKeywords.join(", "));
-    editParams.set("notes", currentSession.notes ?? "");
-    editParams.set(
-      "photoPayload",
-      JSON.stringify(
-        photos.map((photo) => ({
-          photoId: photo.photoId,
-          immichAssetId: photo.immichAssetId,
-          photoRole: photo.photoRole,
-          capturedAt: photo.capturedAt ?? "",
-          notes: photo.notes ?? ""
-        }))
-      )
-    );
-    editParams.set(
-      "photoRows",
-      photos
-        .map((photo) => `${photo.immichAssetId}|${photo.photoRole}|${photo.capturedAt ?? ""}`)
-        .join("\n")
-    );
-  }
 
   return (
     <div className="shell">
@@ -103,7 +74,7 @@ export default async function BoxPage({ params }: BoxPageProps) {
         </p>
         {currentSession ? (
           <p style={{ marginTop: 10 }}>
-            <Link className="button secondary" href={`/boxes/new?${editParams.toString()}`}>
+            <Link className="button secondary" href={`/boxes/new?boxId=${encodeURIComponent(box.boxId)}`}>
               Redigera aktuell session
             </Link>
           </p>

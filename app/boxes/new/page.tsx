@@ -25,6 +25,9 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
     fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
     readInventoryData()
   ]);
+  const currentSessionsByBox = getCurrentSessionByBox(data);
+  const existingBox = params.boxId ? data.boxes.find((box) => box.boxId === params.boxId) ?? null : null;
+  const existingSession = existingBox ? currentSessionsByBox.get(existingBox.boxId) ?? null : null;
   const initialPhotos = (() => {
     const payload = String(params.photoPayload ?? "").trim();
 
@@ -50,6 +53,20 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
       } catch {
         // Fallback to legacy photoRows parsing below.
       }
+    }
+
+    if (existingSession) {
+      return data.photos
+        .filter((photo) => photo.sessionId === existingSession.sessionId)
+        .map((photo) => ({
+          photoId: photo.photoId,
+          immichAssetId: photo.immichAssetId,
+          photoRole: photo.photoRole,
+          capturedAt: photo.capturedAt || undefined,
+          notes: photo.notes || "",
+          thumbnailUrl: getAssetThumbnailUrl(photo.immichAssetId),
+          originalUrl: getAssetOriginalUrl(photo.immichAssetId)
+        }));
     }
 
     return String(params.photoRows ?? "")
@@ -109,14 +126,14 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
         <form action="/api/boxes/save-session" method="post">
           <SessionForm
             defaults={{
-              boxId: params.boxId ?? "",
-              label: params.label ?? "",
-              currentLocationId: params.currentLocationId ?? "",
-              sessionId: params.sessionId ?? "",
-              createdAt: params.createdAt ?? "",
-              summary: params.summary ?? "",
-              itemKeywords: params.itemKeywords ?? "",
-              notes: params.notes ?? "",
+              boxId: params.boxId ?? existingBox?.boxId ?? "",
+              label: params.label ?? existingBox?.label ?? "",
+              currentLocationId: params.currentLocationId ?? existingBox?.currentLocationId ?? "",
+              sessionId: params.sessionId ?? existingSession?.sessionId ?? "",
+              createdAt: params.createdAt ?? existingSession?.createdAt ?? "",
+              summary: params.summary ?? existingSession?.summary ?? "",
+              itemKeywords: params.itemKeywords ?? existingSession?.itemKeywords.join(", ") ?? "",
+              notes: params.notes ?? existingSession?.notes ?? "",
               duplicateWarning: params.duplicateWarning ?? ""
             }}
             initialPhotos={initialPhotos}
