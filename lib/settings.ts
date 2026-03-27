@@ -6,6 +6,36 @@ import { getDefaultLabelSettings, normalizeLabelSettings } from "@/lib/label-tem
 import type { AppSettings } from "@/lib/types";
 
 const settingsFilePath = path.join(process.cwd(), "data", "app-settings.json");
+const aiProviderSchema = z.enum(["lmstudio", "openai", "anthropic", "openrouter", "openwebui"]);
+const aiSettingsSchema = z.object({
+  provider: aiProviderSchema,
+  lmstudio: z.object({
+    baseUrl: z.string(),
+    model: z.string(),
+    apiKey: z.string().optional(),
+    contextLength: z.number().int().positive().optional()
+  }),
+  openai: z.object({
+    baseUrl: z.string(),
+    model: z.string(),
+    apiKey: z.string().optional()
+  }),
+  anthropic: z.object({
+    baseUrl: z.string(),
+    model: z.string(),
+    apiKey: z.string().optional()
+  }),
+  openrouter: z.object({
+    baseUrl: z.string(),
+    model: z.string(),
+    apiKey: z.string().optional()
+  }),
+  openwebui: z.object({
+    baseUrl: z.string(),
+    model: z.string(),
+    apiKey: z.string().optional()
+  })
+});
 
 const settingsSchema = z.object({
   appearance: z.object({
@@ -30,41 +60,16 @@ const settingsSchema = z.object({
     photoSummaryPrompt: z.string(),
     photoSummarySystemPrompt: z.string(),
     anthropicBoxSystemPrompt: z.string(),
+    translationDraftSystemPrompt: z.string(),
     summaryCleanupPrefixes: z.string(),
     keywordCleanupTerms: z.string(),
     notesCleanupPhrases: z.string(),
     photoSummaryCleanupPhrases: z.string()
   }),
-  ai: z.object({
-    provider: z.enum(["lmstudio", "openai", "anthropic", "openrouter", "openwebui"]),
-    lmstudio: z.object({
-      baseUrl: z.string(),
-      model: z.string(),
-      apiKey: z.string().optional(),
-      contextLength: z.number().int().positive().optional()
-    }),
-    openai: z.object({
-      baseUrl: z.string(),
-      model: z.string(),
-      apiKey: z.string().optional()
-    }),
-    anthropic: z.object({
-      baseUrl: z.string(),
-      model: z.string(),
-      apiKey: z.string().optional()
-    }),
-    openrouter: z.object({
-      baseUrl: z.string(),
-      model: z.string(),
-      apiKey: z.string().optional()
-    }),
-    openwebui: z.object({
-      baseUrl: z.string(),
-      model: z.string(),
-      apiKey: z.string().optional()
-    })
-  }),
+  ai: aiSettingsSchema,
+  translationAi: aiSettingsSchema,
   labels: z.object({
+    printerQueue: z.string(),
     defaultTemplateId: z.string(),
     templates: z.array(
       z.object({
@@ -142,13 +147,55 @@ function legacyFontScaleToPt(value: unknown) {
 }
 
 export function getDefaultAppSettings(): AppSettings {
+  const defaultAiSettings: AppSettings["ai"] = {
+    provider: ((process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
+    "anthropic"
+      ? "anthropic"
+      : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
+          "openrouter"
+        ? "openrouter"
+      : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
+          "openwebui"
+        ? "openwebui"
+      : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
+          "lmstudio"
+        ? "lmstudio"
+        : "openai") as AppSettings["ai"]["provider"],
+    lmstudio: {
+      baseUrl: trimTrailingSlash(process.env.LMSTUDIO_BASE_URL || "http://localhost:1234/v1"),
+      model: process.env.LMSTUDIO_MODEL || "",
+      apiKey: process.env.LMSTUDIO_API_KEY || "",
+      contextLength: process.env.LMSTUDIO_CONTEXT_LENGTH ? Number(process.env.LMSTUDIO_CONTEXT_LENGTH) : undefined
+    },
+    openai: {
+      baseUrl: trimTrailingSlash(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      apiKey: process.env.OPENAI_API_KEY || ""
+    },
+    anthropic: {
+      baseUrl: trimTrailingSlash(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"),
+      model: process.env.ANTHROPIC_MODEL || "claude-3-7-sonnet-latest",
+      apiKey: process.env.ANTHROPIC_API_KEY || ""
+    },
+    openrouter: {
+      baseUrl: trimTrailingSlash(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"),
+      model: process.env.OPENROUTER_MODEL || "",
+      apiKey: process.env.OPENROUTER_API_KEY || ""
+    },
+    openwebui: {
+      baseUrl: trimTrailingSlash(process.env.OPENWEBUI_BASE_URL || "http://llm.snille.net:8080/api"),
+      model: process.env.OPENWEBUI_MODEL || "",
+      apiKey: process.env.OPENWEBUI_API_KEY || ""
+    }
+  };
+
   return {
     appearance: {
       theme: "auto",
       fontFamily: "arial",
       fontSizePt: 12,
       reduceMotion: false,
-      language: "sv"
+      language: "en"
     },
     immich: {
       baseUrl: trimTrailingSlash(process.env.IMMICH_BASE_URL || ""),
@@ -206,6 +253,17 @@ export function getDefaultAppSettings(): AppSettings {
       photoSummarySystemPrompt: "Du beskriver verkstadsbilder kortfattat på svenska och svarar endast med JSON.",
       anthropicBoxSystemPrompt:
         "Du analyserar verkstadslådor på svenska. Följ användarens instruktioner och svara endast med ett JSON-objekt.",
+      translationDraftSystemPrompt: [
+        "Du översätter UI-strängar för en app.",
+        "Behåll alla placeholders exakt som de är, till exempel {count}, {label}, {name} och liknande.",
+        "Behåll radbrytningar om de finns i originalet.",
+        "Översätt bara själva texten, inte nycklarna.",
+        "Håll översättningen kort, naturlig och konsekvent för ett användargränssnitt.",
+        "Var konsekvent med återkommande termer i hela appen.",
+        "Ändra inte tekniska identifierare, modellnamn, filändelser eller kodlika värden om det inte är uppenbart att de ska översättas.",
+        "Om källtexten redan är korrekt på målspråket kan den lämnas oförändrad.",
+        "Svara endast i JSON enligt det format som efterfrågas."
+      ].join(" "),
       summaryCleanupPrefixes: [
         "placerad på ivar",
         "placerat på ivar",
@@ -245,47 +303,8 @@ export function getDefaultAppSettings(): AppSettings {
         "katalogen"
       ].join("\n")
     },
-    ai: {
-      provider: ((process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
-      "anthropic"
-        ? "anthropic"
-        : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
-            "openrouter"
-          ? "openrouter"
-        : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
-            "openwebui"
-          ? "openwebui"
-        : (process.env.AI_PROVIDER ?? (process.env.LMSTUDIO_BASE_URL ? "lmstudio" : "openai")).toLowerCase() ===
-            "lmstudio"
-          ? "lmstudio"
-          : "openai") as AppSettings["ai"]["provider"],
-      lmstudio: {
-        baseUrl: trimTrailingSlash(process.env.LMSTUDIO_BASE_URL || "http://localhost:1234/v1"),
-        model: process.env.LMSTUDIO_MODEL || "",
-        apiKey: process.env.LMSTUDIO_API_KEY || "",
-        contextLength: process.env.LMSTUDIO_CONTEXT_LENGTH ? Number(process.env.LMSTUDIO_CONTEXT_LENGTH) : undefined
-      },
-      openai: {
-        baseUrl: trimTrailingSlash(process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"),
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-        apiKey: process.env.OPENAI_API_KEY || ""
-      },
-      anthropic: {
-        baseUrl: trimTrailingSlash(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com"),
-        model: process.env.ANTHROPIC_MODEL || "claude-3-7-sonnet-latest",
-        apiKey: process.env.ANTHROPIC_API_KEY || ""
-      },
-      openrouter: {
-        baseUrl: trimTrailingSlash(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"),
-        model: process.env.OPENROUTER_MODEL || "",
-        apiKey: process.env.OPENROUTER_API_KEY || ""
-      },
-      openwebui: {
-        baseUrl: trimTrailingSlash(process.env.OPENWEBUI_BASE_URL || "http://llm.snille.net:8080/api"),
-        model: process.env.OPENWEBUI_MODEL || "",
-        apiKey: process.env.OPENWEBUI_API_KEY || ""
-      }
-    },
+    ai: defaultAiSettings,
+    translationAi: defaultAiSettings,
     labels: getDefaultLabelSettings()
   };
 }
@@ -300,7 +319,7 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
         typeof inputAppearance.fontSizePt === "number"
           ? inputAppearance.fontSizePt
           : legacyFontScaleToPt(inputAppearance.fontScale),
-      language: String(inputAppearance.language ?? base.appearance.language ?? "sv").trim() || "sv"
+      language: String(inputAppearance.language ?? base.appearance.language ?? "en").trim() || "en"
     },
     immich: {
       ...base.immich,
@@ -334,9 +353,34 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
         ...(input?.ai?.openwebui ?? {})
       }
     },
+    translationAi: {
+      ...base.translationAi,
+      ...(input?.translationAi ?? {}),
+      lmstudio: {
+        ...base.translationAi.lmstudio,
+        ...(input?.translationAi?.lmstudio ?? {})
+      },
+      openai: {
+        ...base.translationAi.openai,
+        ...(input?.translationAi?.openai ?? {})
+      },
+      anthropic: {
+        ...base.translationAi.anthropic,
+        ...(input?.translationAi?.anthropic ?? {})
+      },
+      openrouter: {
+        ...base.translationAi.openrouter,
+        ...(input?.translationAi?.openrouter ?? {})
+      },
+      openwebui: {
+        ...base.translationAi.openwebui,
+        ...(input?.translationAi?.openwebui ?? {})
+      }
+    },
     labels: normalizeLabelSettings({
       ...base.labels,
       ...(input?.labels ?? {}),
+      printerQueue: String(input?.labels?.printerQueue ?? base.labels.printerQueue ?? "").trim(),
       templates: input?.labels?.templates ?? base.labels.templates
     })
   });

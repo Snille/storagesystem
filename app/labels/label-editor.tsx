@@ -18,6 +18,102 @@ type LabelEditorProps = {
   options: LabelOption[];
   initialTemplates: LabelTemplate[];
   initialDefaultTemplateId: string;
+  ui: {
+    fieldTitle: string;
+    fieldDescription: string;
+    fieldPlace: string;
+    printerReading: string;
+    printerReadFailed: string;
+    printerReportsMedia: string;
+    printerReportsSize: string;
+    printerConnectedUnknownSize: string;
+    printerSlow: string;
+    selectedTemplateFromPrinter: string;
+    labelsRemaining: string;
+    labelsRemainingInline: string;
+    templateCopied: string;
+    newTemplateName: string;
+    newTemplateCreated: string;
+    templateRemoved: string;
+    savingTemplates: string;
+    saveTemplatesFailed: string;
+    templatesSaved: string;
+    printFailed: string;
+    printSentWithId: string;
+    printSent: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    emptyPlace: string;
+    appliedPrinterMedia: string;
+    generatorTitle: string;
+    existingBox: string;
+    manualOption: string;
+    resetFromSelected: string;
+    newLabelManual: string;
+    printToDymo: string;
+    printingToDymo: string;
+    printInBrowser: string;
+    printInfo: string;
+    printJobId: string;
+    unknown: string;
+    printQueue: string;
+    printMedia: string;
+    standard: string;
+    clearedJobs: string;
+    printerLabel: string;
+    templatesTitle: string;
+    activeTemplate: string;
+    defaultTemplate: string;
+    templateName: string;
+    labelSize: string;
+    orientation: string;
+    portrait: string;
+    landscape: string;
+    area: string;
+    printableArea: string;
+    snapToGrid: string;
+    grid: string;
+    hidden: string;
+    selectedField: string;
+    font: string;
+    size: string;
+    width: string;
+    height: string;
+    alignment: string;
+    alignLeft: string;
+    alignCenter: string;
+    fontWeight: string;
+    normal: string;
+    bold: string;
+    rotation: string;
+    none: string;
+    rotateClockwise: string;
+    rotateCounterclockwise: string;
+    showField: string;
+    placeDisplay: string;
+    placeDisplayChips: string;
+    placeDisplaySingleLine: string;
+    duplicateTemplate: string;
+    newTemplate: string;
+    deleteTemplate: string;
+    saveTemplates: string;
+    moveBlocksHint: string;
+    activeRoll: string;
+    autoTemplateSelected: string;
+    queue: string;
+    queuedJobs: string;
+    sku: string;
+    roll: string;
+    firmware: string;
+    usePrinterLabel: string;
+    designer: string;
+    printTestLabel: string;
+    printingTestLabel: string;
+    resizeField: string;
+    openLargeImage: string;
+    imageHasAnalysisText: string;
+    closeImageView: string;
+  };
 };
 
 type PrinterStatusResponse = {
@@ -28,6 +124,7 @@ type PrinterStatusResponse = {
     stateReason: string;
     model: string;
     firmwareVersion?: string;
+    labelsRemaining?: number;
     deviceUri: string;
     queuedJobs: number;
     media: {
@@ -46,12 +143,6 @@ type PrinterStatusResponse = {
     };
   };
   error?: string;
-};
-
-const FIELD_LABELS: Record<LabelFieldKey, string> = {
-  title: "Namn",
-  description: "Beskrivning",
-  place: "Plats"
 };
 
 const FONT_OPTIONS: Array<{ value: LabelFontFamily; label: string }> = [
@@ -87,7 +178,7 @@ function buildTemplateId(name: string) {
       .replace(/[^\w\s-]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .slice(0, 32) || `etikett-${Date.now()}`
+      .slice(0, 32) || `label-${Date.now()}`
   );
 }
 
@@ -111,19 +202,33 @@ function getFontFamilyCss(fontFamily: LabelFontFamily) {
 }
 
 function getOrientationLabel(orientation: "portrait" | "landscape") {
-  return orientation === "portrait" ? "Stående" : "Liggande";
+  return orientation;
 }
 
 function ptToPreviewPx(points: number, previewScale: number) {
   return (points * 25.4 * previewScale) / 72;
 }
 
+function appendLabelsRemaining(message: string, labelsRemaining: number | undefined, template: string) {
+  if (labelsRemaining === undefined) {
+    return message;
+  }
+
+  return `${message} ${template.replace("{count}", String(labelsRemaining))}`;
+}
+
 export function LabelEditor({
   initialBoxId,
   options,
   initialTemplates,
-  initialDefaultTemplateId
+  initialDefaultTemplateId,
+  ui
 }: LabelEditorProps) {
+  const fieldLabels: Record<LabelFieldKey, string> = {
+    title: ui.fieldTitle,
+    description: ui.fieldDescription,
+    place: ui.fieldPlace
+  };
   const initialOption = options.find((option) => option.boxId === initialBoxId) ?? options[0] ?? null;
   const [selectedBoxId, setSelectedBoxId] = useState(initialOption?.boxId ?? "");
   const [label, setLabel] = useState(initialOption?.label ?? "");
@@ -144,7 +249,7 @@ export function LabelEditor({
   } | null>(null);
   const [isSavingTemplates, startSavingTemplates] = useTransition();
   const [printerStatus, setPrinterStatus] = useState<PrinterStatusResponse["status"] | null>(null);
-  const [printerStatusMessage, setPrinterStatusMessage] = useState("Läser skrivaren...");
+  const [printerStatusMessage, setPrinterStatusMessage] = useState(ui.printerReading);
   const designerRef = useRef<HTMLDivElement | null>(null);
   const interactionStateRef = useRef<
     | {
@@ -207,34 +312,50 @@ export function LabelEditor({
         }
 
         if (!response.ok || !result.ok || !result.status) {
-          throw new Error(result.error || "Kunde inte läsa skrivaren.");
+          throw new Error(result.error || ui.printerReadFailed);
         }
 
         setPrinterStatus(result.status);
 
         if (result.status.media.matchedPreset) {
           const extraSku = result.status.media.dymoSku ? ` (${result.status.media.dymoSku})` : "";
-          setPrinterStatusMessage(`DYMO rapporterar ${result.status.media.matchedPreset.mediaLabel}${extraSku}.`);
+          setPrinterStatusMessage(
+            appendLabelsRemaining(
+              ui.printerReportsMedia
+                .replace("{media}", result.status.media.matchedPreset.mediaLabel)
+                .replace("{sku}", extraSku),
+              result.status.labelsRemaining,
+              ui.labelsRemainingInline
+            )
+          );
           return;
         }
 
         if (result.status.media.widthMm && result.status.media.heightMm) {
           setPrinterStatusMessage(
-            `DYMO rapporterar ungefär ${result.status.media.widthMm.toFixed(1)} x ${result.status.media.heightMm.toFixed(1)} mm.`
+            appendLabelsRemaining(
+              ui.printerReportsSize
+                .replace("{width}", result.status.media.widthMm.toFixed(1))
+                .replace("{height}", result.status.media.heightMm.toFixed(1)),
+              result.status.labelsRemaining,
+              ui.labelsRemainingInline
+            )
           );
           return;
         }
 
-        setPrinterStatusMessage("DYMO är ansluten, men rapporterar ingen tydlig rullstorlek just nu.");
+        setPrinterStatusMessage(
+          appendLabelsRemaining(ui.printerConnectedUnknownSize, result.status.labelsRemaining, ui.labelsRemainingInline)
+        );
       } catch (error) {
         if (!cancelled) {
           setPrinterStatus(null);
           const message =
             error instanceof Error && error.name === "AbortError"
-              ? "Skrivaren svarade för långsamt just nu. Sidan fungerar ändå, och du kan prova igen strax."
+              ? ui.printerSlow
               : error instanceof Error
                 ? error.message
-                : "Kunde inte läsa skrivaren.";
+                : ui.printerReadFailed;
           setPrinterStatusMessage(message);
         }
       } finally {
@@ -262,7 +383,7 @@ export function LabelEditor({
     }
 
     setSelectedTemplateId(templateForMedia.id);
-    setTemplateStatus(`Valde mall efter skrivarrullen: ${templateForMedia.name}.`);
+    setTemplateStatus(ui.selectedTemplateFromPrinter.replace("{name}", templateForMedia.name));
     autoAppliedPrinterMediaRef.current = true;
   }, [printerStatus, templates]);
 
@@ -336,19 +457,19 @@ export function LabelEditor({
 
     const copy = normalizeLabelTemplate({
       ...selectedTemplate,
-      id: `${buildTemplateId(`${selectedTemplate.name}-kopia`)}-${Date.now().toString(36)}`,
-      name: `${selectedTemplate.name} kopia`
+      id: `${buildTemplateId(`${selectedTemplate.name}-copy`)}-${Date.now().toString(36)}`,
+      name: `${selectedTemplate.name} copy`
     });
     setTemplates((current) => [...current, copy]);
     setSelectedTemplateId(copy.id);
-    setTemplateStatus("Mallen kopierades.");
+    setTemplateStatus(ui.templateCopied);
   }
 
   function createFreshTemplate() {
     const preset = LABEL_MEDIA_PRESETS[2];
     const fresh = normalizeLabelTemplate({
-      id: `${buildTemplateId("ny-mall")}-${Date.now().toString(36)}`,
-      name: `Ny mall ${templates.length + 1}`,
+      id: `${buildTemplateId("new-template")}-${Date.now().toString(36)}`,
+      name: ui.newTemplateName.replace("{count}", String(templates.length + 1)),
       mediaKey: preset.mediaKey,
       mediaLabel: preset.mediaLabel,
       orientation: preset.orientation,
@@ -402,7 +523,7 @@ export function LabelEditor({
 
     setTemplates((current) => [...current, fresh]);
     setSelectedTemplateId(fresh.id);
-    setTemplateStatus("Ny etikettmall skapad.");
+    setTemplateStatus(ui.newTemplateCreated);
   }
 
   function deleteSelectedTemplate() {
@@ -417,11 +538,11 @@ export function LabelEditor({
     if (defaultTemplateId === selectedTemplate.id) {
       setDefaultTemplateId(nextSelected.id);
     }
-    setTemplateStatus("Mallen togs bort.");
+    setTemplateStatus(ui.templateRemoved);
   }
 
   async function saveTemplates() {
-    setTemplateStatus("Sparar etikettmallar...");
+    setTemplateStatus(ui.savingTemplates);
     startSavingTemplates(async () => {
       try {
         const response = await fetch("/api/labels/templates", {
@@ -443,7 +564,7 @@ export function LabelEditor({
         };
 
         if (!response.ok || !result.ok || !result.labels) {
-          throw new Error(result.error || "Kunde inte spara etikettmallarna.");
+          throw new Error(result.error || ui.saveTemplatesFailed);
         }
 
         const savedLabels = result.labels;
@@ -452,9 +573,9 @@ export function LabelEditor({
         setSelectedTemplateId((current) =>
           savedLabels.templates.some((template) => template.id === current) ? current : savedLabels.defaultTemplateId
         );
-        setTemplateStatus("Etikettmallarna sparades.");
+        setTemplateStatus(ui.templatesSaved);
       } catch (error) {
-        setTemplateStatus(error instanceof Error ? error.message : "Kunde inte spara etikettmallarna.");
+        setTemplateStatus(error instanceof Error ? error.message : ui.saveTemplatesFailed);
       }
     });
   }
@@ -489,7 +610,7 @@ export function LabelEditor({
       };
 
       if (!response.ok) {
-        throw new Error(result.error || "Kunde inte skriva ut etiketten.");
+        throw new Error(result.error || ui.printFailed);
       }
 
       setPrintDetails({
@@ -498,22 +619,22 @@ export function LabelEditor({
         media: result.media,
         clearedJobs: result.clearedJobs
       });
-      setPrintMessage(result.requestId ? `Etiketten skickades till DYMO (${result.requestId}).` : "Etiketten skickades till DYMO.");
+      setPrintMessage(result.requestId ? ui.printSentWithId.replace("{id}", result.requestId) : ui.printSent);
     } catch (error) {
-      setPrintMessage(error instanceof Error ? error.message : "Kunde inte skriva ut etiketten.");
+      setPrintMessage(error instanceof Error ? error.message : ui.printFailed);
     } finally {
       setPrintState("idle");
     }
   }
 
   function fieldText(key: LabelFieldKey) {
-    if (key === "title") return label || "Etikettnamn";
-    if (key === "description") return description || "Kort beskrivning av innehållet i lådan.";
+    if (key === "title") return label || ui.emptyTitle;
+    if (key === "description") return description || ui.emptyDescription;
     return placeSegments.length
       ? selectedTemplate?.placeDisplay === "singleLine"
         ? placeSegments.join("  ")
         : placeSegments.join("\n")
-      : "Ivar: X\nHylla: X\nPlats: XA";
+      : ui.emptyPlace;
   }
 
   function beginDrag(key: LabelFieldKey, event: ReactPointerEvent<HTMLDivElement>) {
@@ -573,12 +694,12 @@ export function LabelEditor({
     const templateForMedia = templates.find((template) => template.mediaKey === matchedPreset.mediaKey);
     if (templateForMedia) {
       setSelectedTemplateId(templateForMedia.id);
-      setTemplateStatus(`Valde mall efter skrivarrullen: ${templateForMedia.name}.`);
+      setTemplateStatus(ui.selectedTemplateFromPrinter.replace("{name}", templateForMedia.name));
       return;
     }
 
     applyMediaPreset(matchedPreset.mediaKey);
-    setTemplateStatus(`Använder skrivarrullen ${matchedPreset.mediaLabel} i den valda mallen.`);
+    setTemplateStatus(ui.appliedPrinterMedia.replace("{media}", matchedPreset.mediaLabel));
   }
 
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
@@ -650,14 +771,14 @@ export function LabelEditor({
     <div className="shell">
       <section className="panel shell no-print">
         <div>
-          <h2>Etikettgenerator</h2>
+          <h2>{ui.generatorTitle}</h2>
         </div>
 
         <div className="grid two">
           <label>
-            Befintlig låda
+            {ui.existingBox}
             <select value={selectedBoxId} onChange={(event) => applyOption(event.target.value)}>
-              <option value="">Ingen vald, skriv manuellt</option>
+              <option value="">{ui.manualOption}</option>
               {options.map((option) => (
                 <option key={option.boxId} value={option.boxId}>
                   {formatBoxOption(option)}
@@ -668,54 +789,54 @@ export function LabelEditor({
 
           <div className="action-row" style={{ alignSelf: "end" }}>
             <button type="button" className="button secondary" onClick={resetFromSelected} disabled={!selectedOption}>
-              Återställ från vald låda
+              {ui.resetFromSelected}
             </button>
             <button type="button" className="button secondary" onClick={clearForManual}>
-              Ny etikett manuellt
+              {ui.newLabelManual}
             </button>
           </div>
         </div>
 
         <div className="grid two">
           <label>
-            Namn
+            {ui.fieldTitle}
             <input value={label} onChange={(event) => setLabel(event.target.value)} />
           </label>
 
           <label>
-            Plats
+            {ui.fieldPlace}
             <input value={placeText} onChange={(event) => setPlaceText(event.target.value)} />
           </label>
         </div>
 
         <label>
-          Beskrivning
+          {ui.fieldDescription}
           <textarea value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
 
         <div className="action-row">
           <button type="button" onClick={printToDymo} disabled={printState === "printing" || !label.trim() || !placeText.trim()}>
-            {printState === "printing" ? "Skickar till DYMO..." : "Skriv ut på DYMO"}
+            {printState === "printing" ? ui.printingToDymo : ui.printToDymo}
           </button>
           <button type="button" onClick={() => window.print()}>
-            Skriv ut via webbläsaren
+            {ui.printInBrowser}
           </button>
           {printMessage ? <span className="muted">{printMessage}</span> : null}
         </div>
 
         {printDetails ? (
           <div className="note" style={{ marginTop: "0.75rem" }}>
-            <strong>Utskriftsinfo</strong>
-            <div>Jobb-ID: {printDetails.requestId || "okänt"}</div>
-            <div>Skrivarkö: {printDetails.queue || "DYMO_5XL"}</div>
-            <div>Media: {printDetails.media || "standard"}</div>
-            {printDetails.clearedJobs?.length ? <div>Rensade hängande jobb: {printDetails.clearedJobs.join(", ")}</div> : null}
+            <strong>{ui.printInfo}</strong>
+            <div>{ui.printJobId} {printDetails.requestId || ui.unknown}</div>
+            <div>{ui.printQueue} {printDetails.queue || "DYMO_5XL"}</div>
+            <div>{ui.printMedia} {printDetails.media || ui.standard}</div>
+            {printDetails.clearedJobs?.length ? <div>{ui.clearedJobs} {printDetails.clearedJobs.join(", ")}</div> : null}
           </div>
         ) : null}
 
         <div className="note" style={{ marginTop: "0.75rem" }}>
           <div className="label-inline-status">
-            <strong>DYMO-skrivare:</strong>
+            <strong>{ui.printerLabel}</strong>
             <span>{printerStatusMessage}</span>
           </div>
         </div>
@@ -723,12 +844,12 @@ export function LabelEditor({
 
       <section className="panel shell no-print">
         <div>
-          <h2>Etikettmallar</h2>
+          <h2>{ui.templatesTitle}</h2>
         </div>
 
         <div className="grid two">
           <label>
-            Aktiv mall
+            {ui.activeTemplate}
             <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -739,7 +860,7 @@ export function LabelEditor({
           </label>
 
           <label>
-            Standardmall
+            {ui.defaultTemplate}
             <select value={defaultTemplateId} onChange={(event) => setDefaultTemplateId(event.target.value)}>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -754,7 +875,7 @@ export function LabelEditor({
           <>
             <div className="grid two">
               <label>
-                Mallnamn
+                {ui.templateName}
                 <input
                   value={selectedTemplate.name}
                   onChange={(event) => updateSelectedTemplate((template) => ({ ...template, name: event.target.value || template.name }))}
@@ -762,7 +883,7 @@ export function LabelEditor({
               </label>
 
               <label>
-                Etikettstorlek
+                {ui.labelSize}
                 <select value={selectedTemplate.mediaKey} onChange={(event) => applyMediaPreset(event.target.value)}>
                   {LABEL_MEDIA_PRESETS.map((preset) => (
                     <option key={preset.mediaKey} value={preset.mediaKey}>
@@ -774,12 +895,12 @@ export function LabelEditor({
             </div>
 
             <div className="chips" style={{ marginTop: "0.75rem", marginBottom: "0.25rem" }}>
-              <span>Riktning: {getOrientationLabel(selectedTemplate.orientation)}</span>
+              <span>{ui.orientation}: {getOrientationLabel(selectedTemplate.orientation) === "portrait" ? ui.portrait : ui.landscape}</span>
               <span>
-                Yta: {selectedTemplate.widthMm} x {selectedTemplate.heightMm} mm
+                {ui.area}: {selectedTemplate.widthMm} x {selectedTemplate.heightMm} mm
               </span>
               <span>
-                Utskriftsyta: {selectedTemplate.pageWidthPt} x {selectedTemplate.pageHeightPt} pt
+                {ui.printableArea}: {selectedTemplate.pageWidthPt} x {selectedTemplate.pageHeightPt} pt
               </span>
             </div>
 
@@ -790,11 +911,11 @@ export function LabelEditor({
                   checked={selectedTemplate.snapToGrid}
                   onChange={(event) => updateSelectedTemplate((template) => ({ ...template, snapToGrid: event.target.checked }))}
                 />
-                <span>Snap-to-grid</span>
+                <span>{ui.snapToGrid}</span>
               </label>
 
               <label>
-                Rutnät (mm)
+                {ui.grid} (mm)
                 <input
                   type="number"
                   min={0.5}
@@ -819,9 +940,9 @@ export function LabelEditor({
                       className={`font-choice${activeField === key ? " active" : ""}`}
                       onClick={() => setActiveField(key)}
                     >
-                      <strong>{FIELD_LABELS[key]}</strong>
+                      <strong>{fieldLabels[key]}</strong>
                       <span>
-                        {field.visible ? `x ${field.xMm.toFixed(1)} / y ${field.yMm.toFixed(1)} mm` : "Dolt"}
+                        {field.visible ? `x ${field.xMm.toFixed(1)} / y ${field.yMm.toFixed(1)} mm` : ui.hidden}
                       </span>
                     </button>
                   );
@@ -829,10 +950,10 @@ export function LabelEditor({
               </div>
 
               <div className="panel-quiet">
-                <strong>Markerat fält: {FIELD_LABELS[activeField]}</strong>
+                <strong>{ui.selectedField.replace("{field}", fieldLabels[activeField])}</strong>
                 <div className="grid two" style={{ marginTop: "12px" }}>
                   <label>
-                    Font
+                    {ui.font}
                     <select
                       value={selectedTemplate.fields[activeField].fontFamily}
                       onChange={(event) =>
@@ -851,7 +972,7 @@ export function LabelEditor({
                   </label>
 
                   <label>
-                    Storlek (pt)
+                    {ui.size} (pt)
                     <input
                       type="number"
                       min={6}
@@ -867,7 +988,7 @@ export function LabelEditor({
                   </label>
 
                   <label>
-                    Bredd (mm)
+                    {ui.width} (mm)
                     <input
                       type="number"
                       min={6}
@@ -884,7 +1005,7 @@ export function LabelEditor({
                   </label>
 
                   <label>
-                    Höjd (mm)
+                    {ui.height} (mm)
                     <input
                       type="number"
                       min={2.5}
@@ -903,7 +1024,7 @@ export function LabelEditor({
 
                 <div className="grid two" style={{ marginTop: "12px" }}>
                   <label>
-                    Justering
+                    {ui.alignment}
                     <select
                       value={selectedTemplate.fields[activeField].textAlign}
                       onChange={(event) =>
@@ -913,13 +1034,13 @@ export function LabelEditor({
                         }))
                       }
                     >
-                      <option value="left">Vänster</option>
-                      <option value="center">Centrerad</option>
+                      <option value="left">{ui.alignLeft}</option>
+                      <option value="center">{ui.alignCenter}</option>
                     </select>
                   </label>
 
                   <label>
-                    Fontvikt
+                    {ui.fontWeight}
                     <select
                       value={selectedTemplate.fields[activeField].fontWeight}
                       onChange={(event) =>
@@ -929,13 +1050,13 @@ export function LabelEditor({
                         }))
                       }
                     >
-                      <option value="400">Normal</option>
-                      <option value="700">Fet</option>
+                      <option value="400">{ui.normal}</option>
+                      <option value="700">{ui.bold}</option>
                     </select>
                   </label>
 
                   <label>
-                    Rotation
+                    {ui.rotation}
                     <select
                       value={selectedTemplate.fields[activeField].rotationDeg ?? 0}
                       onChange={(event) =>
@@ -946,9 +1067,9 @@ export function LabelEditor({
                         }))
                       }
                     >
-                      <option value="0">Ingen</option>
-                      <option value="90">90° medurs</option>
-                      <option value="-90">90° moturs</option>
+                      <option value="0">{ui.none}</option>
+                      <option value="90">{ui.rotateClockwise}</option>
+                      <option value="-90">{ui.rotateCounterclockwise}</option>
                     </select>
                   </label>
                 </div>
@@ -965,12 +1086,12 @@ export function LabelEditor({
                         }))
                       }
                     />
-                    <span>Visa fält</span>
+                    <span>{ui.showField}</span>
                   </label>
 
                   {activeField === "place" ? (
                     <label>
-                      Platsvisning
+                      {ui.placeDisplay}
                       <select
                         value={selectedTemplate.placeDisplay}
                         onChange={(event) =>
@@ -980,8 +1101,8 @@ export function LabelEditor({
                           }))
                         }
                       >
-                        <option value="chips">Separata delar</option>
-                        <option value="singleLine">En rad</option>
+                        <option value="chips">{ui.placeDisplayChips}</option>
+                        <option value="singleLine">{ui.placeDisplaySingleLine}</option>
                       </select>
                     </label>
                   ) : null}
@@ -991,62 +1112,67 @@ export function LabelEditor({
 
             <div className="action-row">
               <button type="button" className="button secondary" onClick={duplicateTemplate}>
-                Kopiera mall
+                {ui.duplicateTemplate}
               </button>
               <button type="button" className="button secondary" onClick={createFreshTemplate}>
-                Ny mall
+                {ui.newTemplate}
               </button>
               <button type="button" className="button secondary" onClick={deleteSelectedTemplate} disabled={templates.length <= 1}>
-                Ta bort mall
+                {ui.deleteTemplate}
               </button>
               <button type="button" onClick={saveTemplates} disabled={isSavingTemplates}>
-                {isSavingTemplates ? "Sparar mallar..." : "Spara etikettmallar"}
+                {isSavingTemplates ? ui.savingTemplates : ui.saveTemplates}
               </button>
-              <span className="muted">{templateStatus || "Flytta blocken på etiketten och spara när du är nöjd."}</span>
+              <span className="muted">{templateStatus || ui.moveBlocksHint}</span>
             </div>
 
             <div className="note label-printer-note">
               {printerDetectedPreset ? (
                 <div>
-                  <strong>Aktiv rulle i skrivaren:</strong> {printerDetectedPreset.mediaLabel}
+                  <strong>{ui.activeRoll}</strong> {printerDetectedPreset.mediaLabel}
                   {printerStatus?.media.dymoSku ? ` (${printerStatus.media.dymoSku})` : ""}
                 </div>
               ) : null}
               {printerAutoSelected && selectedTemplate ? (
                 <div style={{ marginTop: "0.35rem" }}>
-                  <strong>Mall vald automatiskt:</strong> {selectedTemplate.name}
+                  <strong>{ui.autoTemplateSelected}</strong> {selectedTemplate.name}
                 </div>
               ) : null}
 
               <div className="label-printer-meta">
                 {printerStatus?.queue ? (
                   <span>
-                    <strong>Kö:</strong> {printerStatus.queue}
+                    <strong>{ui.queue}</strong> {printerStatus.queue}
                   </span>
                 ) : null}
                 {printerStatus?.queuedJobs !== undefined ? (
                   <span>
-                    <strong>Jobb i kö:</strong> {printerStatus.queuedJobs}
+                    <strong>{ui.queuedJobs}</strong> {printerStatus.queuedJobs}
+                  </span>
+                ) : null}
+                {printerStatus?.labelsRemaining !== undefined ? (
+                  <span>
+                    <strong>{ui.labelsRemaining}</strong> {printerStatus.labelsRemaining}
                   </span>
                 ) : null}
                 {printerStatus?.media.dymoSku ? (
                   <span>
-                    <strong>SKU:</strong> {printerStatus.media.dymoSku}
+                    <strong>{ui.sku}</strong> {printerStatus.media.dymoSku}
                   </span>
                 ) : null}
                 {printerStatus?.media.matchedPreset?.orientation ? (
                   <span>
-                    <strong>Riktning:</strong> {getOrientationLabel(printerStatus.media.matchedPreset.orientation)}
+                    <strong>{ui.orientation}:</strong> {getOrientationLabel(printerStatus.media.matchedPreset.orientation) === "portrait" ? ui.portrait : ui.landscape}
                   </span>
                 ) : null}
                 {printerStatus?.media.widthMm && printerStatus?.media.heightMm ? (
                   <span>
-                    <strong>Rulle:</strong> {printerStatus.media.widthMm.toFixed(1)} x {printerStatus.media.heightMm.toFixed(1)}
+                    <strong>{ui.roll}</strong> {printerStatus.media.widthMm.toFixed(1)} x {printerStatus.media.heightMm.toFixed(1)}
                   </span>
                 ) : null}
                 {printerStatus?.firmwareVersion ? (
                   <span>
-                    <strong>Firmware:</strong> {printerStatus.firmwareVersion}
+                    <strong>{ui.firmware}</strong> {printerStatus.firmwareVersion}
                   </span>
                 ) : null}
               </div>
@@ -1058,7 +1184,7 @@ export function LabelEditor({
                   onClick={applyDetectedPrinterMedia}
                   disabled={!printerStatus?.media.matchedPreset}
                 >
-                  Använd skrivarens etikett
+                  {ui.usePrinterLabel}
                 </button>
               </div>
             </div>
@@ -1067,7 +1193,7 @@ export function LabelEditor({
       </section>
 
       <section className="panel label-preview-panel">
-        <h2 className="no-print">Designer</h2>
+        <h2 className="no-print">{ui.designer}</h2>
         <div className="label-designer-toolbar no-print">
           <button
             type="button"
@@ -1075,7 +1201,7 @@ export function LabelEditor({
             onClick={printToDymo}
             disabled={printState === "printing" || !selectedTemplate || !label.trim() || !placeText.trim()}
           >
-            {printState === "printing" ? "Skickar testetikett..." : "Skriv ut testetikett"}
+            {printState === "printing" ? ui.printingTestLabel : ui.printTestLabel}
           </button>
         </div>
         {selectedTemplate ? (
@@ -1180,7 +1306,7 @@ export function LabelEditor({
                     >
                       {key === "place" && selectedTemplate.placeDisplay === "chips" ? (
                         <div className="label-designer-chips" style={contentStyle}>
-                          {placeSegments.length ? placeSegments.map((segment) => <span key={segment}>{segment}</span>) : <span>Plats</span>}
+                          {placeSegments.length ? placeSegments.map((segment) => <span key={segment}>{segment}</span>) : <span>{ui.fieldPlace}</span>}
                         </div>
                       ) : (
                         <span className="label-designer-text" style={contentStyle}>
@@ -1190,7 +1316,7 @@ export function LabelEditor({
                       <button
                         type="button"
                         className="label-designer-handle"
-                        aria-label={`Ändra storlek på ${FIELD_LABELS[key]}`}
+                        aria-label={ui.resizeField.replace("{field}", fieldLabels[key])}
                         onPointerDown={(event) => beginResize(key, event)}
                       />
                     </div>

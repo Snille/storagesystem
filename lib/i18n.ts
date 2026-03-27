@@ -21,7 +21,7 @@ export type LanguageOption = {
 };
 
 const languagesDirPath = path.join(process.cwd(), "data", "languages");
-const defaultLanguageCode = "sv";
+const defaultLanguageCode = "en";
 
 function formatTemplate(template: string, values?: Record<string, string | number>) {
   if (!values) {
@@ -70,9 +70,9 @@ export function readLanguageCatalogSync(code?: string): LanguageCatalog {
   return loadCatalogSync(requestedCode) ?? loadCatalogSync(defaultLanguageCode) ?? {
     _meta: {
       code: defaultLanguageCode,
-      label: "Svenska",
-      htmlLang: "sv",
-      speechRecognitionLocale: "sv-SE"
+      label: "English",
+      htmlLang: "en",
+      speechRecognitionLocale: "en-US"
     }
   };
 }
@@ -114,4 +114,25 @@ export async function listAvailableLanguages(): Promise<LanguageOption[]> {
       speechRecognitionLocale: fallback.speechRecognitionLocale
     }];
   }
+}
+
+export async function writeLanguageCatalog(code: string, entries: Record<string, string>, meta?: LanguageMeta) {
+  const existing = await loadCatalog(code);
+  const normalizedEntries = Object.fromEntries(
+    Object.entries(entries)
+      .filter(([key]) => key !== "_meta")
+      .map(([key, value]) => [key, String(value ?? "")])
+  );
+  const nextCatalog: LanguageCatalog = {
+    ...normalizedEntries,
+    _meta: meta ?? existing?._meta ?? {
+      code,
+      label: code,
+      htmlLang: code,
+      speechRecognitionLocale: code
+    }
+  };
+
+  await fs.mkdir(languagesDirPath, { recursive: true });
+  await fs.writeFile(path.join(languagesDirPath, `${code}.json`), `${JSON.stringify(nextCatalog, null, 2)}\n`, "utf8");
 }

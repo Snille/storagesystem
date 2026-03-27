@@ -1,233 +1,266 @@
-# Användarmanual
+# User Manual
 
-Den här manualen är tänkt för daglig användning av appen. För tekniska detaljer, se [README.md](/c:/Users/eripet/Coding/Hyllsystem/README.md).
+This manual is intended for day-to-day use of the app. For technical details, see [README.md](./README.md).
 
-Aktuell version: `v1.3.0`
+Current version: `v1.4.0`
 
-## Tanken med systemet
+## The Basic Idea
 
-Varje fysisk låda har en egen identitet, och varje gång innehållet uppdateras skapas en ny inventering för samma låda.
+Each physical box has its own identity, and every time the contents are updated, a new inventory session is created for the same box.
 
-Det betyder att du kan:
+That means you can:
 
-- flytta en låda utan att tappa historik
-- lägga till fler bilder senare
-- byta innehåll i lådan och ändå behålla samma låda
+- move a box without losing history
+- add more photos later
+- change the contents of a box while keeping the same box identity
 
-En låda kan nu stå på flera typer av platser:
+A box can now be stored in several kinds of places:
 
-- i en `Ivar`
-- på eller under en `Bänk`
-- i ett `Skåp`
+- in a `Shelving unit`
+- on or under a `Bench`
+- in a `Cabinet`
 
-## Vanligt arbetsflöde
+## Typical Workflow
 
-1. Fota lådan med mobilen.
-2. Låt bilderna synka till Immich.
-3. Öppna `Bilder att koppla`.
-4. Markera de bilder som hör till samma låda.
-5. Klicka på `Analysera markerade bilder`.
-6. Kontrollera AI-förslaget.
-7. Klicka på `Koppla låda` eller gå vidare till `Ny låda / inventering`.
-8. Justera text, bildroller och analystext vid behov.
-9. Spara sessionen.
+1. Photograph the box with your phone.
+2. Let the photos sync to Immich.
+3. Open `Images to Connect`.
+4. Select the photos that belong to the same box.
+5. Click `Analyze selected images`.
+6. Review the AI suggestion.
+7. Click `Attach box` or continue to `New Box / Inventory`.
+8. Adjust text, photo roles, and analysis text if needed.
+9. Save the session.
 
-Efter sparning går appen tillbaka till översikten.
+After saving, the app returns to the overview.
 
-## Bra bildtyper att ta
+## Good Photo Types
 
-Appen fungerar bäst när varje låda har minst:
+The app works best when each box has at least:
 
-- en tydlig etikettbild
-- en eller flera bilder på innehållet
+- one clear label photo
+- one or more photos of the contents
 
-Bra extra bilder är:
+Useful extra photos are:
 
-- utplockat innehåll på bord
-- detaljbilder på småprylar
-- platsbild om etiketten är svår att läsa
+- contents spread out on a table
+- detail photos of small parts
+- a location photo if the label is hard to read
 
-## Bildroller
+## Photo Roles
 
-Rollerna i appen betyder:
+The roles in the app mean:
 
-- `Etikett`: etiketten eller platslappen är huvudmotivet
-- `Plats`: bilden visar var lådan står
-- `Inuti`: lådans innehåll i lådan
-- `Utplockat`: innehållet är utlagt utanför lådan
-- `Detalj`: närbild på en viss pryl eller del
+- `Label`: the label or location tag is the main subject
+- `Location`: the image shows where the box is stored
+- `Inside`: the contents inside the box
+- `Spread`: the contents laid out outside the box
+- `Detail`: a close-up of a specific item or part
 
-Om AI:n väljer fel roll kan du ändra den manuellt.
+If the AI chooses the wrong role, you can change it manually.
 
-## Översikt
+## Overview
 
-På startsidan kan du:
+From the start page you can:
 
-- söka efter saker i verkstan
-- använda röstsökning
-- öppna `Översiktsbild` i egen lightbox
-- öppna en låda genom att klicka på lådkortet
-- klicka på bilder för att se dem i lightbox
-- hovra på bilder med analystext för att läsa en snabb beskrivning direkt
-- se hur många aktuella platser som finns i systemet
+- search for items in the workshop
+- use voice search
+- open the `Overview image` in its own lightbox
+- open a box by clicking the box card
+- click photos to view them in a lightbox
+- hover on images with analysis text to see a quick description
+- see how many current locations exist in the system
 
-`Översiktsbild` hämtas automatiskt från albumomslaget i valt Immich-album.
+The `Overview image` is automatically taken from the album cover of the selected Immich album.
 
-Lådorna visas i fysisk ordning i översikten:
+Boxes are shown in physical order in the overview:
 
-- först `Ivar`
-- sedan `Bänk`
-- sist `Skåp`
+- first `Shelving unit`
+- then `Bench`
+- finally `Cabinet`
 
-Sökningen hittar inte bara lådnamn, utan även:
+Search does not only use box names. It also finds:
 
-- sammanfattningar
-- sökord
-- bildspecifika analystexter
+- summaries
+- keywords
+- per-photo analysis text
 
-## Lagerplats
+## Storage Map
 
-Sidan `Lagerplats` visar alla platsenheter, till exempel:
+The `Storage Map` page shows all storage units, for example:
 
-- `Ivar C`
-- `Bänk Svarv`
-- `Skåp 3D-print`
+- `Shelving unit C`
+- `Bench Lathe`
+- `Cabinet 3D Print`
 
-Här kan du:
+Here you can:
 
-- klicka dig in på rätt platsenhet
-- se lådor grupperade per hylla eller yta
-- öppna en låda direkt från platsvyn
+- open the correct storage unit
+- see boxes grouped by shelf or surface
+- open a box directly from the storage map
 
-I `Ivar`-vyn visas bara de platser som faktiskt används på respektive hylla. Om en hylla har 2 platser visas 2, och om en annan har 4 så visas 4 där.
+In the shelving unit view, only the positions that are actually used on each shelf are shown. If one shelf has 2 positions it shows 2, and if another has 4 it shows 4 there.
 
-Det här är särskilt bra när du vill hitta något utifrån hur verkstaden faktiskt ser ut, snarare än genom fritextsökning.
+This is especially useful when you want to find something based on how the workshop physically looks, rather than by free-text search.
 
-## Bilder att koppla
+## Images to Connect
 
-Den här sidan visar bara bilder som ännu inte är kopplade till någon låda.
+This page only shows images that are not yet linked to any box.
 
-Albumomslaget i Immich visas inte här, eftersom det används som översiktsbild på startsidan.
+The Immich album cover is excluded here because it is used as the overview image on the start page.
 
-Här kan du:
+Here you can:
 
-- markera flera bilder
-- låta AI föreslå låda och plats
-- se sannolika befintliga lådor
-- koppla direkt till ett bra förslag
+- select multiple images
+- let AI suggest a box and a location
+- see likely existing boxes
+- attach directly to a good match
 
-Om flera små lådor står på samma plats försöker appen välja nästa lediga variant, till exempel `A`, `B` eller `C`.
+If several small boxes share the same place, the app tries to choose the next free variant, such as `A`, `B`, or `C`.
 
-## Ny låda / inventering
+## New Box / Inventory
 
-Här gör du själva registreringen.
+This is where registration happens.
 
-Du kan:
+You can:
 
-- justera lådnamn
-- välja platskategori: `Ivar`, `Bänk` eller `Skåp`
-- välja eller ändra aktuell plats
-- välja plats innan du skriver lådnamnet
-- skriva noteringar och spara sessionen direkt efter `Sökord`
-- ändra bildordning
-- ändra bildroller
-- analysera enskilda bilder
-- redigera analystexten manuellt
-- låta markerade album-bilder följa med automatiskt när du sparar, även om du inte först trycker på `Lägg till valda bilder`
+- adjust the box name
+- choose the location category: `Shelving unit`, `Bench`, or `Cabinet`
+- choose or change the current location
+- select the location before typing the box name
+- write notes and save the session directly after `Keywords`
+- change image order
+- change photo roles
+- analyze individual images
+- edit the analysis text manually
+- let selected album images follow automatically when you save, even if you do not click `Add selected images` first
 
-Om du försöker skapa en ny låda på en plats som redan är upptagen stoppas sparningen. Då ska du i stället:
+If you try to create a new box at a location that is already occupied, saving is blocked. In that case you should:
 
-- välja en annan bokstav
-- eller öppna och redigera den befintliga lådan
+- choose another letter
+- or open and edit the existing box instead
 
-För en befintlig låda kan du använda `Ändra plats` om lådan flyttats i verkstaden.
+For an existing box, you can use `Change location` if the box has been moved in the workshop.
 
-Det är ofta den bästa sidan att använda när AI:n nästan har rätt men behöver lite hjälp.
+This is often the best page to use when the AI is almost right but needs a bit of help.
 
-## Låd-vyn
+## Box View
 
-Här ser du den färdiga lådan.
+Here you see the completed box.
 
-Du kan:
+You can:
 
-- se aktuell sammanfattning
-- öppna alla bilder
-- analysera enstaka bilder i efterhand
-- redigera analystext
-- lägga till fler bilder
-- släppa en felkopplad bild
-- öppna historik
+- view the current summary
+- open all photos
+- analyze individual photos afterwards
+- edit analysis text
+- add more photos
+- release an incorrectly linked photo
+- open the history
 
-Om en bild har analystext kan du också se den direkt som tooltip när du hovrar på bilden i olika delar av appen.
+If a photo has analysis text, you can also see it directly as a tooltip when hovering over the image in different parts of the app.
 
-Historiken finns kvar även om lådan flyttas till en ny plats.
+History remains available even if the box moves to a new location.
 
-## När AI:n inte blir rätt
+## When the AI Is Wrong
 
-Det är helt normalt att AI:n ibland behöver hjälp.
+It is completely normal for the AI to need help sometimes.
 
-Det enklaste är då att:
+The simplest fix is usually to:
 
-1. rätta bildrollerna
-2. rätta lådnamnet
-3. rätta analystexten
-4. spara
+1. correct the photo roles
+2. correct the box name
+3. correct the analysis text
+4. save
 
-Bra att tänka på:
+Helpful things to keep in mind:
 
-- etikettbilden bör vara tydlig och nära
-- 2 till 6 bilder brukar ge bäst översiktsanalys
-- för många bilder samtidigt kan göra analysen långsammare eller sämre
+- the label photo should be clear and close
+- 2 to 6 photos usually gives the best overview analysis
+- too many photos at once can make analysis slower or worse
 
-Sökningen är också mer tolerant än tidigare, så den kan ofta förstå både:
+Search is also more tolerant than before, so it can often understand terms such as:
 
-- `rc-bil`
-- `cr-bil`
-- `radiostyrd`
+- `rc-car`
+- `cr-car`
+- `radio controlled`
 
-som samma typ av låda eller innehåll.
+as the same kind of box or content.
 
-## Inställningar
+## Settings
 
-På sidan `Inställningar` kan du ändra:
+From the `Settings` page you can change:
 
-- tema
-- typsnitt
-- textstorlek
-- Immich-konto och album
-- AI-provider och modell
-- promptar som styr modellen
-- rensningsfraser och andra filter som städar AI-svar
-- ladda ner backup
-- exportera katalogen till Excel
-- importera katalog från en exporterad Excel-fil
+- theme
+- font
+- text size
+- Immich account and album
+- AI provider and model
+- prompts that guide the model
+- cleanup phrases and other filters that clean up AI output
+- download a backup
+- export the catalog to Excel
+- import a catalog from an exported Excel file
+- choose which installed CUPS printer queue to use for label printing
+- choose the app language
+- open the translation tool
+- configure a separate AI model for translation drafts
 
-Det här är särskilt användbart om du testar olika modeller i LM Studio.
+## Translation Tool
 
-## Om något ser konstigt ut
+The translation tool is opened from `Settings`.
 
-Några vanliga situationer:
+It is intended for maintaining the language files that ship with the app.
 
-- En bild saknas:
-  den kan ha tagits bort i Immich. Appen ska ändå fortsätta fungera.
+You can:
 
-- En analys känns tom eller märklig:
-  prova igen, eller skriv en egen analystext manuellt.
+- choose a source language and a target language
+- translate one section at a time
+- filter missing strings
+- create a new language from the UI
+- export the current language JSON file
+- use a dedicated AI model for translation drafts
 
-- Fel låda föreslås:
-  kontrollera etikettbilden och välj rätt låda manuellt.
+This makes it possible to keep the app UI multilingual without editing JSON files manually every time.
 
-- En bild hamnade i fel låda:
-  använd `Släpp bild` från lådvyn.
+## Label Printing
 
-- En låda står på fel plats:
-  öppna lådan eller registreringssidan och använd `Ändra plats`.
+The app is still optimized for DYMO workflows, but you can now choose among installed CUPS queues in `Settings`.
 
-## Rekommenderat arbetssätt i vardagen
+For the current DYMO setup, the app can also show:
 
-- Fota alltid etikett först om möjligt.
-- Ta sedan 1 till 3 innehållsbilder.
-- Använd `Bilder att koppla` för snabb sortering.
-- Gör finjusteringar i `Ny låda / inventering`.
-- Använd översikten som din huvudsakliga söksida.
-- Använd `Lagerplats` när du vill navigera visuellt mellan Ivar, bänkar och skåp.
+- the active roll
+- the detected SKU
+- queued jobs
+- firmware version
+- labels remaining on the roll when supported by the printer
+
+This is especially useful if you test different models in LM Studio or compare different printer setups.
+
+## If Something Looks Wrong
+
+Some common situations:
+
+- A photo is missing:
+  it may have been removed in Immich. The app should still continue working.
+
+- An analysis looks empty or strange:
+  try again, or write your own analysis text manually.
+
+- The wrong box is suggested:
+  check the label photo and choose the correct box manually.
+
+- A photo ended up in the wrong box:
+  use `Release image` from the box page.
+
+- A box is shown at the wrong location:
+  open the box or the registration page and use `Change location`.
+
+## Recommended Everyday Workflow
+
+- Photograph the label first whenever possible.
+- Then take 1 to 3 content photos.
+- Use `Images to Connect` for quick sorting.
+- Make fine adjustments in `New Box / Inventory`.
+- Use the overview as your main search page.
+- Use `Storage Map` when you want to navigate visually between shelving units, benches, and cabinets.

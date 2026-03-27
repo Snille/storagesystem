@@ -1,7 +1,10 @@
 import { spawn } from "node:child_process";
 import { LABEL_MEDIA_PRESETS, findLabelMediaPresetBySku, type LabelMediaPreset } from "@/lib/label-templates";
+import { readAppSettingsSync } from "@/lib/settings";
 
-const DEFAULT_DYMO_QUEUE = process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL";
+function getConfiguredPrinterQueue() {
+  return readAppSettingsSync().labels.printerQueue || process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL";
+}
 
 type DymoPrinterState = "idle" | "processing" | "stopped" | "unknown";
 
@@ -11,6 +14,7 @@ export type DymoPrinterStatus = {
   stateReason: string;
   model: string;
   firmwareVersion?: string;
+  labelsRemaining?: number;
   deviceUri: string;
   queuedJobs: number;
   media: {
@@ -250,7 +254,15 @@ function parseFirmwareVersion(buffer: Buffer) {
   return value;
 }
 
-export async function readDymoPrinterStatus(queue = DEFAULT_DYMO_QUEUE): Promise<DymoPrinterStatus> {
+function parseLabelsRemaining(buffer: Buffer) {
+  if (!buffer || buffer.length < 29) {
+    return undefined;
+  }
+
+  return buffer.readUInt16LE(27);
+}
+
+export async function readDymoPrinterStatus(queue = getConfiguredPrinterQueue()): Promise<DymoPrinterStatus> {
   if (process.platform !== "linux") {
     throw new Error("Skrivarstatus via DYMO stöds just nu bara på Linux-servern.");
   }
@@ -270,24 +282,31 @@ export async function readDymoPrinterStatus(queue = DEFAULT_DYMO_QUEUE): Promise
   const mediaCollection = parseSingleAttribute(output, "media-col-default");
   let rawVersion = await queryRawPrinter(Buffer.from([0x1b, 0x56]), 64).catch(() => Buffer.alloc(0));
   let rawSku = await queryRawPrinter(Buffer.from([0x1b, 0x55]), 80).catch(() => Buffer.alloc(0));
+  let rawStatus = await queryRawPrinter(Buffer.from([0x1b, 0x41, 0x01]), 32).catch(() => Buffer.alloc(0));
 
-  if (isEmptyOrZeroBuffer(rawSku)) {
+  if (isEmptyOrZeroBuffer(rawSku) || isEmptyOrZeroBuffer(rawStatus)) {
     const sequence = await exchangeRawPrinter([
+      { command: Buffer.from([0x1b, 0x41, 0x01]), responseBytes: 32 },
       { command: Buffer.from([0x1b, 0x56]), responseBytes: 64 },
       { command: Buffer.from([0x1b, 0x55]), responseBytes: 80 }
     ]).catch(() => []);
 
     if (sequence[0]?.length) {
-      rawVersion = sequence[0];
+      rawStatus = sequence[0];
     }
 
     if (sequence[1]?.length) {
-      rawSku = sequence[1];
+      rawVersion = sequence[1];
+    }
+
+    if (sequence[2]?.length) {
+      rawSku = sequence[2];
     }
   }
 
   const dymoSku = parseDymoSku(rawSku);
   const firmwareVersion = parseFirmwareVersion(rawVersion);
+  const labelsRemaining = parseLabelsRemaining(rawStatus);
 
   const mediaFromKeyword = parseMediaDimensionsFromKeyword(mediaKeyword);
   const mediaFromCollection = parseMediaDimensionsFromCollection(mediaCollection);
@@ -300,6 +319,7 @@ export async function readDymoPrinterStatus(queue = DEFAULT_DYMO_QUEUE): Promise
     stateReason,
     model,
     firmwareVersion,
+    labelsRemaining,
     deviceUri,
     queuedJobs,
     media: {

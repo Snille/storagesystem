@@ -133,6 +133,7 @@ export function getDefaultLabelSettings(): LabelSettings {
   const badge = LABEL_MEDIA_PRESETS[5];
 
   return {
+    printerQueue: process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL",
     defaultTemplateId: "standard-11354",
     templates: [
       buildTemplate(
@@ -262,6 +263,7 @@ export function normalizeLabelSettings(settings: LabelSettings): LabelSettings {
     "";
 
   return {
+    printerQueue: settings.printerQueue?.trim() || fallback.printerQueue,
     defaultTemplateId,
     templates
   };

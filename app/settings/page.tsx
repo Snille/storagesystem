@@ -1,9 +1,10 @@
 import { SettingsForm } from "@/app/settings/settings-form";
 import { fetchAvailableModels } from "@/lib/ai-models";
+import { listAvailablePrinterQueues } from "@/lib/cups-printers";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
 import { createTranslator, listAvailableLanguages, readLanguageCatalog } from "@/lib/i18n";
 import { readAppSettings } from "@/lib/settings";
-import type { AvailableAlbum, AvailableModel } from "@/lib/types";
+import type { AvailableAlbum, AvailableModel, AvailablePrinter } from "@/lib/types";
 
 async function readInitialModels() {
   const settings = await readAppSettings();
@@ -45,11 +46,21 @@ async function readInitialAlbums() {
   }
 }
 
+async function readInitialPrinters() {
+  try {
+    const printers = await listAvailablePrinterQueues();
+    return printers satisfies AvailablePrinter[];
+  } catch {
+    return [] as AvailablePrinter[];
+  }
+}
+
 export default async function SettingsPage() {
-  const [settings, availableModels, availableAlbums, languageOptions] = await Promise.all([
+  const [settings, availableModels, availableAlbums, availablePrinters, languageOptions] = await Promise.all([
     readAppSettings(),
     readInitialModels(),
     readInitialAlbums(),
+    readInitialPrinters(),
     listAvailableLanguages()
   ]);
   const languageCatalog = await readLanguageCatalog(settings.appearance.language);
@@ -66,6 +77,7 @@ export default async function SettingsPage() {
         initialSettings={settings}
         initialModels={availableModels}
         initialAlbums={availableAlbums}
+        initialPrinters={availablePrinters}
         languageOptions={languageOptions}
         ui={Object.fromEntries(
           Object.entries(languageCatalog).filter(([key, value]) => key !== "_meta" && typeof value === "string")

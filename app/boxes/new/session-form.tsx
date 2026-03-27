@@ -264,6 +264,13 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     });
   }, [boxId, currentLocationId, existingBoxes, label]);
   const hasDuplicateWarning = Boolean(defaults.duplicateWarning.trim());
+  const locationLabels = {
+    shelvingUnit: t("ivar", "Lagerhylla"),
+    bench: t("bench", "Bänk"),
+    cabinet: t("cabinet", "Skåp"),
+    surface: t("surface", "Yta"),
+    slot: t("place", "Plats")
+  };
 
   function updateRole(immichAssetId: string, photoRole: PhotoRole) {
     setPhotos((current) =>
@@ -444,9 +451,9 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
               {presentedLocation ? (
                 <div className="meta card-meta">
                   <>
-                    <span>{presentLocation(currentLocationId, boxId).system}</span>
-                    <span>{presentLocation(currentLocationId, boxId).shelf}</span>
-                    <span>{presentLocation(currentLocationId, boxId).slot}</span>
+                    <span>{presentLocation(currentLocationId, boxId, locationLabels).system}</span>
+                    <span>{presentLocation(currentLocationId, boxId, locationLabels).shelf}</span>
+                    <span>{presentLocation(currentLocationId, boxId, locationLabels).slot}</span>
                   </>
                 </div>
               ) : (
@@ -473,20 +480,20 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
                   }}
                   required
                 >
-                  <option value="ivar">{t("ivar", "Ivar")}</option>
+                  <option value="ivar">{t("ivar", "Lagerhylla")}</option>
                   <option value="bench">{t("bench", "Bänk")}</option>
                   <option value="cabinet">{t("cabinet", "Skåp")}</option>
                 </select>
               </label>
               <label>
-                {locationKind === "ivar" ? t("ivar", "Ivar") : locationKind === "bench" ? t("bench", "Bänk") : t("cabinet", "Skåp")}
+                {locationKind === "ivar" ? t("ivar", "Lagerhylla") : locationKind === "bench" ? t("bench", "Bänk") : t("cabinet", "Skåp")}
                 <input
                   list={unitListId}
                   value={locationUnit}
                   onChange={(event) => setLocationUnit(event.target.value)}
                   placeholder={
                     locationKind === "ivar"
-                      ? t("selectIvar", "Välj Ivar")
+                      ? t("selectIvar", "Välj lagerhylla")
                       : locationKind === "bench"
                         ? "Svarv"
                         : "3D-print"

@@ -1,19 +1,19 @@
-# DYMO via CUPS
+# DYMO Through CUPS
 
-Det här projektet använder en `DYMO LabelWriter 5XL` via `CUPS` på Ubuntu-servern.
+This project currently uses a `DYMO LabelWriter 5XL` through `CUPS` on the Ubuntu server.
 
-## Aktuell serverkonfiguration
+## Current Server Configuration
 
 - server: `10.0.0.33`
-- skrivare: `DYMO LabelWriter 5XL`
-- skrivare-IP: `10.0.0.76`
-- protokoll: `RAW socket 9100`
-- CUPS-kö: `DYMO_5XL`
+- printer: `DYMO LabelWriter 5XL`
+- printer IP: `10.0.0.76`
+- protocol: `RAW socket 9100`
+- CUPS queue: `DYMO_5XL`
 - device URI: `socket://10.0.0.76:9100`
 - PPD: `/usr/share/cups/model/lw5xl.ppd`
 - filter: `/usr/lib/cups/filter/raster2dymolw_v2`
 
-## Installerade beroenden
+## Installed Dependencies
 
 - `cups`
 - `libcups2-dev`
@@ -24,31 +24,31 @@ Det här projektet använder en `DYMO LabelWriter 5XL` via `CUPS` på Ubuntu-ser
 - `libtool`
 - `libboost-dev`
 
-## Drivrutinskälla
+## Driver Source
 
-Officiell DYMO-källa:
+Official DYMO source:
 
 - `https://github.com/dymosoftware/Drivers`
 
-Paket som användes:
+Package used:
 
 - `LW5xx_Linux`
 
-## Installationsnotering
+## Installation Notes
 
-Drivrutinen byggdes från källa på Ubuntu 24.04.
+The driver was built from source on Ubuntu 24.04.
 
-För att få bygget att fungera med modern toolchain behövdes:
+To make the build work with a modern toolchain, it required:
 
 1. `autoreconf -fi`
-2. en liten kompatibilitetspatch i `LabelManagerLanguageMonitorV2.cpp`
-   Där lades `#include <ctime>` till innan `make`.
+2. a small compatibility patch in `LabelManagerLanguageMonitorV2.cpp`
+   Add `#include <ctime>` before `make`
 
-LabelWriter-delen för `5XL` installerades sedan korrekt i CUPS.
+The `5XL` LabelWriter part was then installed correctly in CUPS.
 
-## CUPS-kö
+## CUPS Queue
 
-Kön skapades i princip med:
+The queue was created roughly like this:
 
 ```bash
 sudo lpadmin -p DYMO_5XL -E \
@@ -59,33 +59,38 @@ sudo cupsenable DYMO_5XL
 sudo cupsaccept DYMO_5XL
 ```
 
-## Test
+## Testing
 
-Kommunikationen verifierades på två nivåer:
+Communication was verified on two levels:
 
-- servern kunde nå skrivaren på `10.0.0.76:9100`
-- CUPS-loggen visade att ett DYMO-jobb skickades och slutfördes
+- the server could reach the printer at `10.0.0.76:9100`
+- the CUPS log showed that a DYMO job was sent and completed
 
-Exempel på enkel testutskrift:
+Example of a simple test print:
 
 ```bash
 cat > /tmp/dymo-test.txt <<'EOF'
-Hyllsystem test
-Ivar: C  Hylla: 3  Plats: 1A
+Storage System test
+Shelving unit: C  Shelf: 3  Slot: 1A
 DYMO LabelWriter 5XL via CUPS
 EOF
 
 lp -d DYMO_5XL -o media=30334_2-1_4_in_x_1-1_4_in /tmp/dymo-test.txt
 ```
 
-## Nästa steg i appen
+## Current App Integration
 
-Nästa logiska steg är att koppla etikettgeneratorn på `/labels` till en riktig serverendpoint, till exempel:
+The DYMO flow is now integrated in the app through:
 
 - `POST /api/labels/print`
+- `GET /api/labels/printer-status`
 
-Den endpointen kan då:
+The app currently supports:
 
-1. rendera etikettinnehåll
-2. generera utskriftsbar fil eller PDF
-3. skicka jobbet till `DYMO_5XL` via `lp`
+- direct label printing through CUPS
+- printer status reading on the labels page
+- active roll detection
+- remaining label count for supported DYMO models
+- printer queue selection from already installed CUPS queues in `Settings`
+
+DYMO queues are still the recommended choice in the UI until A4 sheet label support is added for regular laser printers.

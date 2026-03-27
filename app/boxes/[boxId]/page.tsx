@@ -47,7 +47,13 @@ export default async function BoxPage({ params }: BoxPageProps) {
   const originalUrls = Object.fromEntries(
     unassignedAssets.map((asset) => [asset.id, getAssetOriginalUrl(asset.id)])
   );
-  const boxMeta = presentLocation(box.currentLocationId, box.boxId);
+  const boxMeta = presentLocation(box.currentLocationId, box.boxId, {
+    shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+    bench: t("boxForm.bench", "Bänk"),
+    cabinet: t("boxForm.cabinet", "Skåp"),
+    surface: t("boxForm.surface", "Yta"),
+    slot: t("boxForm.place", "Plats")
+  });
 
   return (
     <div className="shell">

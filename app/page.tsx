@@ -76,17 +76,30 @@ export default async function Home({ searchParams }: HomeProps) {
           <div className="card-list" style={{ marginTop: 18 }}>
             {results.length > 0 ? (
               results.map((result) => {
-                const boxMeta = presentLocation(result.box.currentLocationId, result.box.boxId);
+                const boxMeta = presentLocation(result.box.currentLocationId, result.box.boxId, {
+                  shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+                  bench: t("boxForm.bench", "Bänk"),
+                  cabinet: t("boxForm.cabinet", "Skåp"),
+                  surface: t("boxForm.surface", "Yta"),
+                  slot: t("boxForm.place", "Plats")
+                });
                 return (
                   <HomeBoxCard
                     key={result.box.boxId}
                     href={`/boxes/${result.box.boxId}`}
                     label={result.box.label}
-                    summary={result.session?.summary ?? t("home.summaryMissing", "Ingen aktuell sammanfattning ännu.")}
-                    keywords={result.session?.itemKeywords ?? []}
-                    photoCount={result.photos.length}
-                    location={boxMeta}
-                    photos={result.photos.map((photo) => ({
+                  summary={result.session?.summary ?? t("home.summaryMissing", "Ingen aktuell sammanfattning ännu.")}
+                  keywords={result.session?.itemKeywords ?? []}
+                  photoCount={result.photos.length}
+                  location={boxMeta}
+                  ui={{
+                    openBox: t("home.openBox", "Öppna {label}"),
+                    photosCount: t("home.photosCount", "Bilder {count}"),
+                    openLargeImage: t("shared.openLargeImage", "Visa större bild: {name}"),
+                    imageHasAnalysisText: t("shared.imageHasAnalysisText", "Bilden har analystext"),
+                    closeImageView: t("shared.closeImageView", "Stäng bildvisning")
+                  }}
+                  photos={result.photos.map((photo) => ({
                       photoId: photo.photoId,
                       thumbnailUrl: getAssetThumbnailUrl(photo.immichAssetId),
                       originalUrl: getAssetOriginalUrl(photo.immichAssetId),
@@ -135,6 +148,11 @@ export default async function Home({ searchParams }: HomeProps) {
               overlayTitle={album.albumName ? t("home.overviewOverlayTitle", "{albumName} - översikt", { albumName: album.albumName }) : t("home.overviewOverlayFallbackTitle", "Översiktsbild")}
               overlayMeta={new Date(overviewAsset.fileCreatedAt).toLocaleString("sv-SE")}
               overlayNote={t("home.overviewOverlayNote", "Albumomslag i Immich. Används som översiktsbild över miljön.")}
+              ui={{
+                openLargeImage: t("shared.openLargeImage", "Visa större bild: {name}"),
+                imageHasAnalysisText: t("shared.imageHasAnalysisText", "Bilden har analystext"),
+                closeImageView: t("shared.closeImageView", "Stäng bildvisning")
+              }}
             />
           </div>
         </section>
@@ -146,7 +164,13 @@ export default async function Home({ searchParams }: HomeProps) {
           {sortedBoxes.map((box) => {
             const session = sessionsByBox.get(box.boxId);
             const photos = session ? photosBySession.get(session.sessionId) ?? [] : [];
-            const boxMeta = presentLocation(box.currentLocationId, box.boxId);
+            const boxMeta = presentLocation(box.currentLocationId, box.boxId, {
+              shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+              bench: t("boxForm.bench", "Bänk"),
+              cabinet: t("boxForm.cabinet", "Skåp"),
+              surface: t("boxForm.surface", "Yta"),
+              slot: t("boxForm.place", "Plats")
+            });
 
             return (
               <HomeBoxCard
@@ -157,6 +181,13 @@ export default async function Home({ searchParams }: HomeProps) {
                 keywords={session?.itemKeywords ?? []}
                 photoCount={photos.length}
                 location={boxMeta}
+                ui={{
+                  openBox: t("home.openBox", "Öppna {label}"),
+                  photosCount: t("home.photosCount", "Bilder {count}"),
+                  openLargeImage: t("shared.openLargeImage", "Visa större bild: {name}"),
+                  imageHasAnalysisText: t("shared.imageHasAnalysisText", "Bilden har analystext"),
+                  closeImageView: t("shared.closeImageView", "Stäng bildvisning")
+                }}
                 photos={photos.map((photo) => ({
                   photoId: photo.photoId,
                   thumbnailUrl: getAssetThumbnailUrl(photo.immichAssetId),

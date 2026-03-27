@@ -1,195 +1,223 @@
 # History
 
+## v1.4.0 - 2026-03-27
+
+Release focused on translation tooling, printer queue selection, DYMO status improvements, and public-facing documentation polish.
+
+### Translation Tooling
+
+- Added a translation tool in `Settings` with source/target language selection.
+- Added per-section translation editing so the UI does not need to load all strings at once.
+- Added new-language creation from the UI.
+- Added export of language JSON files from the translation tool.
+- Added per-language coverage tracking.
+- Added separate AI configuration for translation drafts.
+- Added a dedicated translation instruction prompt used by AI translation drafts.
+- Added OpenRouter app titles for translation requests so they no longer show up as `Unknown`.
+
+### Labels and Printers
+
+- Added remaining label count from supported DYMO printers through the network status protocol.
+- Added remaining-label display both in detailed printer metadata and in the top printer status row on the labels page.
+- Added selection of the active printer queue from already installed CUPS queues in `Settings`.
+- Added DYMO-first recommendation text and sorting in the printer picker.
+
+### Documentation
+
+- Translated the main Markdown documentation to English.
+- Updated README, MANUAL, deploy guides, and TODO to reflect the current app structure.
+- Documented the translation tool and the new printer queue selection flow.
+
 ## v1.3.0 - 2026-03-26
 
-Namngivningsrelease som gör appen och integrationerna mer generella och konsekventa.
+Naming release that makes the app and its integrations more general and consistent.
 
-### Namn och integrationer
+### Naming and Integrations
 
-- Appnamn, filnamn och API-relaterade benämningar använder nu `Lagersystem` i stället för `Hyllsystem` eller `Verkstad` där det var användar- och integrationssynligt.
-- Publika API:t skyddas nu med `LAGERSYSTEM_API_KEY`.
-- Home Assistant-paket och dokumentation använder nu konsekvent `lagersystem_*` och eventet `lagersystem_result`.
-- Backup och Excel-export använder nu filnamn som börjar med `lagersystem-`.
+- App naming, filenames, and API-related labels now consistently use `Storage System` / `Lagersystem` instead of older shelf- or workshop-specific names where the naming is user-facing or integration-facing.
+- The public API is now protected with `LAGERSYSTEM_API_KEY`.
+- The Home Assistant package and documentation now consistently use `lagersystem_*` and the event `lagersystem_result`.
+- Backup and Excel export filenames now start with `lagersystem-`.
 
-### Drift
+### Operations
 
-- Deployscriptets standardvärden pekar nu på `/opt/lagersystem` och `lagersystem.service`.
-- Ny servicefil för `lagersystem.service` med uppdaterad arbetskatalog.
+- Deployment defaults now point to `/opt/lagersystem` and `lagersystem.service`.
+- New service file for `lagersystem.service` with updated working directory.
 
 ## v1.2.1 - 2026-03-26
 
-Punktrelease som knyter ihop katalogens import och export via samma Excel-format.
+Patch release that unifies catalog import and export around the same Excel format.
 
-### Import av katalog
+### Catalog Import
 
-- Ny import i `Inställningar` där du kan välja en exporterad `.xlsx`-fil direkt från datorn.
-- Importen bygger nu på appens aktuella exportformat i stället för den äldre manuella Excel-mallen.
-- Importflödet uppdaterar lådor och aktuella sessioner men låter kopplade bilder ligga kvar.
+- New import flow in `Settings` where you can choose an exported `.xlsx` file directly from your computer.
+- Import now uses the app's current export format instead of the older manual Excel template.
+- The import flow updates boxes and current sessions while keeping linked images in place.
 
 ## v1.2.0 - 2026-03-26
 
-Releasen samlar exportfunktioner, översiktsbild, lokal testning, UI-polish och dokumentationssynk i en gemensam versionshöjning.
+This release bundles export functions, overview image support, local testing, UI polish, and documentation sync into one version bump.
 
-### Export och backup
+### Export and Backup
 
-- Ny Excel-export av katalogen via `scripts/export_label_catalog.py`.
-- Ny export-endpoint i appen och knapp under `Inställningar` i samma avsnitt som backup.
-- Backup- och Excel-filer får nu tidsstämpel i filnamnet i formatet `YYYY-MM-DD-HHMMSS`.
-- Fixat Excel-exporten så att workbook-metadata inte längre ger reparationsdialog i Excel.
+- New Excel catalog export via `scripts/export_label_catalog.py`.
+- New in-app export endpoint and button under `Settings` in the same area as backup.
+- Backup and Excel files now get timestamped filenames in the format `YYYY-MM-DD-HHMMSS`.
+- Fixed Excel export metadata so workbooks no longer trigger a repair dialog in Excel.
 
-### Immich och översikt
+### Immich and Overview
 
-- Albumomslaget i valt Immich-album används nu som `Översiktsbild` på startsidan.
-- `Översiktsbild` kan öppnas i egen lightbox från översikten.
-- Albumomslaget filtreras bort från `Bilder att koppla` så att det inte blandas in bland okopplade lådbilder.
+- The selected Immich album cover is now used as the `Overview image` on the home page.
+- The `Overview image` opens in its own lightbox from the overview.
+- The album cover is filtered out from `Images to Connect` so it does not mix with unassigned box images.
 
-### Lagerplats och tema
+### Storage Map and Theme
 
-- `Lagerplats` har nu tydligare visuell skillnad mellan `Ivar`, `Skåp` och `Bänk`.
-- `Bänk` visar endast själva bänkplanet där det är relevant i strukturen.
-- Hyll- och bänketiketter har justerats till godkänd position direkt mot hyllplanet.
-- Platschippens värden följer nu tema bättre och blir mörka i ljust läge.
+- `Storage Map` now has a clearer visual difference between `Shelving unit`, `Cabinet`, and `Bench`.
+- `Bench` now shows only the actual bench surface where relevant in the structure.
+- Shelf and bench labels were adjusted to a cleaner approved position directly against the shelf surface.
+- Location chips now follow the theme better and become dark in light mode.
 
-### Drift och dokumentation
+### Operations and Documentation
 
-- Ny guide i `LOCAL-TESTING.md` för lokal körning och felsökning.
-- `scripts/start-local.ps1` växlar bara Node-version via `nvm use` när det verkligen behövs.
-- README, MANUAL och Home Assistant-dokumentationen uppdaterade för nya exportflöden, översiktsbild och utökad metadata.
+- New `LOCAL-TESTING.md` guide for local startup and troubleshooting.
+- `scripts/start-local.ps1` only switches Node version via `nvm use` when really needed.
+- README, MANUAL, and Home Assistant documentation were updated for the new export flow, overview image, and expanded metadata.
 
 ## v1.1.2 - 2026-03-25
 
-Punktrelease med fokus på platslogik, AI-matchning, sökning och stabilitet i registreringsflödet.
+Patch release focused on location logic, AI matching, search, and registration flow stability.
 
-### Platser och sortering
+### Locations and Sorting
 
-- Översikten sorterar nu lådor i fysisk ordning: `Ivar`, sedan `Bänk`, sedan `Skåp`.
-- `Lagerplats` använder samma gemensamma platsordning för platsenheter.
-- Ny hjälpare för gemensam platssortering i `lib/location-sort.ts`.
+- The overview now sorts boxes in physical order: `Shelving unit`, then `Bench`, then `Cabinet`.
+- `Storage Map` uses the same shared location sort order for storage units.
+- Added a shared location sort helper in `lib/location-sort.ts`.
 
-### Ny låda / inventering
+### New Box / Inventory
 
-- `Aktuell plats` ligger nu före `Etikett / lådnamn` i formuläret.
-- Nya lådor får inte längre råka skriva över en befintlig låda på samma exakta plats.
-- Servern stoppar nu sparning om platsen redan används av en annan låda och skickar tillbaka en tydlig varning.
-- Nästa lediga bokstav på en plats räknas nu fram utifrån den generella platsmodellen i stället för äldre IVAR-antaganden.
+- `Current location` now appears before `Label / box name` in the form.
+- New boxes can no longer accidentally overwrite an existing box at the same exact location.
+- The server now blocks save attempts if a location is already used by another box and returns a clear warning.
+- The next free letter at a location is now calculated from the generic location model instead of older shelving-only assumptions.
 
-### AI och analys
+### AI and Analysis
 
-- `Lageralbum` matchar nu AI-förslag korrekt även för `Bänk` och `Skåp`.
-- Analyslogiken använder nu samma platsnormalisering och platsjämförelse som resten av appen.
-- Appnamnet i webbläsarfliken är ändrat från `Hyllsystem` till `Lagersystem`.
+- `Lageralbum` now matches AI suggestions correctly for `Bench` and `Cabinet` as well.
+- The analysis logic now uses the same location normalization and location comparison as the rest of the app.
+- The app name in the browser tab changed from `Hyllsystem` to `Lagersystem`.
 
-### Bilder och sessioner
+### Images and Sessions
 
-- Fixat ett fel där två bilder i samma session kunde få samma `photoId`.
-- Fixat följdfelet där `Analysera bild` kunde fylla flera analystextrutor samtidigt.
-- Tooltip med analystext används nu konsekvent på bilder där analystext finns.
+- Fixed an issue where two photos in the same session could get the same `photoId`.
+- Fixed the follow-up issue where `Analyze image` could fill several analysis editors at once.
+- Tooltip-based analysis previews are now used consistently on images that have analysis text.
 
-### Sökning
+### Search
 
-- Förbättrad heuristik för bindestrecksord så sökningar som `rc-bil` inte längre feltolkas som filnamn.
-- Lagt till bättre stöd för korta felskrivningar och synonymvarianter som `cr-bil`, `rc-bil` och `radiostyrd`.
+- Improved heuristics for hyphenated terms so searches like `rc-car` are no longer misread as filenames.
+- Added better support for short typos and synonym variants such as `cr-car`, `rc-car`, and `radio controlled`.
 
-### UI och polish
+### UI and Polish
 
-- Fixat platschippen så `Ivar`, `Hylla` och `Plats` får konsekvent storlek och vita bold-värden.
-- Dokumentationen uppdaterad för ny platslogik, sökbeteende, AI-matchning och skydd mot dubbletter.
+- Fixed location chips so `Shelving unit`, `Shelf`, and `Slot` get consistent sizing and white bold values.
+- Documentation updated for the new location logic, search behavior, AI matching, and duplicate protection.
 
 ## v1.1.1 - 2026-03-24
 
-Punktrelease med fokus på registreringsflöde, bildinformation och dokumentationssynk.
+Patch release focused on registration flow, image information, and documentation sync.
 
-### Registrering och bildflöde
+### Registration and Image Flow
 
-- Markerade album-bilder följer nu med vid sparning även om `Lägg till valda bilder` inte trycks först.
-- `Ny låda / inventering` har fått en mer kompakt layout där `Noteringar` och `Spara session` ligger direkt under `Sökord`.
-- Knappen `Lägg till valda bilder` använder nu samma primärstil som `Spara session`.
+- Selected album images now follow the save action even if `Add selected images` is not clicked first.
+- `New Box / Inventory` got a more compact layout where `Notes` and `Save session` sit directly below `Keywords`.
+- `Add selected images` now uses the same primary visual style as `Save session`.
 
-### Bildvisning
+### Image Viewing
 
-- Analystext visas nu som hover-tooltip på bilder när sådan text finns.
-- Registreringssidan skickar nu med analystext till den gemensamma bildvisaren så tooltip och lightbox visar samma information.
+- Analysis text is now shown as a hover tooltip on images when such text exists.
+- The registration page now passes analysis text to the shared image viewer so the tooltip and lightbox show the same information.
 
-### UI och dokumentation
+### UI and Documentation
 
-- Dokumentationen använder nu `Lagerplats` där det speglar dagens UI.
-- README och MANUAL uppdaterade för det senaste registreringsflödet och bildvisningen.
+- Documentation now uses `Storage Map` where that reflects the current UI.
+- README and MANUAL updated for the latest registration flow and image viewing behavior.
 
 ## v1.1.0 - 2026-03-24
 
-Första utbyggnadsreleasen efter `v1.0.0`, med fokus på platsstruktur och navigering i verkstaden.
+The first expansion release after `v1.0.0`, focused on location structure and navigation inside the workshop.
 
-### Platser och navigering
+### Locations and Navigation
 
-- Ny generell platsmodell för `Ivar`, `Bänk` och `Skåp`.
-- Ny sida `Hyllsystem` som visar alla platsenheter i systemet.
-- Ny detaljvy per platsenhet med visuell hyllstruktur och klickbara lådor.
-- Översikten visar nu `aktuella platser` i stället för dubblerad sessionsstatistik.
+- New generic location model for `Shelving unit`, `Bench`, and `Cabinet`.
+- New `Storage Map` page showing all storage units in the system.
+- New detail view per storage unit with a visual shelf structure and clickable boxes.
+- The overview now shows `current locations` instead of duplicated session statistics.
 
-### Registrering och flytt
+### Registration and Moves
 
-- `Ny låda / inventering` kan nu välja platskategori direkt.
-- Befintliga lådor kan flyttas genom att öppna och ändra `Aktuell plats`.
-- Stöd för bokstavsvariant även vid flytt till ny plats.
+- `New Box / Inventory` can now choose a location category directly.
+- Existing boxes can be moved by opening and changing `Current location`.
+- Support for letter variants when moving to a new location.
 
-### Struktur och presentation
+### Structure and Presentation
 
-- Ny intern platsparser och normalisering för flera typer av plats-ID.
-- Svensk presentation av `Ivar`, `Bänk`, `Skåp`, `Hylla`, `Yta` och `Plats` i hela UI:t.
-- Förbättrad hyllvy med trästruktur, hyllplan och dynamiska rader utan onödiga tomma platshållare.
+- New internal location parser and normalization for multiple location ID types.
+- Localized presentation of `Shelving unit`, `Bench`, `Cabinet`, `Shelf`, `Surface`, and `Slot` across the UI.
+- Improved shelf view with wood structure, shelf boards, and dynamic rows without unnecessary empty placeholders.
 
-### Språk och polish
+### Language and Polish
 
-- Språkfix för `lådor`.
-- Dokumentation uppdaterad för nya platsenheter, hyllvyn och flyttflödet.
+- Language fix for plural box text.
+- Documentation updated for the new location units, storage map, and move flow.
 
 ## v1.0.0 - 2026-03-24
 
-Första stabila releasen av Hyllsystem.
+First stable release of the system.
 
-### Kärnfunktioner
+### Core Features
 
-- Översikt med sök (text + röst), lådkort och bildvisning i lightbox.
-- `Bilder att koppla` med AI-förslag, bildroller och direktkoppling till låda.
-- `Registrera eller uppdatera` med redigering av sammanfattning, sökord, bilder och roller.
-- Låd-vy med historik, bildspecifik analys, redigering och möjlighet att släppa felkopplad bild.
+- Overview with search (text + voice), box cards, and image lightbox viewing.
+- `Images to Connect` with AI suggestions, photo roles, and direct box linking.
+- `Register or update` flow with editing of summaries, keywords, photos, and roles.
+- Box view with history, per-photo analysis, editing, and the ability to release wrongly attached photos.
 
-### AI och analys
+### AI and Analysis
 
-- Stöd för flera AI-providers:
+- Support for multiple AI providers:
   - LM Studio
   - OpenAI
   - Anthropic
   - OpenRouter
   - Open WebUI
-- Tydlig jobbstatus under analysflöden.
-- Redigerbara promptar i `Inställningar`.
-- Rensningsregler för AI-text (sammanfattning, sökord, noteringar, bildtext) via inställningar.
+- Clear job status during analysis flows.
+- Editable prompts in `Settings`.
+- Cleanup rules for AI text such as summary, keywords, notes, and photo text.
 
-### Immich och data
+### Immich and Data
 
-- Immich-integrering med API-nyckel eller share key.
-- Val av aktivt album i inställningar.
-- JSON-baserat datalager för lådor, sessioner, bilder och appinställningar.
-- Backup/export/import av appinställningar + inventarie i `.zip`.
+- Immich integration through API key or share key.
+- Selection of active album in settings.
+- JSON-based data store for boxes, sessions, photos, and app settings.
+- Backup, export, and import of app settings and inventory in `.zip`.
 
-### Etiketter och DYMO
+### Labels and DYMO
 
-- Etikettgenerator med egen mallmotor.
-- Visuell designer med flytt/skalning, rutnät, snap-to-grid och mm-skala.
-- Direktutskrift till DYMO LabelWriter 5XL via CUPS på Ubuntu.
-- Automatisk detektering av isatt etikettrulle och mallmatchning.
+- Label generator with a custom template engine.
+- Visual designer with move/resize, grid, snap-to-grid, and millimeter ruler.
+- Direct printing to DYMO LabelWriter 5XL through CUPS on Ubuntu.
+- Automatic detection of the inserted label roll and template matching.
 
-### Integrations-API
+### Integration API
 
-- Publika REST-endpoints för integration (ex. Home Assistant):
+- Public REST endpoints for integration such as Home Assistant:
   - `/api/public/health`
   - `/api/public/search`
   - `/api/public/ask`
   - `/api/public/boxes/:boxId`
 
-### Drift och stabilitet
+### Operations and Stability
 
-- Säkrare deployflöde med atomisk build-swap via `scripts/deploy_safe.sh`.
-- Förbättrad hantering av fallback, parserrobusthet och felmeddelanden i analysflöden.
-- Stöd för fast `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` i miljön för stabilare deployer med Next.js server actions.
+- Safer deployment flow with atomic build swap through `scripts/deploy_safe.sh`.
+- Improved fallback handling, parser robustness, and error messages in analysis flows.
+- Support for a fixed `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` for more stable Next.js deployments with server actions.

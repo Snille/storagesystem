@@ -1,43 +1,43 @@
-# Home Assistant-integration
+# Home Assistant Integration
 
-Den här appen har ett publikt REST-API som passar bra för Home Assistant.
+This app exposes a public REST API that works well with Home Assistant.
 
-## Filer
+## Files
 
-- paket: [home-assistant-package.yaml](/c:/Users/eripet/Coding/Hyllsystem/deploy/home-assistant-package.yaml)
-- systemd-tjänst för appen: [lagersystem.service](/c:/Users/eripet/Coding/Hyllsystem/deploy/lagersystem.service)
+- package: [home-assistant-package.yaml](./home-assistant-package.yaml)
+- systemd service for the app: [lagersystem.service](./lagersystem.service)
 
-## Förberedelser
+## Preparation
 
-1. Sätt `LAGERSYSTEM_API_KEY` i appens `.env.local` på servern.
-2. Starta om appen.
-3. Lägg följande i `secrets.yaml` i Home Assistant:
+1. Set `LAGERSYSTEM_API_KEY` in the app's `.env.local` on the server.
+2. Restart the app.
+3. Add the following to `secrets.yaml` in Home Assistant:
 
 ```yaml
 lagersystem_api_url: "https://lager.yourdomain.com/api/public/ask"
-lagersystem_api_key: "DIN_NYCKEL"
+lagersystem_api_key: "YOUR_KEY"
 lagersystem_tts_entity: "tts.google_translate_sv"
-lagersystem_media_player: "media_player.lager"
+lagersystem_media_player: "media_player.storage"
 ```
 
-4. Lägg paketfilen i:
+4. Place the package file at:
 
 ```text
 /config/packages/lagersystem.yaml
 ```
 
-5. Se till att `packages` är aktiverat i `configuration.yaml`:
+5. Make sure `packages` is enabled in `configuration.yaml`:
 
 ```yaml
 homeassistant:
   packages: !include_dir_named packages
 ```
 
-6. Starta om Home Assistant.
+6. Restart Home Assistant.
 
-## Vad paketet gör
+## What The Package Adds
 
-Paketet lägger till:
+The package adds:
 
 - `script.lagersystem_fraga`
 - `input_text.lagersystem_last_query`
@@ -48,30 +48,30 @@ Paketet lägger till:
 - `input_text.lagersystem_last_summary`
 - `input_text.lagersystem_last_keywords`
 - `input_number.lagersystem_last_match_count`
-- templatesensorer för svar, plats, box-id, källa, sammanfattning, nyckelord och antal träffar
+- template sensors for answer, location, box id, source, summary, keywords, and match count
 
-När scriptet körs:
+When the script runs:
 
-1. en fråga skickas till `/api/public/ask`
-2. svaret sparas i hjälpare
-3. svaret läses upp via TTS
-4. metadata som `source`, `match_count`, `summary` och `item_keywords` sparas också
-5. ett event `lagersystem_result` skickas i Home Assistant
+1. a question is sent to `/api/public/ask`
+2. the answer is stored in helpers
+3. the answer is spoken through TTS
+4. metadata such as `source`, `match_count`, `summary`, and `item_keywords` is also stored
+5. an event `lagersystem_result` is fired in Home Assistant
 
-## Exempel: kalla scriptet manuellt
+## Example: Call The Script Manually
 
 ```yaml
 action: script.lagersystem_fraga
 data:
-  query: "Var finns skarvdosorna?"
+  query: "Where are the junction boxes?"
 ```
 
-## Exempel: knyta till en knapp i ESPHome
+## Example: Connect To A Button In ESPHome
 
-Låt din ESPHome-knapp exponeras i Home Assistant och skapa sedan en automation:
+Expose your ESPHome button in Home Assistant and then create an automation:
 
 ```yaml
-alias: Lagersystem - Fråga från knapp
+alias: Storage System - Ask From Button
 triggers:
   - trigger: state
     entity_id: input_button.lagersystem_fraga
@@ -82,16 +82,16 @@ actions:
 mode: restart
 ```
 
-## Exempel: reagera på resultat-event
+## Example: React To The Result Event
 
-Du kan använda eventet för att:
+You can use the event to:
 
-- tända LED
-- skicka MQTT
-- vrida servo/stegmotor
-- visa text på display
+- light an LED
+- publish MQTT
+- move a servo or stepper motor
+- show text on a display
 
-Eventet innehåller nu även:
+The event now also contains:
 
 - `source`
 - `match_count`
@@ -100,7 +100,7 @@ Eventet innehåller nu även:
 - `raw`
 
 ```yaml
-alias: Lagersystem - Skicka resultat vidare
+alias: Storage System - Forward Result
 triggers:
   - trigger: event
     event_type: lagersystem_result
@@ -113,12 +113,12 @@ actions:
 mode: queued
 ```
 
-## Rekommenderat nästa steg
+## Recommended Next Step
 
-När du vill koppla på fysisk hårdvara skulle jag bygga vidare så här:
+When you want to connect physical hardware, a good next flow is:
 
-1. knapp eller röstinput in i Home Assistant
+1. button or voice input into Home Assistant
 2. `script.lagersystem_fraga`
 3. event `lagersystem_result`
-4. automation som skickar plats, `box_id`, `summary` eller `item_keywords` vidare
-5. mottagare som ESPHome-display, laserpekare, servo/stegmotor eller högtalare
+4. automation that forwards location, `box_id`, `summary`, or `item_keywords`
+5. receiver such as an ESPHome display, laser pointer, servo/stepper, or speaker

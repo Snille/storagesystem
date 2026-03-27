@@ -148,6 +148,7 @@ export type PromptSettings = {
   photoSummaryPrompt: string;
   photoSummarySystemPrompt: string;
   anthropicBoxSystemPrompt: string;
+  translationDraftSystemPrompt: string;
   summaryCleanupPrefixes: string;
   keywordCleanupTerms: string;
   notesCleanupPhrases: string;
@@ -176,6 +177,7 @@ export type LabelTemplate = {
 };
 
 export type LabelSettings = {
+  printerQueue: string;
   defaultTemplateId: string;
   templates: LabelTemplate[];
 };
@@ -184,6 +186,7 @@ export type AppSettings = {
   appearance: AppearanceSettings;
   immich: ImmichSettings;
   ai: AiSettings;
+  translationAi: AiSettings;
   prompts: PromptSettings;
   labels: LabelSettings;
 };
@@ -208,6 +211,11 @@ export type AvailableAlbum = {
   assetCount: number;
   ownerName?: string;
   shared?: boolean;
+};
+
+export type AvailablePrinter = {
+  queue: string;
+  summary: string;
 };
 
 export type LanguageOption = {

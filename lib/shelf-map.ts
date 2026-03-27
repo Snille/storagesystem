@@ -41,6 +41,16 @@ function getUnitTitle(kind: LocationKind, unitLabel: string) {
   return `Skåp ${unitLabel}`;
 }
 
+export function presentShelfUnitTitle(
+  kind: LocationKind,
+  unitLabel: string,
+  labels?: { shelvingUnit?: string; bench?: string; cabinet?: string }
+) {
+  if (kind === "ivar") return `${labels?.shelvingUnit ?? "Ivar"} ${unitLabel}`;
+  if (kind === "bench") return `${labels?.bench ?? "Bänk"} ${unitLabel}`;
+  return `${labels?.cabinet ?? "Skåp"} ${unitLabel}`;
+}
+
 function getUnitSlug(kind: LocationKind, unitId: string) {
   if (kind === "ivar") {
     return unitId.toLowerCase();

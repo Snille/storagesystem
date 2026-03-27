@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         fontFamily: asFontFamily(String(payload.appearance?.fontFamily ?? "arial")),
         fontSizePt: asFontSizePt(payload.appearance?.fontSizePt ?? 16),
         reduceMotion: Boolean(payload.appearance?.reduceMotion),
-        language: String(payload.appearance?.language ?? previousSettings.appearance.language ?? "sv").trim() || "sv"
+        language: String(payload.appearance?.language ?? previousSettings.appearance.language ?? "en").trim() || "en"
       },
       immich: {
         baseUrl: String(payload.immich?.baseUrl ?? "").trim(),
@@ -64,6 +64,9 @@ export async function POST(request: Request) {
         photoSummaryPrompt: String(payload.prompts?.photoSummaryPrompt ?? "").trim(),
         photoSummarySystemPrompt: String(payload.prompts?.photoSummarySystemPrompt ?? "").trim(),
         anthropicBoxSystemPrompt: String(payload.prompts?.anthropicBoxSystemPrompt ?? "").trim(),
+        translationDraftSystemPrompt: String(
+          payload.prompts?.translationDraftSystemPrompt ?? previousSettings.prompts.translationDraftSystemPrompt ?? ""
+        ).trim(),
         summaryCleanupPrefixes: String(payload.prompts?.summaryCleanupPrefixes ?? "").trim(),
         keywordCleanupTerms: String(payload.prompts?.keywordCleanupTerms ?? "").trim(),
         notesCleanupPhrases: String(payload.prompts?.notesCleanupPhrases ?? "").trim(),
@@ -101,8 +104,45 @@ export async function POST(request: Request) {
           apiKey: String(payload.ai?.openwebui?.apiKey ?? "").trim()
         }
       },
+      translationAi: {
+        provider: asProvider(String(payload.translationAi?.provider ?? previousSettings.translationAi.provider ?? "openrouter")),
+        lmstudio: {
+          baseUrl: String(payload.translationAi?.lmstudio?.baseUrl ?? previousSettings.translationAi.lmstudio.baseUrl ?? "").trim(),
+          model: String(payload.translationAi?.lmstudio?.model ?? previousSettings.translationAi.lmstudio.model ?? "").trim(),
+          apiKey: String(payload.translationAi?.lmstudio?.apiKey ?? previousSettings.translationAi.lmstudio.apiKey ?? "").trim(),
+          contextLength:
+            typeof payload.translationAi?.lmstudio?.contextLength === "number" && payload.translationAi.lmstudio.contextLength > 0
+              ? payload.translationAi.lmstudio.contextLength
+              : previousSettings.translationAi.lmstudio.contextLength
+        },
+        openai: {
+          baseUrl: String(payload.translationAi?.openai?.baseUrl ?? previousSettings.translationAi.openai.baseUrl ?? "").trim(),
+          model: String(payload.translationAi?.openai?.model ?? previousSettings.translationAi.openai.model ?? "").trim(),
+          apiKey: String(payload.translationAi?.openai?.apiKey ?? previousSettings.translationAi.openai.apiKey ?? "").trim()
+        },
+        anthropic: {
+          baseUrl: String(payload.translationAi?.anthropic?.baseUrl ?? previousSettings.translationAi.anthropic.baseUrl ?? "").trim(),
+          model: String(payload.translationAi?.anthropic?.model ?? previousSettings.translationAi.anthropic.model ?? "").trim(),
+          apiKey: String(payload.translationAi?.anthropic?.apiKey ?? previousSettings.translationAi.anthropic.apiKey ?? "").trim()
+        },
+        openrouter: {
+          baseUrl: String(payload.translationAi?.openrouter?.baseUrl ?? previousSettings.translationAi.openrouter.baseUrl ?? "").trim(),
+          model: String(payload.translationAi?.openrouter?.model ?? previousSettings.translationAi.openrouter.model ?? "").trim(),
+          apiKey: String(payload.translationAi?.openrouter?.apiKey ?? previousSettings.translationAi.openrouter.apiKey ?? "").trim()
+        },
+        openwebui: {
+          baseUrl: String(payload.translationAi?.openwebui?.baseUrl ?? previousSettings.translationAi.openwebui.baseUrl ?? "").trim(),
+          model: String(payload.translationAi?.openwebui?.model ?? previousSettings.translationAi.openwebui.model ?? "").trim(),
+          apiKey: String(payload.translationAi?.openwebui?.apiKey ?? previousSettings.translationAi.openwebui.apiKey ?? "").trim()
+        }
+      },
       labels: normalizeLabelSettings(payload.labels ?? previousSettings.labels)
     };
+
+    settings.labels = normalizeLabelSettings({
+      ...settings.labels,
+      printerQueue: String(payload.labels?.printerQueue ?? previousSettings.labels.printerQueue ?? "").trim()
+    });
 
     await writeAppSettings(settings);
 

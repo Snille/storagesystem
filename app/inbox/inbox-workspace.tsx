@@ -31,17 +31,6 @@ function formatDateTime(value: string | undefined, locale: string, missingTime: 
   return new Date(value).toLocaleString(locale);
 }
 
-function renderLocationMeta(locationId: string, boxId = "") {
-  const meta = presentLocation(locationId, boxId);
-  return (
-    <>
-      <span>{meta.system}</span>
-      {meta.shelf ? <span>{meta.shelf}</span> : null}
-      {meta.slot ? <span>{meta.slot}</span> : null}
-    </>
-  );
-}
-
 const roleOptions: PhotoRole[] = ["label", "location", "inside", "spread", "detail"];
 
 function buildDraftHref(suggestion: AnalysisSuggestion) {
@@ -131,6 +120,22 @@ export function InboxWorkspace({
   const [suggestion, setSuggestion] = useState<AnalysisSuggestion | null>(null);
   const [activePhoto, setActivePhoto] = useState<ActiveLightboxPhoto | null>(null);
   const [visibleCount, setVisibleCount] = useState(INBOX_PAGE_SIZE);
+  function renderLocationMeta(locationId: string, boxId = "") {
+    const meta = presentLocation(locationId, boxId, {
+      shelvingUnit: t("shelvingUnit", "Lagerhylla"),
+      bench: t("bench", "Bänk"),
+      cabinet: t("cabinet", "Skåp"),
+      surface: t("surface", "Yta"),
+      slot: t("slot", "Plats")
+    });
+    return (
+      <>
+        <span>{meta.system}</span>
+        {meta.shelf ? <span>{meta.shelf}</span> : null}
+        {meta.slot ? <span>{meta.slot}</span> : null}
+      </>
+    );
+  }
   const primaryMatch = suggestion ? getPrimaryMatchCandidate(suggestion) : null;
   const quickAttachHref =
     suggestion && primaryMatch

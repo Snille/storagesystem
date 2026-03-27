@@ -1,103 +1,103 @@
-# Lokal Testning
+# Local Testing
 
-Den här appen kan köras lokalt i utvecklingsläge på Windows via PowerShell-scriptet:
+This app can be run locally in development mode on Windows through the PowerShell script:
 
 ```powershell
 .\scripts\start-local.ps1
 ```
 
-## Vad scriptet gör
+## What The Script Does
 
 `start-local.ps1`:
 
-- kräver `NVM for Windows`
-- säkerställer att Node `22.14.0` finns installerad
-- aktiverar den versionen via `nvm use`
-- kör `npm install` om `node_modules` saknas
-- startar utvecklingsservern med `npm run dev`
+- requires `NVM for Windows`
+- ensures that Node `22.14.0` is installed
+- activates that version through `nvm use`
+- runs `npm install` if `node_modules` is missing
+- starts the development server with `npm run dev`
 
-När allt är igång nås appen normalt på:
+When everything is running, the app is normally available at:
 
 ```text
 http://localhost:3000
 ```
 
-## Förutsättningar
+## Requirements
 
-Du bör ha:
+You should have:
 
-- `NVM for Windows` installerat
+- `NVM for Windows` installed
 - PowerShell
-- en lokal `.env.local` om du vill att integrationer som Immich, AI eller publikt API ska fungera fullt ut
+- a local `.env.local` if you want integrations such as Immich, AI, or the public API to work fully
 
-Du kan utgå från:
+You can start from:
 
 ```text
 .env.example
 ```
 
-och skapa:
+and create:
 
 ```text
 .env.local
 ```
 
-## Normal användning
+## Normal Usage
 
-1. Öppna PowerShell i projektroten.
-2. Kör:
+1. Open PowerShell in the project root.
+2. Run:
 
 ```powershell
 .\scripts\start-local.ps1
 ```
 
-3. Vänta tills Next.js har startat klart.
-4. Öppna `http://localhost:3000`.
+3. Wait until Next.js has fully started.
+4. Open `http://localhost:3000`.
 
-## Stoppa servern
+## Stopping The Server
 
-Tryck:
+Press:
 
 ```text
 Ctrl+C
 ```
 
-i PowerShell-fönstret där servern körs.
+in the PowerShell window where the server is running.
 
-## Bra att veta
+## Good To Know
 
-- Scriptet kör appen i utvecklingsläge, inte som produktionsbuild.
-- Lokala ändringar i kod och CSS laddas normalt om automatiskt.
-- Om något ser konstigt ut i webbläsaren kan en hård omladdning hjälpa.
+- The script runs the app in development mode, not as a production build.
+- Local code and CSS changes normally reload automatically.
+- If something looks odd in the browser, a hard reload may help.
 
-## Vanliga problem
+## Common Problems
 
-### `nvm hittades inte`
+### `nvm` Was Not Found
 
-Installera `NVM for Windows` först. Scriptet kräver att `nvm.exe` finns lokalt.
+Install `NVM for Windows` first. The script expects `nvm.exe` to be available locally.
 
-### Fel Node-version
+### Wrong Node Version
 
-Scriptet försöker själv installera och växla till rätt version:
+The script will try to install and switch to the correct version automatically:
 
 ```text
 22.14.0
 ```
 
-### Sidan startar men vissa funktioner fungerar inte
+### The Page Starts But Some Features Do Not Work
 
-Det beror oftast på att `.env.local` saknar värden för till exempel:
+That is usually because `.env.local` is missing values such as:
 
 - `IMMICH_BASE_URL`
-- `IMMICH_API_KEY` eller `IMMICH_SHARE_KEY`
+- `IMMICH_API_KEY` or `IMMICH_SHARE_KEY`
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
-- AI-inställningar som `OPENAI_API_KEY` eller `LMSTUDIO_BASE_URL`
+- AI settings such as `OPENAI_API_KEY` or `LMSTUDIO_BASE_URL`
 
-### Port 3000 används redan
+### Port 3000 Is Already In Use
 
-Stäng den andra processen som använder porten, eller starta om terminalen och försök igen.
+Stop the other process using the port, or restart the terminal and try again.
 
-## Rekommendation
+## Recommendation
 
-För snabb UI-testning är `.\scripts\start-local.ps1` rätt sätt att köra projektet lokalt.
-För verifiering i riktig miljö används i stället serverdeployen till `/opt/lagersystem`.
+For quick UI testing, `.\scripts\start-local.ps1` is the right way to run the project locally.
+For verification in the real environment, use the server deployment to `/opt/lagersystem` instead.

@@ -26,6 +26,13 @@ type HomeBoxCardProps = {
   photoCount: number;
   location: PresentedLocation;
   photos: CardPhoto[];
+  ui?: {
+    openBox?: string;
+    photosCount?: string;
+    openLargeImage?: string;
+    imageHasAnalysisText?: string;
+    closeImageView?: string;
+  };
 };
 
 function renderLocationChip(value: string) {
@@ -51,7 +58,8 @@ export function HomeBoxCard({
   keywords,
   photoCount,
   location,
-  photos
+  photos,
+  ui
 }: HomeBoxCardProps) {
   const router = useRouter();
   const primaryPhoto = photos.find((photo) => photo.photoRole === "inside") ?? null;
@@ -72,13 +80,13 @@ export function HomeBoxCard({
       }}
       role="link"
       tabIndex={0}
-      aria-label={`Öppna ${label}`}
+      aria-label={(ui?.openBox ?? "Öppna {label}").replace("{label}", label)}
     >
       <div className="meta card-meta location-meta">
         {renderLocationChip(location.system)}
         {renderLocationChip(location.shelf)}
         {renderLocationChip(location.slot)}
-        <span className="meta-count">Bilder {photoCount}</span>
+        <span className="meta-count">{(ui?.photosCount ?? "Bilder {count}").replace("{count}", String(photoCount))}</span>
       </div>
       <div className={`home-card-layout${primaryPhoto ? " has-primary-photo" : ""}`}>
         <div className="home-card-content">
@@ -106,6 +114,11 @@ export function HomeBoxCard({
                   overlayMeta={photo.photoRole}
                   overlayNote={photo.notes}
                   showAnalysisBadge={photo.hasNotes}
+                  ui={{
+                    openLargeImage: ui?.openLargeImage,
+                    imageHasAnalysisText: ui?.imageHasAnalysisText,
+                    closeImageView: ui?.closeImageView
+                  }}
                 />
               ))}
             </div>
@@ -123,6 +136,11 @@ export function HomeBoxCard({
               overlayMeta={primaryPhoto.photoRole}
               overlayNote={primaryPhoto.notes}
               showAnalysisBadge={primaryPhoto.hasNotes}
+              ui={{
+                openLargeImage: ui?.openLargeImage,
+                imageHasAnalysisText: ui?.imageHasAnalysisText,
+                closeImageView: ui?.closeImageView
+              }}
             />
           </div>
         ) : null}

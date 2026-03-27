@@ -14,6 +14,11 @@ type ImageLightboxButtonProps = {
   overlayMeta?: string;
   overlayNote?: string;
   showAnalysisBadge?: boolean;
+  ui?: {
+    openLargeImage?: string;
+    imageHasAnalysisText?: string;
+    closeImageView?: string;
+  };
 };
 
 export function ImageLightboxButton({
@@ -25,7 +30,8 @@ export function ImageLightboxButton({
   overlayTitle,
   overlayMeta,
   overlayNote,
-  showAnalysisBadge = false
+  showAnalysisBadge = false,
+  ui
 }: ImageLightboxButtonProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -134,13 +140,13 @@ export function ImageLightboxButton({
           event.stopPropagation();
           setOpen(true);
         }}
-        aria-label={`Visa större bild: ${alt}`}
+        aria-label={(ui?.openLargeImage ?? "Visa större bild: {name}").replace("{name}", alt)}
         title={tooltipText}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img alt={alt} className={imageClassName} src={thumbnailUrl} loading="lazy" decoding="async" />
         {showAnalysisBadge ? (
-          <span className="analysis-badge" aria-label="Bilden har analystext">
+          <span className="analysis-badge" aria-label={ui?.imageHasAnalysisText ?? "Bilden har analystext"}>
             ✓
           </span>
         ) : null}
@@ -161,7 +167,7 @@ export function ImageLightboxButton({
               type="button"
               className="lightbox-close"
               onClick={closeOverlay}
-              aria-label="Stäng bildvisning"
+              aria-label={ui?.closeImageView ?? "Stäng bildvisning"}
             >
               X
             </button>

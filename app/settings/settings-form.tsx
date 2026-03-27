@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type {
@@ -7,6 +8,7 @@ import type {
   AppSettings,
   AvailableAlbum,
   AvailableModel,
+  AvailablePrinter,
   FontFamilyChoice,
   LanguageOption,
   ThemePreference
@@ -16,6 +18,7 @@ type SettingsFormProps = {
   initialSettings: AppSettings;
   initialModels: AvailableModel[];
   initialAlbums: AvailableAlbum[];
+  initialPrinters: AvailablePrinter[];
   languageOptions: LanguageOption[];
   ui: Record<string, string>;
 };
@@ -28,7 +31,14 @@ const providerOptions: Array<{ value: AiProvider; label: string }> = [
   { value: "openwebui", label: "Open WebUI" }
 ];
 
-export function SettingsForm({ initialSettings, initialModels, initialAlbums, languageOptions, ui }: SettingsFormProps) {
+export function SettingsForm({
+  initialSettings,
+  initialModels,
+  initialAlbums,
+  initialPrinters,
+  languageOptions,
+  ui
+}: SettingsFormProps) {
   const router = useRouter();
   const t = (key: string, fallback: string, values?: Record<string, string | number>) => {
     const template = ui[key] ?? fallback;
@@ -49,14 +59,21 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [models, setModels] = useState<AvailableModel[]>(initialModels);
   const [albums, setAlbums] = useState<AvailableAlbum[]>(initialAlbums);
+  const [printers, setPrinters] = useState<AvailablePrinter[]>(initialPrinters);
   const [status, setStatus] = useState("");
   const [modelsStatus, setModelsStatus] = useState(initialModels.length > 0 ? "" : t("settings.status.noModels", "Ingen modellista laddad ännu."));
   const [albumsStatus, setAlbumsStatus] = useState(initialAlbums.length > 0 ? "" : t("settings.status.noAlbums", "Ingen albumlista laddad ännu."));
+  const [printersStatus, setPrintersStatus] = useState(
+    initialPrinters.length > 0 ? "" : t("settings.status.noPrinters", "Ingen skrivarkö lästes in ännu.")
+  );
   const [backupStatus, setBackupStatus] = useState("");
   const [catalogImportStatus, setCatalogImportStatus] = useState("");
+  const [selectedBackupFileName, setSelectedBackupFileName] = useState("");
+  const [selectedCatalogFileName, setSelectedCatalogFileName] = useState("");
   const [isSaving, startSaving] = useTransition();
   const [isLoadingModels, startLoadingModels] = useTransition();
   const [isLoadingAlbums, startLoadingAlbums] = useTransition();
+  const [isLoadingPrinters, startLoadingPrinters] = useTransition();
   const [isImportingBackup, startImportingBackup] = useTransition();
   const [isImportingCatalog, startImportingCatalog] = useTransition();
   const backupFileRef = useRef<HTMLInputElement | null>(null);
@@ -73,6 +90,19 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
   const sortedModels = useMemo(
     () => [...models].sort((a, b) => a.label.localeCompare(b.label, "sv", { sensitivity: "base" })),
     [models]
+  );
+  const sortedPrinters = useMemo(
+    () =>
+      [...printers].sort((a, b) => {
+        const aIsDymo = a.queue.toLowerCase().includes("dymo") ? 0 : 1;
+        const bIsDymo = b.queue.toLowerCase().includes("dymo") ? 0 : 1;
+        if (aIsDymo !== bIsDymo) {
+          return aIsDymo - bIsDymo;
+        }
+
+        return a.queue.localeCompare(b.queue, "sv", { sensitivity: "base" });
+      }),
+    [printers]
   );
 
   function patchAppearance<K extends keyof AppSettings["appearance"]>(key: K, value: AppSettings["appearance"][K]) {
@@ -106,6 +136,16 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
       ...current,
       immich: {
         ...current.immich,
+        ...updates
+      }
+    }));
+  }
+
+  function patchLabels(updates: Partial<AppSettings["labels"]>) {
+    setSettings((current) => ({
+      ...current,
+      labels: {
+        ...current.labels,
         ...updates
       }
     }));
@@ -177,6 +217,32 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
     });
   }
 
+  async function refreshPrinters() {
+    setPrintersStatus(t("settings.status.loadingPrinters", "Hämtar skrivarköer..."));
+    startLoadingPrinters(async () => {
+      try {
+        const response = await fetch("/api/settings/printers", { cache: "no-store" });
+        const json = (await response.json()) as { printers?: AvailablePrinter[]; error?: string };
+        if (!response.ok) {
+          throw new Error(json.error || t("settings.status.readPrintersError", "Kunde inte läsa skrivarköerna."));
+        }
+
+        const nextPrinters = json.printers ?? [];
+        setPrinters(nextPrinters);
+        setPrintersStatus(
+          nextPrinters.length
+            ? t("settings.status.foundPrinters", "Hittade {count} skrivarköer.", { count: nextPrinters.length })
+            : t("settings.status.noPrintersFound", "Inga skrivarköer hittades.")
+        );
+      } catch (error) {
+        setPrinters([]);
+        setPrintersStatus(
+          error instanceof Error ? error.message : t("settings.status.readPrintersError", "Kunde inte läsa skrivarköerna.")
+        );
+      }
+    });
+  }
+
   async function saveSettings() {
     setStatus(t("settings.status.saving", "Sparar inställningar..."));
     startSaving(async () => {
@@ -217,7 +283,10 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
         }
 
         setBackupStatus("Backupen lästes in.");
-        backupFileRef.current && (backupFileRef.current.value = "");
+        if (backupFileRef.current) {
+          backupFileRef.current.value = "";
+        }
+        setSelectedBackupFileName("");
         router.refresh();
       } catch (error) {
         setBackupStatus(error instanceof Error ? error.message : "Kunde inte läsa in backupen.");
@@ -259,6 +328,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
         if (catalogFileRef.current) {
           catalogFileRef.current.value = "";
         }
+        setSelectedCatalogFileName("");
         router.refresh();
       } catch (error) {
         setCatalogImportStatus(error instanceof Error ? error.message : "Kunde inte importera katalogen.");
@@ -328,6 +398,14 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
               ))}
             </select>
           </label>
+          <div className="action-row" style={{ alignSelf: "end" }}>
+            <Link
+              className="button secondary"
+              href={`/settings/translations?lang=${encodeURIComponent(settings.appearance.language === "sv" ? "en" : settings.appearance.language)}`}
+            >
+              {t("settings.appearance.translations", "Översättningar")}
+            </Link>
+          </div>
         </div>
 
         <div className="grid two">
@@ -430,7 +508,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
               <option value="">{t("settings.immich.albumPlaceholder", "Välj album eller läs in listan")}</option>
               {albums.map((album) => (
                 <option key={album.id} value={album.id}>
-                  {album.label} ({album.assetCount} bilder)
+                  {album.label} ({t("settings.immich.picturesCount", "{count} bilder", { count: album.assetCount })})
                 </option>
               ))}
             </select>
@@ -463,8 +541,8 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
                 onClick={() => patchImmich({ albumId: album.id })}
               >
                 <strong>{album.label}</strong>
-                <span>{album.assetCount} bilder</span>
-                <span>{album.ownerName ? `Ägare: ${album.ownerName}` : album.id}</span>
+                <span>{t("settings.immich.picturesCount", "{count} bilder", { count: album.assetCount })}</span>
+                <span>{album.ownerName ? t("settings.immich.ownerName", "Ägare: {name}", { name: album.ownerName }) : album.id}</span>
               </button>
             ))}
           </div>
@@ -595,6 +673,67 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
 
       <section className="panel shell">
         <div>
+          <h2>{t("settings.printer.title", "Skrivare")}</h2>
+          <p>{t("settings.printer.intro", "Välj vilken redan installerad CUPS-kö appen ska använda för etikettstatus och utskrift.")}</p>
+          <p className="muted">{t("settings.printer.recommendation", "Rekommendation: välj helst en DYMO-kö här tills vi har fullt stöd för A4-etikettark på vanliga laserskrivare.")}</p>
+        </div>
+
+        <div className="grid two">
+          <label>
+            {t("settings.printer.queue", "Skrivarkö")}
+            <select
+              value={settings.labels.printerQueue}
+              onChange={(event) => patchLabels({ printerQueue: event.target.value })}
+            >
+              <option value="">{t("settings.printer.queuePlaceholder", "Välj skrivarkö eller läs in listan")}</option>
+              {sortedPrinters.map((printer) => (
+                <option key={printer.queue} value={printer.queue}>
+                  {printer.queue}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            {t("settings.printer.queueManual", "Skrivarkö manuellt")}
+            <input
+              value={settings.labels.printerQueue}
+              onChange={(event) => patchLabels({ printerQueue: event.target.value })}
+              placeholder={t("settings.printer.queueManualPlaceholder", "Till exempel DYMO_5XL")}
+            />
+          </label>
+        </div>
+
+        <div className="action-row">
+          <button type="button" onClick={refreshPrinters} disabled={isLoadingPrinters}>
+            {isLoadingPrinters
+              ? t("settings.button.loadingPrinters", "Hämtar skrivarköer...")
+              : t("settings.button.loadPrinters", "Läs in skrivarköer")}
+          </button>
+          <span className="muted">{printersStatus}</span>
+        </div>
+
+        {sortedPrinters.length > 0 ? (
+          <div className="grid two">
+            {sortedPrinters.map((printer) => (
+              <button
+                key={printer.queue}
+                type="button"
+                className={`font-choice${settings.labels.printerQueue === printer.queue ? " active" : ""}`}
+                onClick={() => patchLabels({ printerQueue: printer.queue })}
+              >
+                <strong>{printer.queue}</strong>
+                <span>{printer.summary}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {renderSaveRow(t("settings.printer.save", "Spara skrivare"))}
+      </section>
+
+      <section className="panel shell">
+        <div>
           <h2>{t("settings.backup.title", "Backup")}</h2>
           <p>{t("settings.backup.intro", "Ladda ner backup eller exportera katalogen till Excel från samma ställe.")}</p>
         </div>
@@ -615,13 +754,23 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
               ref={backupFileRef}
               type="file"
               accept="application/json,.json,application/zip,.zip"
+              style={{ display: "none" }}
               onChange={(event) => {
                 const file = event.target.files?.[0];
+                setSelectedBackupFileName(file?.name ?? "");
                 if (file) {
                   void importBackup(file);
                 }
               }}
             />
+            <div className="action-row" style={{ marginTop: 8 }}>
+              <button type="button" className="button secondary" onClick={() => backupFileRef.current?.click()}>
+                {t("settings.backup.chooseFile", "Välj fil")}
+              </button>
+              <span className="muted">
+                {selectedBackupFileName || t("settings.backup.noFileSelected", "Ingen fil vald")}
+              </span>
+            </div>
           </label>
           <label>
             {t("settings.backup.importCatalog", "Importera katalog")}
@@ -629,13 +778,23 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums, la
               ref={catalogFileRef}
               type="file"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx"
+              style={{ display: "none" }}
               onChange={(event) => {
                 const file = event.target.files?.[0];
+                setSelectedCatalogFileName(file?.name ?? "");
                 if (file) {
                   void importCatalog(file);
                 }
               }}
             />
+            <div className="action-row" style={{ marginTop: 8 }}>
+              <button type="button" className="button secondary" onClick={() => catalogFileRef.current?.click()}>
+                {t("settings.backup.chooseFile", "Välj fil")}
+              </button>
+              <span className="muted">
+                {selectedCatalogFileName || t("settings.backup.noFileSelected", "Ingen fil vald")}
+              </span>
+            </div>
           </label>
         </div>
 

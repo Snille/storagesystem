@@ -5,10 +5,14 @@ import { spawn } from "node:child_process";
 import { z } from "zod";
 import { findLabelMediaPreset, normalizeLabelTemplate } from "@/lib/label-templates";
 import { wrapFieldText } from "@/lib/label-layout";
+import { readAppSettingsSync } from "@/lib/settings";
 import type { LabelFieldKey, LabelTemplate } from "@/lib/types";
 
-const DEFAULT_DYMO_QUEUE = process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL";
 const DEFAULT_DYMO_MEDIA = process.env.DYMO_PRINTER_MEDIA || "w162h90";
+
+function getConfiguredPrinterQueue() {
+  return readAppSettingsSync().labels.printerQueue || process.env.DYMO_PRINTER_QUEUE || "DYMO_5XL";
+}
 
 const labelPrintSchema = z.object({
   label: z.string().trim().min(1),
@@ -333,18 +337,19 @@ export async function printLabelViaDymo(payload: LabelPrintPayload) {
     throw new Error("Direktutskrift till DYMO stöds just nu bara på Linux-servern.");
   }
 
+  const printerQueue = getConfiguredPrinterQueue();
   const data = labelPrintSchema.parse(payload);
   const tempFilePath = path.join(os.tmpdir(), `lagersystem-label-${Date.now()}.ps`);
-  const queueCheck = await runCommand("lpstat", ["-p", DEFAULT_DYMO_QUEUE]);
+  const queueCheck = await runCommand("lpstat", ["-p", printerQueue]);
 
-  if (!queueCheck.stdout.toString("utf8").includes(DEFAULT_DYMO_QUEUE)) {
-    throw new Error(`DYMO-kön ${DEFAULT_DYMO_QUEUE} finns inte i CUPS.`);
+  if (!queueCheck.stdout.toString("utf8").includes(printerQueue)) {
+    throw new Error(`DYMO-kön ${printerQueue} finns inte i CUPS.`);
   }
 
-  const clearedJobs = await cleanupPendingDymoJobs(DEFAULT_DYMO_QUEUE);
+  const clearedJobs = await cleanupPendingDymoJobs(printerQueue);
   await fs.writeFile(tempFilePath, buildLabelPostScript(data), { encoding: "utf8", mode: 0o644 });
   const mediaKey = data.template?.mediaKey || DEFAULT_DYMO_MEDIA;
-  const result = await runCommand("lp", ["-d", DEFAULT_DYMO_QUEUE, "-o", `media=${mediaKey}`, tempFilePath]);
+  const result = await runCommand("lp", ["-d", printerQueue, "-o", `media=${mediaKey}`, tempFilePath]);
 
   const requestIdMatch = result.stdout.toString("utf8").match(/request id is ([^\s]+)/i);
   const requestId = requestIdMatch?.[1] ?? "";
@@ -353,7 +358,7 @@ export async function printLabelViaDymo(payload: LabelPrintPayload) {
 
   return {
     ok: true as const,
-    queue: DEFAULT_DYMO_QUEUE,
+    queue: printerQueue,
     media: mediaKey,
     requestId,
     clearedJobs

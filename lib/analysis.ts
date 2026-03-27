@@ -1,4 +1,4 @@
-import { getAiConfig, getImmichConfig } from "@/lib/config";
+import { getAiConfig, getImmichConfig, getOpenRouterHeaders } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets } from "@/lib/immich";
 import { buildLocationId, normalizeLocationUnit, parseBoxId, parseLocationId } from "@/lib/location-schema";
@@ -672,10 +672,7 @@ async function sendAiRequest(
       onProgress,
       aiConfig.provider === "openwebui" ? "Open WebUI bearbetar bilderna..." : "OpenRouter bearbetar bilderna...",
       aiConfig.provider === "openrouter"
-        ? {
-            "HTTP-Referer": "https://hylla.snille.net",
-            "X-Title": "Lagersystem"
-          }
+        ? getOpenRouterHeaders("Lagersystem - Box Analysis")
         : undefined
     );
 
