@@ -1,6 +1,7 @@
 import { SettingsForm } from "@/app/settings/settings-form";
 import { fetchAvailableModels } from "@/lib/ai-models";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
+import { createTranslator, listAvailableLanguages, readLanguageCatalog } from "@/lib/i18n";
 import { readAppSettings } from "@/lib/settings";
 import type { AvailableAlbum, AvailableModel } from "@/lib/types";
 
@@ -45,22 +46,31 @@ async function readInitialAlbums() {
 }
 
 export default async function SettingsPage() {
-  const [settings, availableModels, availableAlbums] = await Promise.all([
+  const [settings, availableModels, availableAlbums, languageOptions] = await Promise.all([
     readAppSettings(),
     readInitialModels(),
-    readInitialAlbums()
+    readInitialAlbums(),
+    listAvailableLanguages()
   ]);
+  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const t = createTranslator(languageCatalog);
 
   return (
     <div className="shell">
       <section className="hero">
-        <h1>Inställningar</h1>
-        <p>
-          Här styr du utseende, typografi och vilken AI-motor appen ska använda för bildanalys.
-        </p>
+        <h1>{t("settings.title", "Inställningar")}</h1>
+        <p>{t("settings.intro", "Här styr du utseende, typografi och vilken AI-motor appen ska använda för bildanalys.")}</p>
       </section>
 
-      <SettingsForm initialSettings={settings} initialModels={availableModels} initialAlbums={availableAlbums} />
+      <SettingsForm
+        initialSettings={settings}
+        initialModels={availableModels}
+        initialAlbums={availableAlbums}
+        languageOptions={languageOptions}
+        ui={Object.fromEntries(
+          Object.entries(languageCatalog).filter(([key, value]) => key !== "_meta" && typeof value === "string")
+        ) as Record<string, string>}
+      />
     </div>
   );
 }

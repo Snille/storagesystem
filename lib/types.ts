@@ -98,6 +98,7 @@ export type AppearanceSettings = {
   fontFamily: FontFamilyChoice;
   fontSizePt: number;
   reduceMotion: boolean;
+  language: string;
 };
 
 export type LmStudioSettings = {
@@ -207,4 +208,11 @@ export type AvailableAlbum = {
   assetCount: number;
   ownerName?: string;
   shared?: boolean;
+};
+
+export type LanguageOption = {
+  code: string;
+  label: string;
+  htmlLang: string;
+  speechRecognitionLocale: string;
 };

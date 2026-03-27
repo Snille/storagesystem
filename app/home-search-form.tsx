@@ -38,9 +38,24 @@ declare global {
 
 type HomeSearchFormProps = {
   query: string;
+  speechRecognitionLocale: string;
+  ui: {
+    label: string;
+    placeholder: string;
+    voiceUnsupported: string;
+    voiceCaptured: string;
+    voiceListening: string;
+    voiceError: string;
+    voiceHint: string;
+    startVoice: string;
+    stopVoice: string;
+    microphone: string;
+    stop: string;
+    submit: string;
+  };
 };
 
-export function HomeSearchForm({ query }: HomeSearchFormProps) {
+export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearchFormProps) {
   const [value, setValue] = useState(query);
   const [isListening, setIsListening] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -58,12 +73,12 @@ export function HomeSearchForm({ query }: HomeSearchFormProps) {
 
   function startListening() {
     if (!SpeechRecognitionApi) {
-      setStatusText("Röstsökning stöds inte i den här webbläsaren.");
+      setStatusText(ui.voiceUnsupported);
       return;
     }
 
     const recognition = new SpeechRecognitionApi();
-    recognition.lang = "sv-SE";
+    recognition.lang = speechRecognitionLocale;
     recognition.continuous = false;
     recognition.interimResults = true;
 
@@ -74,12 +89,12 @@ export function HomeSearchForm({ query }: HomeSearchFormProps) {
         .trim();
 
       setValue(transcript);
-      setStatusText(transcript ? "Röst fångad. Du kan söka direkt." : "Lyssnar...");
+      setStatusText(transcript ? ui.voiceCaptured : ui.voiceListening);
     };
 
     recognition.onerror = () => {
       setIsListening(false);
-      setStatusText("Det gick inte att läsa av rösten just nu.");
+      setStatusText(ui.voiceError);
     };
 
     recognition.onend = () => {
@@ -88,7 +103,7 @@ export function HomeSearchForm({ query }: HomeSearchFormProps) {
     };
 
     recognitionRef.current = recognition;
-    setStatusText("Lyssnar...");
+    setStatusText(ui.voiceListening);
     setIsListening(true);
     recognition.start();
   }
@@ -103,12 +118,12 @@ export function HomeSearchForm({ query }: HomeSearchFormProps) {
   return (
     <form className="form-grid" method="get">
       <label>
-        Fråga eller sökord
+        {ui.label}
         <div className="search-input-row">
           <input
             type="search"
             name="q"
-            placeholder="Till exempel: adaptrar, hålsåg, nätverkskabel"
+            placeholder={ui.placeholder}
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
@@ -117,25 +132,25 @@ export function HomeSearchForm({ query }: HomeSearchFormProps) {
             className={`voice-button${isListening ? " listening" : ""}`}
             onClick={isListening ? stopListening : startListening}
             disabled={!supportsVoice}
-            aria-label={isListening ? "Stoppa röstsökning" : "Starta röstsökning"}
+            aria-label={isListening ? ui.stopVoice : ui.startVoice}
             title={
               supportsVoice
                 ? isListening
-                  ? "Stoppa röstsökning"
-                  : "Starta röstsökning"
-                : "Röstsökning stöds inte i den här webbläsaren"
+                  ? ui.stopVoice
+                  : ui.startVoice
+                : ui.voiceUnsupported
             }
           >
-            {isListening ? "Stoppa" : "Mikrofon"}
+            {isListening ? ui.stop : ui.microphone}
           </button>
         </div>
       </label>
       <div className="search-actions">
-        <button type="submit">Sök</button>
+        <button type="submit">{ui.submit}</button>
         <span className="muted voice-status">
           {supportsVoice
-            ? statusText || "Tryck på Mikrofon och säg vad du letar efter."
-            : "Röstsökning stöds inte i den här webbläsaren."}
+            ? statusText || ui.voiceHint
+            : ui.voiceUnsupported}
         </span>
       </div>
     </form>

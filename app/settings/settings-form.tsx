@@ -8,6 +8,7 @@ import type {
   AvailableAlbum,
   AvailableModel,
   FontFamilyChoice,
+  LanguageOption,
   ThemePreference
 } from "@/lib/types";
 
@@ -15,21 +16,9 @@ type SettingsFormProps = {
   initialSettings: AppSettings;
   initialModels: AvailableModel[];
   initialAlbums: AvailableAlbum[];
+  languageOptions: LanguageOption[];
+  ui: Record<string, string>;
 };
-
-const themeOptions: Array<{ value: ThemePreference; label: string }> = [
-  { value: "auto", label: "Auto (systemet)" },
-  { value: "light", label: "Ljust" },
-  { value: "dark", label: "Mörkt" }
-];
-
-const fontOptions: Array<{ value: FontFamilyChoice; label: string; preview: string }> = [
-  { value: "arial", label: "Arial", preview: "Ren och lättläst" },
-  { value: "system", label: "System UI", preview: "Neutral och modern" },
-  { value: "verdana", label: "Verdana", preview: "Tydlig på små skärmar" },
-  { value: "trebuchet", label: "Trebuchet", preview: "Mjuk och luftig" },
-  { value: "georgia", label: "Georgia", preview: "Mer klassisk känsla" }
-];
 
 const providerOptions: Array<{ value: AiProvider; label: string }> = [
   { value: "lmstudio", label: "LM Studio" },
@@ -39,14 +28,30 @@ const providerOptions: Array<{ value: AiProvider; label: string }> = [
   { value: "openwebui", label: "Open WebUI" }
 ];
 
-export function SettingsForm({ initialSettings, initialModels, initialAlbums }: SettingsFormProps) {
+export function SettingsForm({ initialSettings, initialModels, initialAlbums, languageOptions, ui }: SettingsFormProps) {
   const router = useRouter();
+  const t = (key: string, fallback: string, values?: Record<string, string | number>) => {
+    const template = ui[key] ?? fallback;
+    return template.replace(/\{(\w+)\}/g, (_, token: string) => String(values?.[token] ?? `{${token}}`));
+  };
+  const themeOptions: Array<{ value: ThemePreference; label: string }> = [
+    { value: "auto", label: t("settings.theme.auto", "Auto (systemet)") },
+    { value: "light", label: t("settings.theme.light", "Ljust") },
+    { value: "dark", label: t("settings.theme.dark", "Mörkt") }
+  ];
+  const fontOptions: Array<{ value: FontFamilyChoice; label: string; preview: string }> = [
+    { value: "arial", label: t("font.arial.label", "Arial"), preview: t("font.arial.preview", "Ren och lättläst") },
+    { value: "system", label: t("font.system.label", "System UI"), preview: t("font.system.preview", "Neutral och modern") },
+    { value: "verdana", label: t("font.verdana.label", "Verdana"), preview: t("font.verdana.preview", "Tydlig på små skärmar") },
+    { value: "trebuchet", label: t("font.trebuchet.label", "Trebuchet"), preview: t("font.trebuchet.preview", "Mjuk och luftig") },
+    { value: "georgia", label: t("font.georgia.label", "Georgia"), preview: t("font.georgia.preview", "Mer klassisk känsla") }
+  ];
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [models, setModels] = useState<AvailableModel[]>(initialModels);
   const [albums, setAlbums] = useState<AvailableAlbum[]>(initialAlbums);
   const [status, setStatus] = useState("");
-  const [modelsStatus, setModelsStatus] = useState(initialModels.length > 0 ? "" : "Ingen modellista laddad ännu.");
-  const [albumsStatus, setAlbumsStatus] = useState(initialAlbums.length > 0 ? "" : "Ingen albumlista laddad ännu.");
+  const [modelsStatus, setModelsStatus] = useState(initialModels.length > 0 ? "" : t("settings.status.noModels", "Ingen modellista laddad ännu."));
+  const [albumsStatus, setAlbumsStatus] = useState(initialAlbums.length > 0 ? "" : t("settings.status.noAlbums", "Ingen albumlista laddad ännu."));
   const [backupStatus, setBackupStatus] = useState("");
   const [catalogImportStatus, setCatalogImportStatus] = useState("");
   const [isSaving, startSaving] = useTransition();
@@ -107,7 +112,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
   }
 
   async function refreshModels() {
-    setModelsStatus("Hämtar modeller...");
+    setModelsStatus(t("settings.status.loadingModels", "Hämtar modeller..."));
     startLoadingModels(async () => {
       try {
         const response = await fetch("/api/settings/models", {
@@ -122,20 +127,24 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         const json = (await response.json()) as { models?: AvailableModel[]; error?: string };
         if (!response.ok) {
-          throw new Error(json.error || "Kunde inte läsa modellistan.");
+          throw new Error(json.error || t("settings.status.readModelsError", "Kunde inte läsa modellistan."));
         }
 
         setModels(json.models ?? []);
-        setModelsStatus(json.models?.length ? `Hittade ${json.models.length} modeller.` : "Inga modeller hittades.");
+        setModelsStatus(
+          json.models?.length
+            ? t("settings.status.foundModels", "Hittade {count} modeller.", { count: json.models.length })
+            : t("settings.status.noModelsFound", "Inga modeller hittades.")
+        );
       } catch (error) {
         setModels([]);
-        setModelsStatus(error instanceof Error ? error.message : "Kunde inte läsa modellistan.");
+        setModelsStatus(error instanceof Error ? error.message : t("settings.status.readModelsError", "Kunde inte läsa modellistan."));
       }
     });
   }
 
   async function refreshAlbums() {
-    setAlbumsStatus("Hämtar album...");
+    setAlbumsStatus(t("settings.status.loadingAlbums", "Hämtar album..."));
     startLoadingAlbums(async () => {
       try {
         const response = await fetch("/api/settings/albums", {
@@ -152,20 +161,24 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         const json = (await response.json()) as { albums?: AvailableAlbum[]; error?: string };
         if (!response.ok) {
-          throw new Error(json.error || "Kunde inte läsa albumlistan.");
+          throw new Error(json.error || t("settings.status.readAlbumsError", "Kunde inte läsa albumlistan."));
         }
 
         setAlbums(json.albums ?? []);
-        setAlbumsStatus(json.albums?.length ? `Hittade ${json.albums.length} album.` : "Inga album hittades.");
+        setAlbumsStatus(
+          json.albums?.length
+            ? t("settings.status.foundAlbums", "Hittade {count} album.", { count: json.albums.length })
+            : t("settings.status.noAlbumsFound", "Inga album hittades.")
+        );
       } catch (error) {
         setAlbums([]);
-        setAlbumsStatus(error instanceof Error ? error.message : "Kunde inte läsa albumlistan.");
+        setAlbumsStatus(error instanceof Error ? error.message : t("settings.status.readAlbumsError", "Kunde inte läsa albumlistan."));
       }
     });
   }
 
   async function saveSettings() {
-    setStatus("Sparar inställningar...");
+    setStatus(t("settings.status.saving", "Sparar inställningar..."));
     startSaving(async () => {
       try {
         const response = await fetch("/api/settings", {
@@ -176,13 +189,13 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         const json = (await response.json()) as { ok?: boolean; error?: string };
         if (!response.ok || !json.ok) {
-          throw new Error(json.error || "Kunde inte spara inställningarna.");
+          throw new Error(json.error || t("settings.status.saveError", "Kunde inte spara inställningarna."));
         }
 
-        setStatus("Inställningarna sparades.");
+        setStatus(t("settings.status.saved", "Inställningarna sparades."));
         router.refresh();
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Kunde inte spara inställningarna.");
+        setStatus(error instanceof Error ? error.message : t("settings.status.saveError", "Kunde inte spara inställningarna."));
       }
     });
   }
@@ -257,7 +270,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
     return (
       <div className="action-row">
         <button type="button" onClick={saveSettings} disabled={isSaving}>
-          {isSaving ? "Sparar..." : label}
+          {isSaving ? t("settings.button.saving", "Sparar...") : label}
         </button>
         <span className="muted">{status}</span>
       </div>
@@ -268,13 +281,13 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
     <div className="shell">
       <section className="panel shell">
         <div>
-          <h2>Utseende</h2>
-          <p>Välj tema, font och läsbarhet för hela appen.</p>
+          <h2>{t("settings.appearance.title", "Utseende")}</h2>
+          <p>{t("settings.appearance.intro", "Välj tema, font, språk och läsbarhet för hela appen.")}</p>
         </div>
 
         <div className="grid two">
           <label>
-            Tema
+            {t("settings.appearance.theme", "Tema")}
             <select
               value={settings.appearance.theme}
               onChange={(event) => patchAppearance("theme", event.target.value as ThemePreference)}
@@ -288,7 +301,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Fontstorlek
+            {t("settings.appearance.fontSize", "Fontstorlek")}
             <input
               type="number"
               min={8}
@@ -298,6 +311,22 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
               onChange={(event) => patchAppearance("fontSizePt", Number(event.target.value || 12))}
               placeholder="12"
             />
+          </label>
+        </div>
+
+        <div className="grid two">
+          <label>
+            {t("settings.appearance.language", "Språk")}
+            <select
+              value={settings.appearance.language}
+              onChange={(event) => patchAppearance("language", event.target.value)}
+            >
+              {languageOptions.map((language) => (
+                <option key={language.code} value={language.code}>
+                  {language.label}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -321,30 +350,30 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             checked={settings.appearance.reduceMotion}
             onChange={(event) => patchAppearance("reduceMotion", event.target.checked)}
           />
-          <span>Minska animationer och övergångar</span>
+          <span>{t("settings.appearance.reduceMotion", "Minska animationer och övergångar")}</span>
         </label>
 
-        {renderSaveRow("Spara utseende")}
+        {renderSaveRow(t("settings.appearance.save", "Spara utseende"))}
       </section>
 
       <section className="panel shell">
         <div>
-          <h2>Immich</h2>
-          <p>Byt konto, åtkomstmetod och vilket album som appen ska inventera från.</p>
+          <h2>{t("settings.immich.title", "Immich")}</h2>
+          <p>{t("settings.immich.intro", "Byt konto, åtkomstmetod och vilket album som appen ska inventera från.")}</p>
         </div>
 
         <div className="grid two">
           <label>
-            Kontoetikett
+            {t("settings.immich.accountLabel", "Kontoetikett")}
             <input
               value={settings.immich.accountLabel}
               onChange={(event) => patchImmich({ accountLabel: event.target.value })}
-              placeholder="Till exempel Mimer eller Lager"
+              placeholder={t("settings.immich.accountPlaceholder", "Till exempel Mimer eller Lager")}
             />
           </label>
 
           <label>
-            Bas-URL
+            {t("settings.immich.baseUrl", "Bas-URL")}
             <input
               value={settings.immich.baseUrl}
               onChange={(event) => patchImmich({ baseUrl: event.target.value })}
@@ -355,7 +384,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Åtkomstmetod
+            {t("settings.immich.accessMode", "Åtkomstmetod")}
             <select
               value={settings.immich.accessMode}
               onChange={(event) =>
@@ -364,28 +393,28 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
                 })
               }
             >
-              <option value="apiKey">API-nyckel</option>
-              <option value="shareKey">Delningsnyckel</option>
+              <option value="apiKey">{t("settings.immich.access.apiKey", "API-nyckel")}</option>
+              <option value="shareKey">{t("settings.immich.access.shareKey", "Delningsnyckel")}</option>
             </select>
           </label>
 
           {settings.immich.accessMode === "apiKey" ? (
             <label>
-              Immich API-nyckel
+              {t("settings.immich.apiKey", "Immich API-nyckel")}
               <input
                 type="password"
                 value={settings.immich.apiKey ?? ""}
                 onChange={(event) => patchImmich({ apiKey: event.target.value })}
-                placeholder="Användarnyckel för att läsa och senare skriva metadata"
+                placeholder={t("settings.immich.apiKeyPlaceholder", "Användarnyckel för att läsa och senare skriva metadata")}
               />
             </label>
           ) : (
             <label>
-              Delningsnyckel
+              {t("settings.immich.shareKey", "Delningsnyckel")}
               <input
                 value={settings.immich.shareKey ?? ""}
                 onChange={(event) => patchImmich({ shareKey: event.target.value })}
-                placeholder="Nyckel från delad Immich-länk"
+                placeholder={t("settings.immich.shareKeyPlaceholder", "Nyckel från delad Immich-länk")}
               />
             </label>
           )}
@@ -393,12 +422,12 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Album
+            {t("settings.immich.album", "Album")}
             <select
               value={settings.immich.albumId}
               onChange={(event) => patchImmich({ albumId: event.target.value })}
             >
-              <option value="">Välj album eller läs in listan</option>
+              <option value="">{t("settings.immich.albumPlaceholder", "Välj album eller läs in listan")}</option>
               {albums.map((album) => (
                 <option key={album.id} value={album.id}>
                   {album.label} ({album.assetCount} bilder)
@@ -408,18 +437,18 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Album-ID
+            {t("settings.immich.albumId", "Album-ID")}
             <input
               value={settings.immich.albumId}
               onChange={(event) => patchImmich({ albumId: event.target.value })}
-              placeholder="Klistra in album-ID om du vill"
+              placeholder={t("settings.immich.albumIdPlaceholder", "Klistra in album-ID om du vill")}
             />
           </label>
         </div>
 
         <div className="action-row">
           <button type="button" onClick={refreshAlbums} disabled={isLoadingAlbums}>
-            {isLoadingAlbums ? "Hämtar album..." : "Läs in album"}
+            {isLoadingAlbums ? t("settings.button.loadingAlbums", "Hämtar album...") : t("settings.button.loadAlbums", "Läs in album")}
           </button>
           <span className="muted">{albumsStatus}</span>
         </div>
@@ -441,18 +470,18 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </div>
         ) : null}
 
-        {renderSaveRow("Spara Immich")}
+        {renderSaveRow(t("settings.immich.save", "Spara Immich"))}
       </section>
 
       <section className="panel shell">
         <div>
-          <h2>AI-motor</h2>
-          <p>Här väljer du provider, endpoint och modell för bildanalys.</p>
+          <h2>{t("settings.ai.title", "AI-motor")}</h2>
+          <p>{t("settings.ai.intro", "Här väljer du provider, endpoint och modell för bildanalys.")}</p>
         </div>
 
         <div className="grid two">
           <label>
-            Provider
+            {t("settings.ai.provider", "Provider")}
             <select
               value={settings.ai.provider}
               onChange={(event) => setSettings((current) => ({
@@ -472,12 +501,12 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Modell (sökbar lista)
+            {t("settings.ai.modelSearch", "Modell (sökbar lista)")}
             <input
               list="available-models"
               value={activeConnection.model}
               onChange={(event) => patchAiSection(settings.ai.provider, { model: event.target.value })}
-              placeholder="Börja skriva för att söka modell..."
+              placeholder={t("settings.ai.modelSearchPlaceholder", "Börja skriva för att söka modell...")}
             />
             <datalist id="available-models">
               {sortedModels.map((model) => (
@@ -491,7 +520,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Bas-URL
+            {t("settings.ai.baseUrl", "Bas-URL")}
             <input
               value={activeConnection.baseUrl}
               onChange={(event) => patchAiSection(settings.ai.provider, { baseUrl: event.target.value })}
@@ -510,29 +539,29 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Modell-ID
+            {t("settings.ai.modelId", "Modell-ID")}
             <input
               value={activeConnection.model}
               onChange={(event) => patchAiSection(settings.ai.provider, { model: event.target.value })}
-              placeholder="Till exempel qwen/qwen3.5-35b-a3b"
+              placeholder={t("settings.ai.modelIdPlaceholder", "Till exempel qwen/qwen3.5-35b-a3b")}
             />
           </label>
         </div>
 
         <div className="grid two">
           <label>
-            API-nyckel
+            {t("settings.ai.apiKey", "API-nyckel")}
             <input
               type="password"
               value={activeConnection.apiKey ?? ""}
               onChange={(event) => patchAiSection(settings.ai.provider, { apiKey: event.target.value })}
-              placeholder="Valfritt för LM Studio, krävs för moln-API"
+              placeholder={t("settings.ai.apiKeyPlaceholder", "Valfritt för LM Studio, krävs för moln-API")}
             />
           </label>
 
           {settings.ai.provider === "lmstudio" ? (
             <label>
-              Context length
+              {t("settings.ai.contextLength", "Context length")}
               <input
                 type="number"
                 value={settings.ai.lmstudio.contextLength ?? ""}
@@ -541,14 +570,14 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
                     contextLength: event.target.value ? Number(event.target.value) : undefined
                   })
                 }
-                placeholder="150082"
+                placeholder={t("settings.ai.contextLengthPlaceholder", "150082")}
               />
             </label>
           ) : (
             <div className="panel-quiet">
-              <strong>Tips</strong>
+              <strong>{t("settings.ai.tipTitle", "Tips")}</strong>
               <p className="muted">
-                OpenAI, Anthropic, OpenRouter och Open WebUI använder sina egna modellistor. LM Studio hämtar modeller från din lokala server.
+                {t("settings.ai.tipBody", "OpenAI, Anthropic, OpenRouter och Open WebUI använder sina egna modellistor. LM Studio hämtar modeller från din lokala server.")}
               </p>
             </div>
           )}
@@ -556,32 +585,32 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="action-row">
           <button type="button" onClick={refreshModels} disabled={isLoadingModels}>
-            {isLoadingModels ? "Hämtar modeller..." : "Läs in modeller"}
+            {isLoadingModels ? t("settings.button.loadingModels", "Hämtar modeller...") : t("settings.button.loadModels", "Läs in modeller")}
           </button>
           <span className="muted">{modelsStatus}</span>
         </div>
 
-        {renderSaveRow("Spara AI-motor")}
+        {renderSaveRow(t("settings.ai.save", "Spara AI-motor"))}
       </section>
 
       <section className="panel shell">
         <div>
-          <h2>Backup</h2>
-          <p>Ladda ner backup eller exportera katalogen till Excel från samma ställe.</p>
+          <h2>{t("settings.backup.title", "Backup")}</h2>
+          <p>{t("settings.backup.intro", "Ladda ner backup eller exportera katalogen till Excel från samma ställe.")}</p>
         </div>
 
         <div className="action-row">
           <a className="button" href="/api/settings/backup">
-            Ladda ner backup
+            {t("settings.button.downloadBackup", "Ladda ner backup")}
           </a>
           <a className="button" href="/api/settings/export-catalog">
-            Exportera Excel
+            {t("settings.button.exportExcel", "Exportera Excel")}
           </a>
         </div>
 
         <div className="grid two">
           <label>
-            Läs in backupfil
+            {t("settings.backup.importFile", "Läs in backupfil")}
             <input
               ref={backupFileRef}
               type="file"
@@ -595,7 +624,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
             />
           </label>
           <label>
-            Importera katalog
+            {t("settings.backup.importCatalog", "Importera katalog")}
             <input
               ref={catalogFileRef}
               type="file"
@@ -612,35 +641,35 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <div className="panel-quiet">
-            <strong>Backup och export</strong>
+            <strong>{t("settings.backup.infoTitle", "Backup och export")}</strong>
             <p className="muted" style={{ marginTop: 8 }}>
-              Backupen innehåller inventariet, sessionshistorik, analystexter, etikettmallar och övriga appinställningar i en zip-fil. Excel-exporten ger en läsbar katalog med lådor, platser, sammanfattningar och nyckelord.
+              {t("settings.backup.infoBody", "Backupen innehåller inventariet, sessionshistorik, analystexter, etikettmallar och övriga appinställningar i en zip-fil. Excel-exporten ger en läsbar katalog med lådor, platser, sammanfattningar och nyckelord.")}
             </p>
           </div>
           <div className="panel-quiet">
-            <strong>Excel-import</strong>
+            <strong>{t("settings.backup.importInfoTitle", "Excel-import")}</strong>
             <p className="muted" style={{ marginTop: 8 }}>
-              Importen utgår från appens nuvarande exportformat. Den uppdaterar lådor och aktuella sessioner från filen, men låter kopplade bilder ligga kvar i inventariet.
+              {t("settings.backup.importInfoBody", "Importen utgår från appens nuvarande exportformat. Den uppdaterar lådor och aktuella sessioner från filen, men låter kopplade bilder ligga kvar i inventariet.")}
             </p>
           </div>
         </div>
 
         <div className="action-row">
-          <span className="muted">{isImportingBackup ? "Läser in backup..." : backupStatus}</span>
+          <span className="muted">{isImportingBackup ? t("settings.backup.importingBackup", "Läser in backup...") : backupStatus}</span>
         </div>
         <div className="action-row">
-          <span className="muted">{isImportingCatalog ? "Importerar Excel..." : catalogImportStatus}</span>
+          <span className="muted">{isImportingCatalog ? t("settings.backup.importingCatalog", "Importerar Excel...") : catalogImportStatus}</span>
         </div>
       </section>
 
       <section className="panel shell">
         <div>
-          <h2>Promptar</h2>
-          <p>Här kan du finjustera hur modellen instrueras. Det är särskilt användbart när du testar nya modeller.</p>
+          <h2>{t("settings.prompts.title", "Promptar")}</h2>
+          <p>{t("settings.prompts.intro", "Här kan du finjustera hur modellen instrueras. Det är särskilt användbart när du testar nya modeller.")}</p>
         </div>
 
         <label>
-          Lådanalys: huvudinstruktion
+          {t("settings.prompts.boxAnalysis", "Lådanalys: huvudinstruktion")}
           <textarea
             value={settings.prompts.boxAnalysisInstructions}
             onChange={(event) =>
@@ -657,7 +686,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Bildroll: systemprompt
+            {t("settings.prompts.roleSystem", "Bildroll: systemprompt")}
             <textarea
               value={settings.prompts.photoRoleSystemPrompt}
               onChange={(event) =>
@@ -673,7 +702,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Bildroll: användarprompt
+            {t("settings.prompts.roleUser", "Bildroll: användarprompt")}
             <textarea
               value={settings.prompts.photoRolePrompt}
               onChange={(event) =>
@@ -691,7 +720,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Bildspecifik analys: systemprompt
+            {t("settings.prompts.summarySystem", "Bildspecifik analys: systemprompt")}
             <textarea
               value={settings.prompts.photoSummarySystemPrompt}
               onChange={(event) =>
@@ -707,7 +736,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Bildspecifik analys: användarprompt
+            {t("settings.prompts.summaryUser", "Bildspecifik analys: användarprompt")}
             <textarea
               value={settings.prompts.photoSummaryPrompt}
               onChange={(event) =>
@@ -724,7 +753,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
         </div>
 
         <label>
-          Anthropic: systemprompt för lådanalys
+          {t("settings.prompts.anthropicSystem", "Anthropic: systemprompt för lådanalys")}
           <textarea
             value={settings.prompts.anthropicBoxSystemPrompt}
             onChange={(event) =>
@@ -741,7 +770,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Rensningsfraser: sammanfattning (en per rad)
+            {t("settings.prompts.summaryCleanup", "Rensningsfraser: sammanfattning (en per rad)")}
             <textarea
               value={settings.prompts.summaryCleanupPrefixes}
               onChange={(event) =>
@@ -757,7 +786,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Rensningsord: sökord (en per rad)
+            {t("settings.prompts.keywordCleanup", "Rensningsord: sökord (en per rad)")}
             <textarea
               value={settings.prompts.keywordCleanupTerms}
               onChange={(event) =>
@@ -775,7 +804,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
 
         <div className="grid two">
           <label>
-            Rensningsfraser: noteringar (en per rad)
+            {t("settings.prompts.notesCleanup", "Rensningsfraser: noteringar (en per rad)")}
             <textarea
               value={settings.prompts.notesCleanupPhrases}
               onChange={(event) =>
@@ -791,7 +820,7 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
 
           <label>
-            Rensningsfraser: bildtext (en per rad)
+            {t("settings.prompts.photoCleanup", "Rensningsfraser: bildtext (en per rad)")}
             <textarea
               value={settings.prompts.photoSummaryCleanupPhrases}
               onChange={(event) =>
@@ -807,10 +836,10 @@ export function SettingsForm({ initialSettings, initialModels, initialAlbums }: 
           </label>
         </div>
 
-        {renderSaveRow("Spara promptar")}
+        {renderSaveRow(t("settings.prompts.save", "Spara promptar"))}
       </section>
 
-      {renderSaveRow("Spara alla inställningar")}
+      {renderSaveRow(t("settings.all.save", "Spara alla inställningar"))}
     </div>
   );
 }

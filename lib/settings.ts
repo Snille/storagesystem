@@ -12,7 +12,8 @@ const settingsSchema = z.object({
     theme: z.enum(["auto", "light", "dark"]),
     fontFamily: z.enum(["arial", "georgia", "verdana", "trebuchet", "system"]),
     fontSizePt: z.number().min(8).max(28),
-    reduceMotion: z.boolean()
+    reduceMotion: z.boolean(),
+    language: z.string().min(2).max(16)
   }),
   immich: z.object({
     baseUrl: z.string(),
@@ -146,7 +147,8 @@ export function getDefaultAppSettings(): AppSettings {
       theme: "auto",
       fontFamily: "arial",
       fontSizePt: 12,
-      reduceMotion: false
+      reduceMotion: false,
+      language: "sv"
     },
     immich: {
       baseUrl: trimTrailingSlash(process.env.IMMICH_BASE_URL || ""),
@@ -297,7 +299,8 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
       fontSizePt:
         typeof inputAppearance.fontSizePt === "number"
           ? inputAppearance.fontSizePt
-          : legacyFontScaleToPt(inputAppearance.fontScale)
+          : legacyFontScaleToPt(inputAppearance.fontScale),
+      language: String(inputAppearance.language ?? base.appearance.language ?? "sv").trim() || "sv"
     },
     immich: {
       ...base.immich,

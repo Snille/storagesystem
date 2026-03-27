@@ -2,10 +2,12 @@ import { HomeSearchForm } from "@/app/home-search-form";
 import { HomeBoxCard } from "@/app/home-box-card";
 import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
+import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
 import { compareBoxesByLocation } from "@/lib/location-sort";
 import { searchInventory } from "@/lib/search";
+import { readAppSettings } from "@/lib/settings";
 import packageJson from "@/package.json";
 
 type HomeProps = {
@@ -15,13 +17,15 @@ type HomeProps = {
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
-  const [data, album] = await Promise.all([
+  const [data, album, settings] = await Promise.all([
     readInventoryData(),
-    fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" }))
+    fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
+    readAppSettings()
   ]);
+  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const t = createTranslator(languageCatalog);
   const albumAssets = query ? album.assets : [];
   const sessionsByBox = getCurrentSessionByBox(data);
-  const currentSessions = [...sessionsByBox.values()];
   const currentLocationCount = new Set(
     data.boxes.map((box) => box.currentLocationId.trim()).filter(Boolean)
   ).size;
@@ -45,12 +49,29 @@ export default async function Home({ searchParams }: HomeProps) {
     <div className="shell">
       <section className="panel">
         <div className="section-header">
-          <h2>Sök efter något i verkstan</h2>
-          <span className="app-version-badge" aria-label={`Appversion ${packageJson.version}`}>
+          <h2>{t("home.searchTitle", "Sök efter något i verkstan")}</h2>
+          <span className="app-version-badge" aria-label={t("home.versionAria", "Appversion {version}", { version: packageJson.version })}>
             v{packageJson.version}
           </span>
         </div>
-        <HomeSearchForm query={query} />
+        <HomeSearchForm
+          query={query}
+          speechRecognitionLocale={languageCatalog._meta.speechRecognitionLocale}
+          ui={{
+            label: t("search.label", "Fråga eller sökord"),
+            placeholder: t("search.placeholder", "Till exempel: adaptrar, hålsåg, nätverkskabel"),
+            voiceUnsupported: t("search.voiceUnsupported", "Röstsökning stöds inte i den här webbläsaren."),
+            voiceCaptured: t("search.voiceCaptured", "Röst fångad. Du kan söka direkt."),
+            voiceListening: t("search.voiceListening", "Lyssnar..."),
+            voiceError: t("search.voiceError", "Det gick inte att läsa av rösten just nu."),
+            voiceHint: t("search.voiceHint", "Tryck på Mikrofon och säg vad du letar efter."),
+            startVoice: t("search.startVoice", "Starta röstsökning"),
+            stopVoice: t("search.stopVoice", "Stoppa röstsökning"),
+            microphone: t("search.microphone", "Mikrofon"),
+            stop: t("search.stop", "Stoppa"),
+            submit: t("search.submit", "Sök")
+          }}
+        />
         {query ? (
           <div className="card-list" style={{ marginTop: 18 }}>
             {results.length > 0 ? (
@@ -61,7 +82,7 @@ export default async function Home({ searchParams }: HomeProps) {
                     key={result.box.boxId}
                     href={`/boxes/${result.box.boxId}`}
                     label={result.box.label}
-                    summary={result.session?.summary ?? "Ingen aktuell sammanfattning ännu."}
+                    summary={result.session?.summary ?? t("home.summaryMissing", "Ingen aktuell sammanfattning ännu.")}
                     keywords={result.session?.itemKeywords ?? []}
                     photoCount={result.photos.length}
                     location={boxMeta}
@@ -77,33 +98,33 @@ export default async function Home({ searchParams }: HomeProps) {
                 );
               })
             ) : (
-              <div className="empty">Ingen träff ännu. Lägg till eller uppdatera en session.</div>
+              <div className="empty">{t("home.noResults", "Ingen träff ännu. Lägg till eller uppdatera en session.")}</div>
             )}
           </div>
         ) : null}
       </section>
 
       <section className="hero">
-        <h1>Lagerinventarie med Immich som bildlager</h1>
+        <h1>{t("home.heroTitle", "Lagerinventarie med Immich som bildlager")}</h1>
         <div className="grid three">
           <div className="stat">
             <strong>{data.boxes.length}</strong>
-            registrerade lådor
+            {t("home.registeredBoxes", "registrerade lådor")}
           </div>
           <div className="stat">
             <strong>{currentLocationCount}</strong>
-            aktuella platser
+            {t("home.currentLocations", "aktuella platser")}
           </div>
           <div className="stat">
             <strong>{data.photos.length}</strong>
-            kopplade bilder
+            {t("home.linkedPhotos", "kopplade bilder")}
           </div>
         </div>
       </section>
 
       {overviewAsset ? (
         <section className="panel overview-panel">
-          <h2>Översiktsbild</h2>
+          <h2>{t("home.overviewImage", "Översiktsbild")}</h2>
           <div className="overview-card">
             <ImageLightboxButton
               alt={overviewAsset.originalFileName}
@@ -111,16 +132,16 @@ export default async function Home({ searchParams }: HomeProps) {
               imageClassName="overview-image"
               thumbnailUrl={getAssetThumbnailUrl(overviewAsset.id)}
               originalUrl={getAssetOriginalUrl(overviewAsset.id)}
-              overlayTitle={album.albumName ? `${album.albumName} - översikt` : "Översiktsbild"}
+              overlayTitle={album.albumName ? t("home.overviewOverlayTitle", "{albumName} - översikt", { albumName: album.albumName }) : t("home.overviewOverlayFallbackTitle", "Översiktsbild")}
               overlayMeta={new Date(overviewAsset.fileCreatedAt).toLocaleString("sv-SE")}
-              overlayNote="Albumomslag i Immich. Används som översiktsbild över miljön."
+              overlayNote={t("home.overviewOverlayNote", "Albumomslag i Immich. Används som översiktsbild över miljön.")}
             />
           </div>
         </section>
       ) : null}
 
       <section className="panel">
-        <h2>Aktuella lådor</h2>
+        <h2>{t("home.currentBoxes", "Aktuella lådor")}</h2>
         <div className="two-column-list">
           {sortedBoxes.map((box) => {
             const session = sessionsByBox.get(box.boxId);
@@ -132,7 +153,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 key={box.boxId}
                 href={`/boxes/${box.boxId}`}
                 label={box.label}
-                summary={session?.summary ?? "Ingen aktiv session ännu."}
+                summary={session?.summary ?? t("home.activeSummaryMissing", "Ingen aktiv session ännu.")}
                 keywords={session?.itemKeywords ?? []}
                 photoCount={photos.length}
                 location={boxMeta}

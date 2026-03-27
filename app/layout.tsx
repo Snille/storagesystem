@@ -7,9 +7,11 @@ import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
 import { getUnmappedInboxAssets } from "@/lib/album-assets";
 import { fetchAlbumDetails } from "@/lib/immich";
+import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
 import { readAppSettings } from "@/lib/settings";
 import { getShelfSystemCount } from "@/lib/shelf-map";
 import { ThemeController } from "@/app/theme-controller";
+import type { AvailableAlbum } from "@/lib/types";
 
 const inlineGlobalCss = readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
 
@@ -20,7 +22,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const settings = await readAppSettings();
-  const [album, data, albums] = await Promise.all([
+  const [album, data, albums, languageCatalog] = await Promise.all([
     fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
     readInventoryData(),
     fetchAvailableAlbums({
@@ -29,10 +31,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       apiKey: settings.immich.apiKey,
       shareKey: settings.immich.shareKey,
       currentAlbumId: settings.immich.albumId
-    }).catch(() => [])
+    }).catch(() => [] as AvailableAlbum[]),
+    readLanguageCatalog(settings.appearance.language)
   ]);
+  const t = createTranslator(languageCatalog);
   const currentSessionIds = new Set([...getCurrentSessionByBox(data).values()].map((session) => session.sessionId));
-  const mappedAssetIds = new Set(
+  const mappedAssetIds = new Set<string>(
     data.photos
       .filter((photo) => currentSessionIds.has(photo.sessionId))
       .map((photo) => photo.immichAssetId)
@@ -46,7 +50,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html
-      lang="sv"
+      lang={languageCatalog._meta.htmlLang}
       data-theme-mode={settings.appearance.theme}
       data-theme-resolved={
         settings.appearance.theme === "auto"
@@ -67,22 +71,22 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <ThemeController appearance={settings.appearance} />
         <main>
           <nav className="topnav">
-            <Link href="/">Översikt</Link>
+            <Link href="/">{t("nav.overview", "Översikt")}</Link>
             <Link href="/hyllsystem" className="nav-with-count">
-              <span>Lagerplats</span>
-              <span className="nav-count" aria-label={`${shelfSystemCount} platsenheter`}>
+              <span>{t("nav.locations", "Lagerplats")}</span>
+              <span className="nav-count" aria-label={t("nav.locationUnitsAria", "{count} platsenheter", { count: shelfSystemCount })}>
                 {shelfSystemCount}
               </span>
             </Link>
             <Link href="/inbox" className="nav-with-count">
               <span>{albumLabel}</span>
-              <span className="nav-count" aria-label={`${inboxCount} bilder i inkorgen`}>
+              <span className="nav-count" aria-label={t("nav.inboxCountAria", "{count} bilder i inkorgen", { count: inboxCount })}>
                 {inboxCount}
               </span>
             </Link>
-            <Link href="/boxes/new">Ny låda / inventering</Link>
-            <Link href="/labels">Etiketter</Link>
-            <Link href="/settings">Inställningar</Link>
+            <Link href="/boxes/new">{t("nav.newBox", "Ny låda / inventering")}</Link>
+            <Link href="/labels">{t("nav.labels", "Etiketter")}</Link>
+            <Link href="/settings">{t("nav.settings", "Inställningar")}</Link>
           </nav>
           {children}
         </main>

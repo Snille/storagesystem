@@ -46,7 +46,8 @@ export async function POST(request: Request) {
         theme: asTheme(String(payload.appearance?.theme ?? "auto")),
         fontFamily: asFontFamily(String(payload.appearance?.fontFamily ?? "arial")),
         fontSizePt: asFontSizePt(payload.appearance?.fontSizePt ?? 16),
-        reduceMotion: Boolean(payload.appearance?.reduceMotion)
+        reduceMotion: Boolean(payload.appearance?.reduceMotion),
+        language: String(payload.appearance?.language ?? previousSettings.appearance.language ?? "sv").trim() || "sv"
       },
       immich: {
         baseUrl: String(payload.immich?.baseUrl ?? "").trim(),
