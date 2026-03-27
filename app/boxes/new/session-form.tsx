@@ -187,11 +187,39 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     [draftPhotoNotes, effectivePhotos]
   );
   const presentedLocation = formatLocationDisplay(currentLocationId, boxId);
-  const knownSystems = Array.from(
-    new Set(
-      [locationUnit, ...["A", "B", "C", "D", "E", "F", "G"]].filter(Boolean)
-    )
-  );
+  const knownSystemsByKind = useMemo(() => {
+    const ivarDefaults = ["A", "B", "C", "D", "E", "F", "G"];
+    const grouped = new Map<LocationKind, string[]>();
+
+    for (const kind of ["ivar", "bench", "cabinet"] as const) {
+      grouped.set(kind, []);
+    }
+
+    for (const box of existingBoxes) {
+      const parsed = parseLocationId(box.currentLocationId);
+      if (!parsed) {
+        continue;
+      }
+
+      const current = grouped.get(parsed.kind) ?? [];
+      if (!current.includes(parsed.unitLabel)) {
+        current.push(parsed.unitLabel);
+      }
+      grouped.set(parsed.kind, current);
+    }
+
+    const ivarKnown = Array.from(new Set([locationUnit, ...ivarDefaults, ...(grouped.get("ivar") ?? [])].filter(Boolean)));
+    const benchKnown = Array.from(new Set([locationUnit, ...(grouped.get("bench") ?? [])].filter(Boolean)));
+    const cabinetKnown = Array.from(new Set([locationUnit, ...(grouped.get("cabinet") ?? [])].filter(Boolean)));
+
+    return {
+      ivar: ivarKnown.sort((a, b) => a.localeCompare(b, "sv", { sensitivity: "base" })),
+      bench: benchKnown.sort((a, b) => a.localeCompare(b, "sv", { sensitivity: "base" })),
+      cabinet: cabinetKnown.sort((a, b) => a.localeCompare(b, "sv", { sensitivity: "base" }))
+    };
+  }, [existingBoxes, locationUnit]);
+  const unitOptions = knownSystemsByKind[locationKind];
+  const unitListId = `location-unit-options-${locationKind}`;
   const shelfOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
   const slotOptions = Array.from({ length: 12 }, (_, index) => String(index + 1));
   const variantOptions = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
@@ -452,23 +480,24 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
               </label>
               <label>
                 {locationKind === "ivar" ? t("ivar", "Ivar") : locationKind === "bench" ? t("bench", "Bänk") : t("cabinet", "Skåp")}
-                {locationKind === "ivar" ? (
-                  <select value={locationUnit} onChange={(event) => setLocationUnit(event.target.value)} required>
-                    <option value="">{t("selectIvar", "Välj Ivar")}</option>
-                    {knownSystems.map((system) => (
-                      <option key={system} value={system}>
-                        {system}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={locationUnit}
-                    onChange={(event) => setLocationUnit(event.target.value)}
-                    placeholder={locationKind === "bench" ? "Svarv" : "3D-print"}
-                    required
-                  />
-                )}
+                <input
+                  list={unitListId}
+                  value={locationUnit}
+                  onChange={(event) => setLocationUnit(event.target.value)}
+                  placeholder={
+                    locationKind === "ivar"
+                      ? t("selectIvar", "Välj Ivar")
+                      : locationKind === "bench"
+                        ? "Svarv"
+                        : "3D-print"
+                  }
+                  required
+                />
+                <datalist id={unitListId}>
+                  {unitOptions.map((system) => (
+                    <option key={system} value={system} />
+                  ))}
+                </datalist>
               </label>
               <label>
                 {locationKind === "bench" ? t("surface", "Yta") : t("shelf", "Hylla")}
