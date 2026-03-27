@@ -1,6 +1,24 @@
 import type { NextConfig } from "next";
 
-const imageHostnames = (process.env.NEXT_IMAGE_HOSTNAMES || "photos.yourdomain.com")
+function getDefaultImageHostnames() {
+  const configured = process.env.NEXT_IMAGE_HOSTNAMES?.trim();
+  if (configured) {
+    return configured;
+  }
+
+  const immichBaseUrl = process.env.IMMICH_BASE_URL?.trim();
+  if (immichBaseUrl) {
+    try {
+      return new URL(immichBaseUrl).hostname;
+    } catch {
+      // Fall back to the example hostname below.
+    }
+  }
+
+  return "photos.yourdomain.com";
+}
+
+const imageHostnames = getDefaultImageHostnames()
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
