@@ -7,7 +7,8 @@ import type {
   FontFamilyChoice,
   ThemePreference,
   AiProvider,
-  ImmichAccessMode
+  ImmichAccessMode,
+  PhotoSourceProvider
 } from "@/lib/types";
 
 function asTheme(value: string): ThemePreference {
@@ -37,10 +38,17 @@ function asImmichAccessMode(value: string): ImmichAccessMode {
   return value === "shareKey" ? "shareKey" : "apiKey";
 }
 
+function asPhotoSourceProvider(value: string): PhotoSourceProvider {
+  return value === "photoprism" || value === "nextcloud" ? value : "immich";
+}
+
 export async function POST(request: Request) {
   try {
     const previousSettings = await readAppSettings();
     const payload = (await request.json()) as AppSettings;
+    const photoSourceProvider = asPhotoSourceProvider(String(payload.immich?.provider ?? previousSettings.immich.provider ?? "immich"));
+    const requestedAccessMode = asImmichAccessMode(String(payload.immich?.accessMode ?? "apiKey"));
+    const photoSourceAccessMode = photoSourceProvider === "photoprism" ? "apiKey" : requestedAccessMode;
     const settings: AppSettings = {
       appearance: {
         theme: asTheme(String(payload.appearance?.theme ?? "auto")),
@@ -50,9 +58,10 @@ export async function POST(request: Request) {
         language: String(payload.appearance?.language ?? previousSettings.appearance.language ?? "en").trim() || "en"
       },
       immich: {
+        provider: photoSourceProvider,
         baseUrl: String(payload.immich?.baseUrl ?? "").trim(),
         accountLabel: String(payload.immich?.accountLabel ?? "").trim(),
-        accessMode: asImmichAccessMode(String(payload.immich?.accessMode ?? "apiKey")),
+        accessMode: photoSourceAccessMode,
         apiKey: String(payload.immich?.apiKey ?? "").trim(),
         shareKey: String(payload.immich?.shareKey ?? "").trim(),
         albumId: String(payload.immich?.albumId ?? "").trim()

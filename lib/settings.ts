@@ -46,6 +46,7 @@ const settingsSchema = z.object({
     language: z.string().min(2).max(16)
   }),
   immich: z.object({
+    provider: z.enum(["immich", "photoprism", "nextcloud"]).default("immich"),
     baseUrl: z.string(),
     accountLabel: z.string(),
     accessMode: z.enum(["apiKey", "shareKey"]),
@@ -198,6 +199,7 @@ export function getDefaultAppSettings(): AppSettings {
       language: "en"
     },
     immich: {
+      provider: "immich",
       baseUrl: trimTrailingSlash(process.env.IMMICH_BASE_URL || ""),
       accountLabel: process.env.IMMICH_ACCOUNT_LABEL || "Default account",
       accessMode: process.env.IMMICH_API_KEY ? "apiKey" : "shareKey",

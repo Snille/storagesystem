@@ -133,6 +133,27 @@ export async function removePhotoFromSession(photoId: string) {
   await writeInventoryData(data);
 }
 
+export async function deleteBoxCascade(boxId: string) {
+  const data = await readInventoryData();
+  const box = data.boxes.find((entry) => entry.boxId === boxId);
+
+  if (!box) {
+    throw new Error("Kunde inte hitta lådan i inventariet.");
+  }
+
+  const sessionIds = new Set(
+    data.sessions
+      .filter((session) => session.boxId === boxId)
+      .map((session) => session.sessionId)
+  );
+
+  data.boxes = data.boxes.filter((entry) => entry.boxId !== boxId);
+  data.sessions = data.sessions.filter((session) => session.boxId !== boxId);
+  data.photos = data.photos.filter((photo) => !sessionIds.has(photo.sessionId));
+
+  await writeInventoryData(data);
+}
+
 export async function upsertBoxSession(payload: {
   box: Omit<BoxRecord, "createdAt" | "updatedAt">;
   session: Omit<SessionRecord, "createdAt" | "isCurrent"> & { createdAt?: string };

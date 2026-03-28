@@ -1,5 +1,29 @@
 # History
 
+## v1.4.2 - 2026-03-28
+
+Patch release focused on photo-source expansion, box deletion, and documentation cleanup.
+
+### Photo Sources
+
+- Added a generic photo-source layer so the app is no longer hard-wired only to `Immich`.
+- Added initial `PhotoPrism` support as a second provider with album loading, asset browsing, and token-based access from `Settings`.
+- Updated settings UI and translations so the app can switch between `Immich` and `PhotoPrism` without exposing unsupported access modes.
+
+### Boxes and Data
+
+- Added a safe delete flow for boxes.
+- Deleting a box now removes the box, all of its sessions, and all linked image references from the app data.
+- Deleting a box does not remove the actual images from `Immich` or `PhotoPrism`.
+- Clarified by behavior and documentation that storage locations are derived from existing boxes and disappear automatically when no box remains there.
+
+### Documentation and Presentation
+
+- Reorganized Markdown documentation under `docs/` while keeping the root `README.md` as the public entry point.
+- Added README screenshots for overview, search, box view, edit flow, and labels.
+- Updated README and MANUAL to describe the album-based photo-source model instead of only `Immich`.
+- Clarified that the internal `immichAssetId` field now stores either an `Immich` asset ID or a `PhotoPrism` photo UID.
+
 ## v1.4.1 - 2026-03-28
 
 Patch release focused on editing reliability, overview cleanup, translation-draft precision, and live deployment follow-up.

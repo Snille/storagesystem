@@ -35,6 +35,7 @@ async function readInitialAlbums() {
 
   try {
     return await fetchAvailableAlbums({
+      provider: settings.immich.provider,
       baseUrl: settings.immich.baseUrl,
       accessMode: settings.immich.accessMode,
       apiKey: settings.immich.apiKey,

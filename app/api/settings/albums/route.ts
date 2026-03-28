@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
-import type { ImmichAccessMode } from "@/lib/types";
+import type { ImmichAccessMode, PhotoSourceProvider } from "@/lib/types";
 
 function asAccessMode(value: string): ImmichAccessMode {
   return value === "shareKey" ? "shareKey" : "apiKey";
+}
+
+function asProvider(value: string): PhotoSourceProvider {
+  return value === "photoprism" || value === "nextcloud" ? value : "immich";
 }
 
 export async function POST(request: Request) {
@@ -14,14 +18,19 @@ export async function POST(request: Request) {
       apiKey?: string;
       shareKey?: string;
       currentAlbumId?: string;
+      provider?: string;
     };
+
+    const provider = asProvider(String(payload.provider ?? "immich"));
+    const accessMode = provider === "photoprism" ? "apiKey" : asAccessMode(String(payload.accessMode ?? "apiKey"));
 
     const albums = await fetchAvailableAlbums({
       baseUrl: String(payload.baseUrl ?? "").trim(),
-      accessMode: asAccessMode(String(payload.accessMode ?? "apiKey")),
+      accessMode,
       apiKey: String(payload.apiKey ?? "").trim(),
       shareKey: String(payload.shareKey ?? "").trim(),
-      currentAlbumId: String(payload.currentAlbumId ?? "").trim()
+      currentAlbumId: String(payload.currentAlbumId ?? "").trim(),
+      provider
     });
 
     return NextResponse.json({ albums });
@@ -32,4 +41,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

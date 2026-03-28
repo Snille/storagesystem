@@ -6,6 +6,7 @@ import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/l
 import { presentLocation } from "@/lib/location-presentation";
 import { readAppSettings } from "@/lib/settings";
 import { AttachPhotosForm } from "@/app/boxes/[boxId]/attach-photos-form";
+import { DeleteBoxForm } from "@/app/boxes/[boxId]/delete-box-form";
 import { PhotoLightbox } from "@/app/boxes/[boxId]/photo-lightbox";
 
 type BoxPageProps = {
@@ -193,6 +194,33 @@ export default async function BoxPage({ params }: BoxPageProps) {
           />
         </section>
       ) : null}
+
+      <section className="panel">
+        <h2>{t("boxPage.deleteTitle", "Delete box")}</h2>
+        <p>
+          {t(
+            "boxPage.deleteIntro",
+            "This removes the box, all of its inventory sessions, and all linked image references from the app. The actual images remain in the photo source."
+          )}
+        </p>
+        <p className="muted">
+          {t(
+            "boxPage.deleteLocationNote",
+            "Locations are derived from the stored boxes, so an unused location disappears automatically when no box is left there."
+          )}
+        </p>
+        <DeleteBoxForm
+          boxId={box.boxId}
+          ui={{
+            delete: t("boxPage.deleteButton", "Delete box"),
+            deleting: t("boxPage.deletingButton", "Deleting..."),
+            confirm: t(
+              "boxPage.deleteConfirm",
+              "Delete this box and all of its sessions from the app? The linked images in the photo source will not be deleted."
+            )
+          }}
+        />
+      </section>
     </div>
   );
 }

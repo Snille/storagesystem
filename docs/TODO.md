@@ -24,10 +24,16 @@
 
 ## Translation Tool
 
-- Add AI-assisted `translate missing in section`.
-- Add AI-assisted `translate all missing`.
 - Add review markers for AI-generated drafts before save.
 - Add completion overview per language with clearer progress states.
+
+## Image Sources
+
+- Investigate support for Google Photos as an optional source, likely through a manual picker-style flow rather than a full album mirror.
+- Validate `PhotoPrism` support against a real instance and document any API differences or limitations compared with `Immich`.
+- Investigate support for `Nextcloud`-based photo libraries as the next optional self-hosted source.
+- Evaluate whether Synology Photos is realistic to support with stable enough authentication and album access.
+- Document tradeoffs for each provider: album model, authentication model, read-only vs write-back, and API stability.
 
 ## General
 

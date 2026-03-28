@@ -17,7 +17,7 @@ const inlineGlobalCss = readFileSync(path.join(process.cwd(), "app", "globals.cs
 
 export const metadata: Metadata = {
   title: "Lagersystem",
-  description: "Inventarieapp kopplad till Immich och JSON."
+  description: "Inventarieapp kopplad till ett bildalbum och JSON."
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
     readInventoryData(),
     fetchAvailableAlbums({
+      provider: settings.immich.provider,
       baseUrl: settings.immich.baseUrl,
       accessMode: settings.immich.accessMode,
       apiKey: settings.immich.apiKey,

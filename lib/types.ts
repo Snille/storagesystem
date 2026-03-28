@@ -2,7 +2,9 @@ export type PhotoRole = "label" | "location" | "inside" | "spread" | "detail";
 export type ThemePreference = "auto" | "light" | "dark";
 export type FontFamilyChoice = "arial" | "georgia" | "verdana" | "trebuchet" | "system";
 export type AiProvider = "lmstudio" | "openai" | "anthropic" | "openrouter" | "openwebui";
+export type PhotoSourceProvider = "immich" | "photoprism" | "nextcloud";
 export type ImmichAccessMode = "apiKey" | "shareKey";
+export type PhotoSourceAccessMode = ImmichAccessMode;
 export type LabelTextAlign = "left" | "center";
 export type LabelPlaceDisplay = "chips" | "singleLine";
 export type LabelFontFamily = "arial" | "verdana" | "trebuchet" | "georgia" | "system";
@@ -66,6 +68,9 @@ export type ImmichAsset = {
   originalMimeType: string;
   width?: number;
   height?: number;
+  fileHash?: string;
+  previewToken?: string;
+  downloadToken?: string;
 };
 
 export type AnalysisSuggestion = {
@@ -196,14 +201,17 @@ export type AvailableModel = {
   label: string;
 };
 
-export type ImmichSettings = {
+export type PhotoSourceSettings = {
+  provider: PhotoSourceProvider;
   baseUrl: string;
   accountLabel: string;
-  accessMode: ImmichAccessMode;
+  accessMode: PhotoSourceAccessMode;
   apiKey?: string;
   shareKey?: string;
   albumId: string;
 };
+
+export type ImmichSettings = PhotoSourceSettings;
 
 export type AvailableAlbum = {
   id: string;

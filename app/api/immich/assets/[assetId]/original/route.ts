@@ -1,4 +1,4 @@
-import { getImmichConfig } from "@/lib/config";
+import { fetchAssetOriginalResponse } from "@/lib/photo-source";
 
 type RouteProps = {
   params: Promise<{ assetId: string }>;
@@ -25,18 +25,7 @@ function missingImageSvg(label: string) {
 
 export async function GET(_request: Request, { params }: RouteProps) {
   const { assetId } = await params;
-  const config = getImmichConfig();
-  const query = new URLSearchParams();
-  query.set("edited", "true");
-  if (!config.apiKey && config.shareKey) {
-    query.set("key", config.shareKey);
-  }
-  const url = `${config.baseUrl}/api/assets/${assetId}/original?${query.toString()}`;
-
-  const response = await fetch(url, {
-    headers: config.apiKey ? { "x-api-key": config.apiKey } : undefined,
-    cache: "no-store"
-  });
+  const response = await fetchAssetOriginalResponse(assetId);
 
   if (!response.ok) {
     return missingImageSvg(assetId);

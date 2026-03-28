@@ -11,6 +11,7 @@ import type {
   AvailablePrinter,
   FontFamilyChoice,
   LanguageOption,
+  PhotoSourceProvider,
   ThemePreference
 } from "@/lib/types";
 
@@ -29,6 +30,11 @@ const providerOptions: Array<{ value: AiProvider; label: string }> = [
   { value: "anthropic", label: "Anthropic" },
   { value: "openrouter", label: "OpenRouter" },
   { value: "openwebui", label: "Open WebUI" }
+];
+
+const photoSourceProviderOptions: Array<{ value: PhotoSourceProvider; labelKey: string; fallback: string }> = [
+  { value: "immich", labelKey: "settings.immich.provider.immich", fallback: "Immich" },
+  { value: "photoprism", labelKey: "settings.immich.provider.photoprism", fallback: "PhotoPrism" }
 ];
 
 export function SettingsForm({
@@ -104,6 +110,13 @@ export function SettingsForm({
       }),
     [printers]
   );
+  const photoSourceProvider = settings.immich.provider;
+  const photoSourceUsesShareKey = photoSourceProvider === "immich";
+  const photoSourceRequiresApiKey = photoSourceProvider === "photoprism";
+  const photoSourceTitle = photoSourceProvider === "photoprism"
+    ? t("settings.immich.provider.photoprism", "PhotoPrism")
+    : t("settings.immich.provider.immich", "Immich");
+  const photoSourceAccessMode = photoSourceRequiresApiKey ? "apiKey" : settings.immich.accessMode;
 
   function patchAppearance<K extends keyof AppSettings["appearance"]>(key: K, value: AppSettings["appearance"][K]) {
     setSettings((current) => ({
@@ -191,6 +204,7 @@ export function SettingsForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            provider: settings.immich.provider,
             baseUrl: settings.immich.baseUrl,
             accessMode: settings.immich.accessMode,
             apiKey: settings.immich.apiKey ?? "",
@@ -437,10 +451,29 @@ export function SettingsForm({
       <section className="panel shell">
         <div>
           <h2>{t("settings.immich.title", "Immich")}</h2>
-          <p>{t("settings.immich.intro", "Byt konto, åtkomstmetod och vilket album som appen ska inventera från.")}</p>
+          <p>{t("settings.immich.intro", "Välj bildkälla, konto, åtkomstmetod och vilket album som appen ska inventera från.")}</p>
         </div>
 
         <div className="grid two">
+          <label>
+            {t("settings.immich.provider", "Bildkälla")}
+            <select
+              value={photoSourceProvider}
+              onChange={(event) =>
+                patchImmich({
+                  provider: event.target.value as PhotoSourceProvider,
+                  accessMode: event.target.value === "photoprism" ? "apiKey" : settings.immich.accessMode
+                })
+              }
+            >
+              {photoSourceProviderOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {t(option.labelKey, option.fallback)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label>
             {t("settings.immich.accountLabel", "Kontoetikett")}
             <input
@@ -464,26 +497,42 @@ export function SettingsForm({
           <label>
             {t("settings.immich.accessMode", "Åtkomstmetod")}
             <select
-              value={settings.immich.accessMode}
+              value={photoSourceAccessMode}
+              disabled={photoSourceRequiresApiKey}
               onChange={(event) =>
                 patchImmich({
                   accessMode: event.target.value === "shareKey" ? "shareKey" : "apiKey"
                 })
               }
             >
-              <option value="apiKey">{t("settings.immich.access.apiKey", "API-nyckel")}</option>
-              <option value="shareKey">{t("settings.immich.access.shareKey", "Delningsnyckel")}</option>
+              <option value="apiKey">
+                {photoSourceRequiresApiKey
+                  ? t("settings.immich.access.token", "App-lösenord / access token")
+                  : t("settings.immich.access.apiKey", "API-nyckel")}
+              </option>
+              {photoSourceUsesShareKey ? (
+                <option value="shareKey">{t("settings.immich.access.shareKey", "Delningsnyckel")}</option>
+              ) : null}
             </select>
           </label>
 
-          {settings.immich.accessMode === "apiKey" ? (
+          {photoSourceAccessMode === "apiKey" ? (
             <label>
-              {t("settings.immich.apiKey", "Immich API-nyckel")}
+              {photoSourceRequiresApiKey
+                ? t("settings.immich.photoPrismApiKey", "PhotoPrism app-lösenord / access token")
+                : t("settings.immich.apiKey", "Immich API-nyckel")}
               <input
                 type="password"
                 value={settings.immich.apiKey ?? ""}
                 onChange={(event) => patchImmich({ apiKey: event.target.value })}
-                placeholder={t("settings.immich.apiKeyPlaceholder", "Användarnyckel för att läsa och senare skriva metadata")}
+                placeholder={
+                  photoSourceRequiresApiKey
+                    ? t(
+                        "settings.immich.photoPrismApiKeyPlaceholder",
+                        "API-nyckel, app-lösenord eller access token för PhotoPrism-album"
+                      )
+                    : t("settings.immich.apiKeyPlaceholder", "Användarnyckel för att läsa och senare skriva metadata")
+                }
               />
             </label>
           ) : (
@@ -497,6 +546,15 @@ export function SettingsForm({
             </label>
           )}
         </div>
+
+        {photoSourceRequiresApiKey ? (
+          <p className="muted">
+            {t(
+              "settings.immich.photoPrismHint",
+              "PhotoPrism använder tokenbaserad åtkomst här, så delningsnyckel visas inte som alternativ."
+            )}
+          </p>
+        ) : null}
 
         <div className="grid two">
           <label>
@@ -548,7 +606,7 @@ export function SettingsForm({
           </div>
         ) : null}
 
-        {renderSaveRow(t("settings.immich.save", "Spara Immich"))}
+        {renderSaveRow(t("settings.immich.save", "Spara bildkälla").replace("Immich", photoSourceTitle))}
       </section>
 
       <section className="panel shell">

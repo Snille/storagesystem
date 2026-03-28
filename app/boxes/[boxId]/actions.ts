@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { appendPhotosToSession } from "@/lib/data-store";
+import { appendPhotosToSession, deleteBoxCascade } from "@/lib/data-store";
 import type { PhotoRole } from "@/lib/types";
 
 const validRoles = new Set<PhotoRole>(["label", "location", "inside", "spread", "detail"]);
@@ -38,4 +38,15 @@ export async function attachPhotosToCurrentSession(formData: FormData) {
   });
 
   redirect(`/boxes/${boxId}`);
+}
+
+export async function deleteBoxAction(formData: FormData) {
+  const boxId = String(formData.get("boxId") ?? "").trim();
+
+  if (!boxId) {
+    throw new Error("boxId måste anges.");
+  }
+
+  await deleteBoxCascade(boxId);
+  redirect("/");
 }

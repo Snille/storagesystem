@@ -1,8 +1,8 @@
 # User Manual
 
-This manual is intended for day-to-day use of the app. For technical details, see [README.md](./README.md).
+This manual is intended for day-to-day use of the app. For technical details, see [README.md](../README.md).
 
-Current version: `v1.4.1`
+Current version: `v1.4.2`
 
 ## The Basic Idea
 
@@ -23,7 +23,7 @@ A box can now be stored in several kinds of places:
 ## Typical Workflow
 
 1. Photograph the box with your phone.
-2. Let the photos sync to Immich.
+2. Let the photos sync into a shared album in the configured photo source.
 3. Open `Images to Connect`.
 4. Select the photos that belong to the same box.
 5. Click `Analyze selected images`.
@@ -71,7 +71,7 @@ From the start page you can:
 - hover on images with analysis text to see a quick description
 - see overview statistics for storage units, storage types, and image coverage
 
-The `Overview image` is automatically taken from the album cover of the selected Immich album.
+The `Overview image` is automatically taken from the album cover of the selected album.
 
 Boxes are shown in physical order in the overview:
 
@@ -107,7 +107,7 @@ This is especially useful when you want to find something based on how the works
 
 This page only shows images that are not yet linked to any box.
 
-The Immich album cover is excluded here because it is used as the overview image on the start page.
+The selected album cover is excluded here because it is used as the overview image on the start page.
 
 It is also excluded when you edit a box and add more images from the album.
 
@@ -198,7 +198,7 @@ From the `Settings` page you can change:
 - theme
 - font
 - text size
-- Immich account and album
+- photo source, access details, and selected album
 - AI provider and model
 - prompts that guide the model
 - cleanup phrases and other filters that clean up AI output
@@ -248,7 +248,7 @@ This is especially useful if you test different models in LM Studio or compare d
 Some common situations:
 
 - A photo is missing:
-  it may have been removed in Immich. The app should still continue working.
+  it may have been removed from the photo source. The app should still continue working.
 
 - An analysis looks empty or strange:
   try again, or write your own analysis text manually.

@@ -1,26 +1,60 @@
 # Storage System
 
-Practical day-to-day usage is described in [MANUAL.md](./MANUAL.md). This README is the technical overview.
+Practical day-to-day usage is described in [MANUAL.md](./docs/MANUAL.md). This README is the technical overview.
 
-Planned next steps are collected in [TODO.md](./TODO.md).
+Planned next steps are collected in [TODO.md](./docs/TODO.md).
 
-Current version: `v1.4.1`
+Current version: `v1.4.2`
 
-A web app for inventorying workshop boxes with Immich as the image library, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
+A web app for inventorying workshop / shed / house boxes and storage places with an album-based photo source, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
 The app is built around a practical workflow:
 
 1. photograph boxes with your phone
-2. let the photos sync to Immich
+2. let the photos land in a shared album in Immich or PhotoPrism
 3. connect the photos to the correct box in the app
 4. let AI suggest label, location, contents, and photo roles
-5. search later for the items you need in the workshop
+5. search later for the items you need to find
 
 Since `v1.1.x`, the app is no longer limited to shelves only and now covers a broader storage structure:
 
 - `Shelving unit`
 - `Bench`
 - `Cabinet`
+
+For supporting documentation, see [docs/README.md](./docs/README.md).
+
+## Screenshots
+
+### Overview
+
+The home page combines search, storage statistics, and the album cover based overview image.
+
+![Overview page](./docs/screenshots/overview01.png)
+
+### Search Results
+
+Search results show matching boxes with their current location, summary, keywords, and linked photos. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card.
+
+![Search results](./docs/screenshots/search01.png)
+
+### Box View
+
+The box page brings together the current session, linked photos, per-photo analysis, and history for a single box. Images that already have saved analysis text also expose it through hover overlays in the places where that preview is available.
+
+![Box view](./docs/screenshots/box01.png)
+
+### Edit Box
+
+Existing boxes can be updated in place, including text, keywords, photo roles, and location changes when needed.
+
+![Edit box](./docs/screenshots/editbox01.png)
+
+### Labels
+
+The labels view supports template-based label generation, printer selection, and DYMO-oriented workflows.
+
+![Labels view](./docs/screenshots/labels01.png)
 
 ## Overview
 
@@ -29,7 +63,7 @@ The system separates four identities:
 - `boxId`: the physical box
 - `currentLocationId`: where the box is currently stored
 - `sessionId`: one inventory event
-- `immichAssetId`: the actual image in Immich
+- `immichAssetId`: the linked image asset from the configured photo source
 
 That makes it possible to:
 
@@ -46,13 +80,15 @@ The location model is now generic and supports several types of storage units:
 
 That means the same inventory model works for shelves, workbenches, and cabinets.
 
+`immichAssetId` is still the historical internal field name in the JSON data model. With `Immich` it stores the Immich asset ID, and with `PhotoPrism` it stores the PhotoPrism photo UID.
+
 ## Technology
 
 - `Next.js 15` with App Router
 - `React 19`
 - `TypeScript`
 - `Zod` for validation
-- `Immich` as image source
+- `Immich` or `PhotoPrism` as image source
 - `data/inventory.json` as inventory database
 - `data/app-settings.json` for user settings
 
@@ -94,10 +130,38 @@ Contains everything that can be changed from the `Settings` page, including:
 - font
 - text size
 - reduced motion
-- Immich account, access method, and selected album
+- selected photo source, account/access token details, and album
 - AI provider and model
 - analysis prompts
 - printer queue selection for label printing
+
+## Photo Source Requirements
+
+The app is built around one selected album, not around arbitrary loose images from the whole library.
+
+That means you need:
+
+- an album in the configured photo source that contains the images the app should inventory from
+- the selected album ID
+- credentials that can read that album
+
+For the current feature set:
+
+- `Immich`: a shared album plus `shareKey` is enough
+- `PhotoPrism`: use an app password, API key, or access token with album access
+
+At the moment the app only needs read access in order to:
+
+- list the selected album
+- read the album assets
+- use the album cover as the overview image
+- fetch thumbnails and originals for linked assets
+
+So creating a dedicated Immich user is optional right now.
+
+Using an Immich `apiKey` is still supported and may become more useful later if the app gains broader album management or write-back features, but it is not required for the current album-based workflow.
+
+PhotoPrism support currently follows the same album-based read workflow, but uses token-based access rather than an Immich-style share key.
 
 ## Key Pages
 
@@ -108,7 +172,7 @@ The start page is primarily used for search.
 It shows:
 
 - a text or voice search box
-- `Overview image` from the Immich album cover, openable in its own lightbox
+- `Overview image` from the selected album cover, openable in its own lightbox
 - box cards with location, summary, keywords, and photos
 - all linked photos for each box in search results
 - statistics for storage units, storage types, and box image coverage
@@ -157,7 +221,7 @@ Shelving units now have a more physical shelf view with:
 
 ### `Images to Connect`
 
-Shows only images from the selected Immich album that are not yet linked to any box.
+Shows only images from the selected album that are not yet linked to any box.
 
 Here you can:
 
@@ -168,7 +232,7 @@ Here you can:
 - connect directly to a likely existing box
 - move to the registration page with prefilled data
 
-The Immich album cover is used as the `Overview image` on the start page and is therefore excluded from this view.
+The selected album cover is used as the `Overview image` on the start page and is therefore excluded from this view.
 
 The same album cover is also excluded when you edit an existing box or add more images from the album later.
 
@@ -215,9 +279,9 @@ Here you can change:
 - font: `Arial`, `System UI`, `Verdana`, `Trebuchet`, `Georgia`
 - font size
 - reduced motion
-- Immich base URL
+- photo source provider and base URL
 - account label
-- active Immich album
+- active album
 - AI provider and model
 - prompts that guide the model
 - cleanup phrases and filters for AI responses
@@ -229,9 +293,16 @@ Here you can change:
 - access to the translation tool for editing language files in place
 - separate translation AI configuration and translation prompt
 
+For `Immich`, the app supports two access modes:
+
+- `shareKey`: recommended when you only want to expose one shared album to the app
+- `apiKey`: optional broader account-based access for future expansion
+
+For `PhotoPrism`, the current implementation uses token-based access via app password / access token.
+
 ### `Translations`
 
-The translation tool is now available from `Settings`.
+The translation tool is available from `Settings`.
 
 It currently supports:
 
@@ -276,9 +347,10 @@ The public API can be protected with `LAGERSYSTEM_API_KEY`.
 
 ## Local Development
 
-For local development and troubleshooting, see [LOCAL-TESTING.md](./LOCAL-TESTING.md).
+For local development and troubleshooting, see [LOCAL-TESTING.md](./docs/LOCAL-TESTING.md).
 
 ## Deployment and Integrations
 
 - DYMO + CUPS setup: [deploy/DYMO_CUPS.md](./deploy/DYMO_CUPS.md)
 - Home Assistant integration: [deploy/HOME_ASSISTANT.md](./deploy/HOME_ASSISTANT.md)
+- Additional project documentation: [docs/README.md](./docs/README.md)

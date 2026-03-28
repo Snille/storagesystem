@@ -13,7 +13,7 @@ export function getOpenRouterHeaders(title: string) {
   };
 }
 
-export function getImmichConfig() {
+export function getPhotoSourceConfig() {
   const settings = readAppSettingsSync();
   const baseUrl = settings.immich.baseUrl || process.env.IMMICH_BASE_URL;
 
@@ -22,12 +22,24 @@ export function getImmichConfig() {
   }
 
   return {
+    provider: settings.immich.provider || "immich",
     baseUrl: trimTrailingSlash(baseUrl),
+    accountLabel: settings.immich.accountLabel || process.env.IMMICH_ACCOUNT_LABEL || "",
     apiKey: settings.immich.accessMode === "apiKey" ? settings.immich.apiKey || process.env.IMMICH_API_KEY : undefined,
     shareKey:
       settings.immich.accessMode === "shareKey" ? settings.immich.shareKey || process.env.IMMICH_SHARE_KEY : undefined,
-    albumId: settings.immich.albumId || process.env.IMMICH_ALBUM_ID
+    albumId: settings.immich.albumId || process.env.IMMICH_ALBUM_ID || "",
+    accessMode: settings.immich.accessMode
   };
+}
+
+export function getImmichConfig() {
+  const config = getPhotoSourceConfig();
+  if (config.provider !== "immich") {
+    throw new Error(`Current photo source '${config.provider}' is not supported by the legacy Immich helper.`);
+  }
+
+  return config;
 }
 
 export function getAiConfig() {
