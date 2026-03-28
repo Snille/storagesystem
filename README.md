@@ -34,13 +34,13 @@ The home page combines search, storage statistics, and the album cover based ove
 
 ### Search Results
 
-Search results show matching boxes with their current location, summary, keywords, and linked photos. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card.
+Search results show matching boxes with their current location, summary, keywords, and linked photos. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card. A small green checkmark on an image means analysis text is already saved for that image.
 
 ![Search results](./docs/screenshots/search01.png)
 
 ### Box View
 
-The box page brings together the current session, linked photos, per-photo analysis, and history for a single box. Images that already have saved analysis text also expose it through hover overlays in the places where that preview is available.
+The box page brings together the current session, linked photos, per-photo analysis, and history for a single box. Images that already have saved analysis text also expose it through hover overlays in the places where that preview is available. A small green checkmark on an image indicates that analysis text exists for that image.
 
 ![Box view](./docs/screenshots/box01.png)
 

@@ -69,6 +69,7 @@ From the start page you can:
 - open a box by clicking the box card
 - click photos to view them in a lightbox
 - hover on images with analysis text to see a quick description
+- see a small green checkmark on images that already have saved analysis text
 - see overview statistics for storage units, storage types, and image coverage
 
 The `Overview image` is automatically taken from the album cover of the selected album.
@@ -163,6 +164,8 @@ You can:
 - open the history
 
 If a photo has analysis text, you can also see it directly as a tooltip when hovering over the image in different parts of the app.
+
+A small green checkmark on an image means that analysis text exists for that image. If the checkmark is missing, there is no saved analysis text yet.
 
 History remains available even if the box moves to a new location.
 
