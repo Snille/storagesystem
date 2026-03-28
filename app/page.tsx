@@ -5,6 +5,7 @@ import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
+import { parseBoxId, parseLocationId } from "@/lib/location-schema";
 import { compareBoxesByLocation } from "@/lib/location-sort";
 import { searchInventory } from "@/lib/search";
 import { readAppSettings } from "@/lib/settings";
@@ -26,9 +27,6 @@ export default async function Home({ searchParams }: HomeProps) {
   const t = createTranslator(languageCatalog);
   const albumAssets = query ? album.assets : [];
   const sessionsByBox = getCurrentSessionByBox(data);
-  const currentLocationCount = new Set(
-    data.boxes.map((box) => box.currentLocationId.trim()).filter(Boolean)
-  ).size;
   const photosBySession = new Map(
     data.photos.reduce<Array<[string, typeof data.photos]>>((groups, photo) => {
       const existing = groups.find(([sessionId]) => sessionId === photo.sessionId);
@@ -44,6 +42,55 @@ export default async function Home({ searchParams }: HomeProps) {
   const results = query ? searchInventory(data, query, assetFileNamesById) : [];
   const sortedBoxes = [...data.boxes].sort(compareBoxesByLocation);
   const overviewAsset = album.albumThumbnailAssetId ? album.assets.find((asset) => asset.id === album.albumThumbnailAssetId) : null;
+  const locationUnits = new Set<string>();
+  const locationUnitsByKind = {
+    ivar: new Set<string>(),
+    bench: new Set<string>(),
+    cabinet: new Set<string>()
+  };
+
+  for (const box of data.boxes) {
+    const parsedLocation = parseLocationId(box.currentLocationId) ?? parseBoxId(box.boxId);
+    if (!parsedLocation) {
+      continue;
+    }
+
+    const unitKey = `${parsedLocation.kind}:${parsedLocation.unitId}`;
+    locationUnits.add(unitKey);
+    locationUnitsByKind[parsedLocation.kind].add(unitKey);
+  }
+
+  const boxesWithPhotosCount = data.boxes.filter((box) => {
+    const session = sessionsByBox.get(box.boxId);
+    return Boolean(session && (photosBySession.get(session.sessionId)?.length ?? 0) > 0);
+  }).length;
+  const boxesWithoutPhotosCount = data.boxes.length - boxesWithPhotosCount;
+  const stats = [
+    {
+      value: locationUnits.size,
+      label: t("home.locationUnits", "platsenheter")
+    },
+    {
+      value: locationUnitsByKind.ivar.size,
+      label: t("home.ivarUnits", "IVAR-enheter")
+    },
+    {
+      value: locationUnitsByKind.bench.size,
+      label: t("home.benchUnits", "bänkenheter")
+    },
+    {
+      value: locationUnitsByKind.cabinet.size,
+      label: t("home.cabinetUnits", "skåpenheter")
+    },
+    {
+      value: boxesWithPhotosCount,
+      label: t("home.boxesWithPhotos", "lådor med bilder")
+    },
+    {
+      value: boxesWithoutPhotosCount,
+      label: t("home.boxesWithoutPhotos", "lådor utan kopplade bilder")
+    }
+  ];
 
   return (
     <div className="shell">
@@ -117,24 +164,6 @@ export default async function Home({ searchParams }: HomeProps) {
         ) : null}
       </section>
 
-      <section className="hero">
-        <h1>{t("home.heroTitle", "Lagerinventarie med Immich som bildlager")}</h1>
-        <div className="grid three">
-          <div className="stat">
-            <strong>{data.boxes.length}</strong>
-            {t("home.registeredBoxes", "registrerade lådor")}
-          </div>
-          <div className="stat">
-            <strong>{currentLocationCount}</strong>
-            {t("home.currentLocations", "aktuella platser")}
-          </div>
-          <div className="stat">
-            <strong>{data.photos.length}</strong>
-            {t("home.linkedPhotos", "kopplade bilder")}
-          </div>
-        </div>
-      </section>
-
       {overviewAsset ? (
         <section className="panel overview-panel">
           <h2>{t("home.overviewImage", "Översiktsbild")}</h2>
@@ -157,6 +186,18 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
         </section>
       ) : null}
+
+      <section className="hero">
+        <h1 className="hero-subtitle">{t("home.heroTitle", "Lagerinventarie med Immich som bildlager")}</h1>
+        <div className="home-stats-grid">
+          {stats.map((stat) => (
+            <div className="stat" key={stat.label}>
+              <strong>{stat.value}</strong>
+              {stat.label}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="panel">
         <h2>{t("home.currentBoxes", "Aktuella lådor")}</h2>

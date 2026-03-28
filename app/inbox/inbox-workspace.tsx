@@ -345,8 +345,8 @@ export function InboxWorkspace({
                 </p>
                 <p>{suggestion.suggestedSummary}</p>
                 <div className="pill-row">
-                  {suggestion.suggestedKeywords.map((keyword) => (
-                    <span className="pill" key={keyword}>
+                  {suggestion.suggestedKeywords.map((keyword, index) => (
+                    <span className="pill" key={`${keyword}-${index}`}>
                       {keyword}
                     </span>
                   ))}

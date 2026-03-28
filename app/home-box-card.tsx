@@ -94,8 +94,8 @@ export function HomeBoxCard({
           <p>{summary}</p>
           {keywords.length > 0 ? (
             <div className="pill-row">
-              {keywords.map((keyword) => (
-                <span className="pill" key={keyword}>
+              {keywords.map((keyword, index) => (
+                <span className="pill" key={`${keyword}-${index}`}>
                   {keyword}
                 </span>
               ))}

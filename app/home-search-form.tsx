@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type SpeechRecognitionAlternative = {
   transcript: string;
@@ -59,25 +59,23 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
   const [value, setValue] = useState(query);
   const [isListening, setIsListening] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [speechRecognitionApi, setSpeechRecognitionApi] = useState<SpeechRecognitionConstructor | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
-  const SpeechRecognitionApi = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? null
-        : (window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null),
-    []
-  );
+  useEffect(() => {
+    const api = window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+    setSpeechRecognitionApi(() => api);
+  }, []);
 
-  const supportsVoice = Boolean(SpeechRecognitionApi);
+  const supportsVoice = Boolean(speechRecognitionApi);
 
   function startListening() {
-    if (!SpeechRecognitionApi) {
+    if (!speechRecognitionApi) {
       setStatusText(ui.voiceUnsupported);
       return;
     }
 
-    const recognition = new SpeechRecognitionApi();
+    const recognition = new speechRecognitionApi();
     recognition.lang = speechRecognitionLocale;
     recognition.continuous = false;
     recognition.interimResults = true;

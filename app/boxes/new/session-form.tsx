@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
-import { buildLocationId, parseLocationId, type BenchZone, type LocationKind } from "@/lib/location-schema";
+import { buildLocationId, parseBoxId, parseLocationId, type BenchZone, type LocationKind } from "@/lib/location-schema";
 import { presentLocation } from "@/lib/location-presentation";
 import { presentPhotoRole } from "@/lib/photo-role-presentation";
 import type { PhotoRole } from "@/lib/types";
@@ -69,6 +69,28 @@ function formatDateTime(value: string | undefined, locale: string, missingTime: 
 function formatLocationDisplay(locationId: string, boxId = "") {
   const location = presentLocation(locationId, boxId);
   return [location.system, location.shelf, location.slot].filter(Boolean).join(" ");
+}
+
+function resolveComparableLocationId(locationId: string, boxId = "") {
+  const parsedLocation = parseLocationId(locationId);
+  if (parsedLocation?.variant) {
+    return parsedLocation.normalizedId;
+  }
+
+  const parsedBox = boxId ? parseBoxId(boxId) : null;
+  if (parsedLocation && parsedBox) {
+    const sameBase =
+      parsedLocation.kind === parsedBox.kind &&
+      parsedLocation.unitId === parsedBox.unitId &&
+      parsedLocation.rowId === parsedBox.rowId &&
+      parsedLocation.slot === parsedBox.slot;
+
+    if (sameBase) {
+      return parsedBox.normalizedId;
+    }
+  }
+
+  return parsedLocation?.normalizedId ?? locationId.trim();
 }
 
 export function SessionForm({ defaults, initialPhotos, availablePhotos, existingBoxes, locale, ui }: SessionFormProps) {
@@ -187,6 +209,8 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     [draftPhotoNotes, effectivePhotos]
   );
   const presentedLocation = formatLocationDisplay(currentLocationId, boxId);
+  const submittedLocationId =
+    isExistingBox && !isEditingLocation ? resolveComparableLocationId(currentLocationId, boxId) : currentLocationId;
   const knownSystemsByKind = useMemo(() => {
     const ivarDefaults = ["A", "B", "C", "D", "E", "F", "G"];
     const grouped = new Map<LocationKind, string[]>();
@@ -232,14 +256,14 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
       return [];
     }
 
-    const normalizedLocation = parseLocationId(currentLocationId)?.normalizedId ?? currentLocationId.trim();
+    const normalizedLocation = resolveComparableLocationId(currentLocationId, boxId);
 
     return existingBoxes.filter((box) => {
       if (boxId && box.boxId === boxId) {
         return false;
       }
 
-      const boxLocation = parseLocationId(box.currentLocationId)?.normalizedId ?? box.currentLocationId.trim();
+      const boxLocation = resolveComparableLocationId(box.currentLocationId, box.boxId);
       return boxLocation === normalizedLocation;
     });
   }, [boxId, currentLocationId, existingBoxes]);
@@ -248,7 +272,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
       return [];
     }
 
-    const normalizedLocation = parseLocationId(currentLocationId)?.normalizedId ?? currentLocationId.trim();
+    const normalizedLocation = resolveComparableLocationId(currentLocationId, boxId);
     const normalizedLabel = normalizeComparableText(label);
 
     return existingBoxes.filter((box) => {
@@ -256,7 +280,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
         return false;
       }
 
-      const boxLocation = parseLocationId(box.currentLocationId)?.normalizedId ?? box.currentLocationId.trim();
+      const boxLocation = resolveComparableLocationId(box.currentLocationId, box.boxId);
       return (
         boxLocation === normalizedLocation &&
         normalizeComparableText(box.label) === normalizedLabel
@@ -441,7 +465,7 @@ export function SessionForm({ defaults, initialPhotos, availablePhotos, existing
     <div className="form-grid">
       <input type="hidden" name="boxId" value={boxId} />
       <input type="hidden" name="sessionId" value={sessionId} />
-      <input type="hidden" name="currentLocationId" value={currentLocationId} />
+      <input type="hidden" name="currentLocationId" value={submittedLocationId} />
       <input type="hidden" name="photoPayload" value={photoPayload} />
       <label>
         {t("locationLabel", "Aktuell plats")}

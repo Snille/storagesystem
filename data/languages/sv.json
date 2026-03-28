@@ -1,10 +1,4 @@
 {
-  "_meta": {
-    "code": "sv",
-    "label": "Svenska",
-    "htmlLang": "sv",
-    "speechRecognitionLocale": "sv-SE"
-  },
   "app.title": "Lagersystem",
   "app.description": "Inventarieapp kopplad till Immich och JSON.",
   "nav.overview": "Översikt",
@@ -17,7 +11,14 @@
   "home.searchTitle": "Sök efter något i verkstan",
   "home.versionAria": "Appversion {version}",
   "home.noResults": "Ingen träff ännu. Lägg till eller uppdatera en session.",
-  "home.heroTitle": "Lagerinventarie med Immich som bildlager",
+  "home.heroTitle": "Lagerinventarie",
+  "home.locationUnits": "platsenheter",
+  "home.ivarUnits": "hyllor",
+  "home.benchUnits": "bänkar",
+  "home.cabinetUnits": "skåp",
+  "home.boxesWithPhotos": "lådor med bilder",
+  "home.boxesWithoutPhotos": "lådor utan kopplade bilder",
+  "home.boxesWithoutCurrentSession": "lådor utan aktiv session",
   "home.registeredBoxes": "registrerade lådor",
   "home.currentLocations": "aktuella platser",
   "home.linkedPhotos": "kopplade bilder",
@@ -470,5 +471,11 @@
   "translations.emptyTarget": "Skriv översättning här...",
   "translations.empty": "Inga strängar matchar den aktuella filtreringen.",
   "translations.aiTitle": "AI-utkast",
-  "translations.aiHint": "AI kan nu fylla i saknade strängar i vald sektion. Granska utkastet och spara när du är nöjd."
+  "translations.aiHint": "AI kan nu fylla i saknade strängar i vald sektion. Granska utkastet och spara när du är nöjd.",
+  "_meta": {
+    "code": "sv",
+    "label": "Svenska",
+    "htmlLang": "sv",
+    "speechRecognitionLocale": "sv-SE"
+  }
 }

@@ -1,10 +1,4 @@
 {
-  "_meta": {
-    "code": "en",
-    "label": "English",
-    "htmlLang": "en",
-    "speechRecognitionLocale": "en-US"
-  },
   "app.title": "Storage System",
   "app.description": "Inventory app connected to Immich and JSON.",
   "nav.overview": "Overview",
@@ -17,7 +11,14 @@
   "home.searchTitle": "Search for something in the workshop",
   "home.versionAria": "App version {version}",
   "home.noResults": "No matches yet. Add or update a session.",
-  "home.heroTitle": "Storage inventory with Immich as image library",
+  "home.heroTitle": "Storage inventory",
+  "home.locationUnits": "locations",
+  "home.ivarUnits": "storage shelfs",
+  "home.benchUnits": "benches",
+  "home.cabinetUnits": "cabinets",
+  "home.boxesWithPhotos": "boxes with images",
+  "home.boxesWithoutPhotos": "boxes without linked images",
+  "home.boxesWithoutCurrentSession": "boxes without active session",
   "home.registeredBoxes": "registered boxes",
   "home.currentLocations": "current locations",
   "home.linkedPhotos": "linked images",
@@ -470,5 +471,11 @@
   "translations.emptyTarget": "Write translation here...",
   "translations.empty": "No strings match the current filtering.",
   "translations.aiTitle": "AI draft",
-  "translations.aiHint": "AI can now fill missing strings in the selected section. Review the draft and save when you are satisfied."
+  "translations.aiHint": "AI can now fill missing strings in the selected section. Review the draft and save when you are satisfied.",
+  "_meta": {
+    "code": "en",
+    "label": "English",
+    "htmlLang": "en",
+    "speechRecognitionLocale": "en-US"
+  }
 }

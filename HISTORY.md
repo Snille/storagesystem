@@ -1,5 +1,31 @@
 # History
 
+## v1.4.1 - 2026-03-28
+
+Patch release focused on editing reliability, overview cleanup, translation-draft precision, and live deployment follow-up.
+
+### Registration and Locations
+
+- Fixed editing of existing boxes so unchanged locations no longer trigger false duplicate-location warnings.
+- Fixed save flow for existing boxes so incorrect conflict redirects no longer build very long retry URLs.
+- Added a one-time migration script for older inventory data where exact `currentLocationId` values were missing the letter variant.
+
+### Images and Overview
+
+- The Immich album cover is now consistently excluded both from `Images to Connect` and from box-edit / add-more-images flows.
+- The overview statistics were refreshed to show storage units, unit types, and image coverage instead of the now-redundant `current locations` total.
+- The overview stats layout and heading were adjusted to match the current start-page design.
+
+### Translation Tooling
+
+- Fixed translation draft prompts so `missing` drafts only send actually missing keys to the AI model.
+- Added new overview-stat translation keys for Swedish, English, and German.
+
+### UI and Stability
+
+- Fixed duplicate React keys for keyword pills in overview, inbox, and box views.
+- Fixed hydration/runtime issues in voice search by delaying speech-recognition capability detection until after mount.
+
 ## v1.4.0 - 2026-03-27
 
 Release focused on translation tooling, printer queue selection, DYMO status improvements, and public-facing documentation polish.

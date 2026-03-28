@@ -280,6 +280,7 @@ export async function buildTranslationDraft({
     readLanguageCatalog(targetCode)
   ]);
   const keys = Object.keys(sourceEntries).filter((key) => !existingTargetEntries[key]?.trim());
+  const draftableSourceEntries = Object.fromEntries(keys.map((key) => [key, sourceEntries[key] ?? ""]));
 
   if (keys.length === 0) {
     return {
@@ -295,7 +296,7 @@ export async function buildTranslationDraft({
     "Return one JSON object where each property key is unchanged and each value is the translated string.",
     section && section !== "all" ? `The strings are from the section '${section}'.` : "",
     "",
-    JSON.stringify(sourceEntries, null, 2)
+    JSON.stringify(draftableSourceEntries, null, 2)
   ]
     .filter(Boolean)
     .join("\n");

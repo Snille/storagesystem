@@ -4,7 +4,7 @@ Practical day-to-day usage is described in [MANUAL.md](./MANUAL.md). This README
 
 Planned next steps are collected in [TODO.md](./TODO.md).
 
-Current version: `v1.4.0`
+Current version: `v1.4.1`
 
 A web app for inventorying workshop boxes with Immich as the image library, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
@@ -111,7 +111,7 @@ It shows:
 - `Overview image` from the Immich album cover, openable in its own lightbox
 - box cards with location, summary, keywords, and photos
 - all linked photos for each box in search results
-- statistics for registered boxes, current locations, and linked photos
+- statistics for storage units, storage types, and box image coverage
 - the current app version directly in the overview
 
 Boxes in the overview are sorted in physical order:
@@ -170,6 +170,8 @@ Here you can:
 
 The Immich album cover is used as the `Overview image` on the start page and is therefore excluded from this view.
 
+The same album cover is also excluded when you edit an existing box or add more images from the album later.
+
 ### `New Box / Inventory`
 
 This page is used to register a new box or update an existing session.
@@ -189,6 +191,8 @@ Here you can:
 When creating a completely new box, the app now also protects against accidentally overwriting an existing box at the same exact location. Saving is blocked and you must choose another letter or edit the existing box instead.
 
 For existing boxes, you can also click `Change location` to move the box in the system without losing history.
+
+Older inventory data may still contain location IDs without the final letter variant. The app now handles such boxes safely during editing, and the included migration script can normalize those stored locations.
 
 ### `Box View`
 
@@ -241,6 +245,8 @@ It currently supports:
 - a dedicated translation instruction prompt
 
 Translation drafts can use a different AI model than image analysis, which is especially useful when comparing OpenRouter models for translation quality.
+
+When the draft flow is used for `missing` strings, only the actually missing keys are now sent to the AI model.
 
 ## Labels and DYMO
 

@@ -1,4 +1,5 @@
 import { getImmichConfig } from "@/lib/config";
+import { getNonCoverAlbumAssets } from "@/lib/album-assets";
 import type { ImmichAsset } from "@/lib/types";
 
 function createHeaders(): Record<string, string> {
@@ -30,7 +31,7 @@ async function request<T>(url: string): Promise<T> {
 
 export async function fetchAlbumAssets(): Promise<ImmichAsset[]> {
   const album = await fetchAlbumDetails();
-  return [...album.assets].sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
+  return getNonCoverAlbumAssets(album).sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
 }
 
 export async function fetchAlbumDetails(): Promise<{

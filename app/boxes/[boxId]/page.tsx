@@ -66,8 +66,8 @@ export default async function BoxPage({ params }: BoxPageProps) {
         <h1>{box.label}</h1>
         <p>{currentSession?.summary ?? t("boxPage.noSavedSession", "Ingen session har sparats än för den här lådan.")}</p>
         <div className="pill-row">
-          {(currentSession?.itemKeywords ?? []).map((keyword) => (
-            <span className="pill" key={keyword}>
+          {(currentSession?.itemKeywords ?? []).map((keyword, index) => (
+            <span className="pill" key={`${keyword}-${index}`}>
               {keyword}
             </span>
           ))}

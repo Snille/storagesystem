@@ -2,7 +2,7 @@
 
 This manual is intended for day-to-day use of the app. For technical details, see [README.md](./README.md).
 
-Current version: `v1.4.0`
+Current version: `v1.4.1`
 
 ## The Basic Idea
 
@@ -69,7 +69,7 @@ From the start page you can:
 - open a box by clicking the box card
 - click photos to view them in a lightbox
 - hover on images with analysis text to see a quick description
-- see how many current locations exist in the system
+- see overview statistics for storage units, storage types, and image coverage
 
 The `Overview image` is automatically taken from the album cover of the selected Immich album.
 
@@ -109,6 +109,8 @@ This page only shows images that are not yet linked to any box.
 
 The Immich album cover is excluded here because it is used as the overview image on the start page.
 
+It is also excluded when you edit a box and add more images from the album.
+
 Here you can:
 
 - select multiple images
@@ -141,6 +143,8 @@ If you try to create a new box at a location that is already occupied, saving is
 - or open and edit the existing box instead
 
 For an existing box, you can use `Change location` if the box has been moved in the workshop.
+
+If you only edit text on an older box without changing its place, the app should now keep the current location correctly and avoid false duplicate warnings.
 
 This is often the best page to use when the AI is almost right but needs a bit of help.
 
@@ -222,6 +226,8 @@ You can:
 - use a dedicated AI model for translation drafts
 
 This makes it possible to keep the app UI multilingual without editing JSON files manually every time.
+
+When `Missing` is selected, AI drafts now focus on the currently missing keys in that scope instead of sending the whole section as extra context.
 
 ## Label Printing
 

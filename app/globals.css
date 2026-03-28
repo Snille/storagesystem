@@ -157,6 +157,17 @@ main { max-width: 1180px; margin: 0 auto; padding: 24px; }
 
 .stat strong { display: block; font-size: 1.8rem; }
 
+.hero-subtitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.home-stats-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .pill-row, .meta, .topnav {
   display: flex;
   flex-wrap: wrap;
@@ -1338,6 +1349,7 @@ code {
   main { padding: 16px; }
   .hero, .panel { border-radius: 18px; }
   .two-column-list { grid-template-columns: 1fr; }
+  .home-stats-grid { grid-template-columns: 1fr; }
   .analysis-photo-row { grid-template-columns: 1fr; }
   .analysis-thumb { width: 100%; height: 180px; }
   .session-photo-row { grid-template-columns: 1fr; }
@@ -1352,6 +1364,10 @@ code {
   .thumb-strip { grid-template-columns: repeat(3, minmax(0, 78px)); }
   .shelf-row-grid { grid-template-columns: 1fr !important; }
   .shelf-slot { min-height: 220px; }
+}
+
+@media (max-width: 900px) and (min-width: 641px) {
+  .home-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media print {

@@ -1,5 +1,5 @@
 import { readInventoryData, upsertBoxSession } from "@/lib/data-store";
-import { buildLocationId, normalizeLocationUnit, parseLocationId } from "@/lib/location-schema";
+import { buildLocationId, normalizeLocationUnit, parseBoxId, parseLocationId } from "@/lib/location-schema";
 import type { PhotoRole } from "@/lib/types";
 
 function normalizeComparableText(value: string) {
@@ -59,6 +59,28 @@ function normalizeLocationId(value: string) {
   }
 
   return trimmed;
+}
+
+function resolveComparableLocationId(locationId: string, boxId = "") {
+  const parsedLocation = parseLocationId(locationId);
+  if (parsedLocation?.variant) {
+    return parsedLocation.normalizedId;
+  }
+
+  const parsedBox = boxId ? parseBoxId(boxId) : null;
+  if (parsedLocation && parsedBox) {
+    const sameBase =
+      parsedLocation.kind === parsedBox.kind &&
+      parsedLocation.unitId === parsedBox.unitId &&
+      parsedLocation.rowId === parsedBox.rowId &&
+      parsedLocation.slot === parsedBox.slot;
+
+    if (sameBase) {
+      return parsedBox.normalizedId;
+    }
+  }
+
+  return parsedLocation?.normalizedId ?? locationId.trim();
 }
 
 function extractVariantLetter(value: string) {
@@ -163,7 +185,7 @@ export async function saveBoxSessionFromFormData(formData: FormData) {
   const submittedBoxId = String(formData.get("boxId") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   const currentLocationInput = String(formData.get("currentLocationId") ?? "").trim();
-  const currentLocationId = normalizeLocationId(currentLocationInput);
+  const currentLocationId = resolveComparableLocationId(normalizeLocationId(currentLocationInput), submittedBoxId);
   const summary = String(formData.get("summary") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const submittedSessionId = String(formData.get("sessionId") ?? "").trim();
@@ -180,7 +202,7 @@ export async function saveBoxSessionFromFormData(formData: FormData) {
       return false;
     }
 
-    return sameExactLocation(box.currentLocationId, currentLocationId);
+    return sameExactLocation(resolveComparableLocationId(box.currentLocationId, box.boxId), currentLocationId);
   });
 
   if (exactLocationConflicts.length > 0) {
@@ -210,7 +232,7 @@ export async function saveBoxSessionFromFormData(formData: FormData) {
     }
 
     return (
-      sameExactLocation(box.currentLocationId, currentLocationId) &&
+      sameExactLocation(resolveComparableLocationId(box.currentLocationId, box.boxId), currentLocationId) &&
       normalizeComparableText(box.label) === normalizedLabel
     );
   });
