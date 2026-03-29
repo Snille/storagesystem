@@ -2,7 +2,7 @@
 
 This manual is intended for day-to-day use of the app. For technical details, see [README.md](../README.md).
 
-Current version: `v1.4.2`
+Current version: `v1.4.3`
 
 ## The Basic Idea
 
@@ -65,6 +65,8 @@ From the start page you can:
 
 - search for items in the workshop
 - use voice search
+- hear a browser-spoken answer after voice search
+- use `Read answer` for typed search results when you want the short answer spoken aloud
 - open the `Overview image` in its own lightbox
 - open a box by clicking the box card
 - click photos to view them in a lightbox
@@ -204,7 +206,9 @@ From the `Settings` page you can change:
 - photo source, access details, and selected album
 - AI provider and model
 - prompts that guide the model
+- a separate spoken-answer prompt for voice search
 - cleanup phrases and other filters that clean up AI output
+- public integration base URL and public API key under `Security`
 - download a backup
 - export the catalog to Excel
 - import a catalog from an exported Excel file

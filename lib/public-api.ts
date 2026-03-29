@@ -5,6 +5,28 @@ import { presentLocation } from "@/lib/location-presentation";
 import { searchInventory } from "@/lib/search";
 import { readAppSettingsSync } from "@/lib/settings";
 
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function toAbsoluteUrl(pathname: string) {
+  const settings = readAppSettingsSync();
+  const baseUrl = settings.security.appBaseUrl?.trim() || process.env.APP_BASE_URL?.trim();
+  if (!baseUrl) {
+    return pathname;
+  }
+
+  return `${trimTrailingSlash(baseUrl)}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+}
+
+function toPublicAssetUrl(assetId: string, variant: "thumbnail" | "original") {
+  const settings = readAppSettingsSync();
+  const pathname = `/api/public/assets/${assetId}/${variant}`;
+  const key = settings.security.publicApiKey?.trim() || process.env.LAGERSYSTEM_API_KEY?.trim() || "";
+  const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
+  return toAbsoluteUrl(`${pathname}${suffix}`);
+}
+
 type PublicPhoto = {
   photoId: string;
   immichAssetId: string;
@@ -58,8 +80,8 @@ function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number])
       role: photo.photoRole,
       capturedAt: photo.capturedAt,
       notes: photo.notes,
-      thumbnailUrl: getAssetThumbnailUrl(photo.immichAssetId),
-      originalUrl: getAssetOriginalUrl(photo.immichAssetId)
+      thumbnailUrl: toPublicAssetUrl(photo.immichAssetId, "thumbnail"),
+      originalUrl: toPublicAssetUrl(photo.immichAssetId, "original")
     })),
     score: input.score
   };
@@ -116,7 +138,7 @@ function extractResponseText(json: unknown) {
   return chunks.join("\n").trim();
 }
 
-async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[]) {
+async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[], mode: "public" | "voice" = "public") {
   const aiConfig = getAiConfig();
   const settings = readAppSettingsSync();
   const context = matches.slice(0, 5).map((match) => ({
@@ -128,8 +150,10 @@ async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[]
   }));
 
   const systemText =
-    settings.prompts.publicAskSystemPrompt?.trim() ||
-    'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}';
+    (mode === "voice" ? settings.prompts.voiceAskSystemPrompt : settings.prompts.publicAskSystemPrompt)?.trim() ||
+    (mode === "voice"
+      ? 'Du svarar på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Svara naturligt och uppläsningsvänligt i 1 till 2 korta meningar. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}'
+      : 'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}');
   const userText = [
     `Fråga: ${query}`,
     "",
@@ -238,7 +262,7 @@ export async function getPublicBoxById(boxId: string) {
   });
 }
 
-export async function answerInventoryQuestion(query: string) {
+export async function answerInventoryQuestion(query: string, mode: "public" | "voice" = "public") {
   const matches = await searchPublicInventory(query, 5);
   const localAnswer = buildLocalAnswer(query, matches);
 
@@ -251,7 +275,7 @@ export async function answerInventoryQuestion(query: string) {
   }
 
   try {
-    const aiAnswer = await askAiForInventoryAnswer(query, matches);
+    const aiAnswer = await askAiForInventoryAnswer(query, matches, mode);
     if (aiAnswer) {
       return {
         answer: aiAnswer,

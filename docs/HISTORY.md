@@ -1,5 +1,31 @@
 # History
 
+## v1.4.3 - 2026-03-29
+
+Patch release focused on voice-search polish, public integration security, and Home Assistant image support.
+
+### Voice Search and Overview
+
+- Added a dedicated voice-answer prompt so microphone searches can return more natural spoken responses.
+- Kept typed search focused on a shorter on-page summary while still showing the full result list below.
+- Added browser speech playback for the search answer area and automatic read-aloud after voice searches.
+- Cleaned up search URLs so regular typed searches no longer append `mode=text`.
+
+### Public API and Security
+
+- Added a `Security` section in `Settings` for the public integration base URL and public API key.
+- Public API auth now reads the saved settings first and falls back to environment variables when needed.
+- Added public asset routes for integration-safe image access:
+  - `/api/public/assets/:assetId/thumbnail`
+  - `/api/public/assets/:assetId/original`
+- Public API box/search answers can now return absolute image URLs through those public asset routes.
+
+### Home Assistant and Integrations
+
+- Updated the Home Assistant packages to store thumbnail and original image URLs for the first matched box image.
+- Updated Home Assistant documentation for the new public asset endpoints and richer image metadata.
+- Added OpenRouter app headers for public ask requests so they no longer show up as `Unknown`.
+
 ## v1.4.2 - 2026-03-28
 
 Patch release focused on photo-source expansion, box deletion, and documentation cleanup.

@@ -71,6 +71,9 @@ export async function POST(request: Request) {
         publicAskSystemPrompt: String(
           payload.prompts?.publicAskSystemPrompt ?? previousSettings.prompts.publicAskSystemPrompt ?? ""
         ).trim(),
+        voiceAskSystemPrompt: String(
+          payload.prompts?.voiceAskSystemPrompt ?? previousSettings.prompts.voiceAskSystemPrompt ?? ""
+        ).trim(),
         photoRolePrompt: String(payload.prompts?.photoRolePrompt ?? "").trim(),
         photoRoleSystemPrompt: String(payload.prompts?.photoRoleSystemPrompt ?? "").trim(),
         photoSummaryPrompt: String(payload.prompts?.photoSummaryPrompt ?? "").trim(),
@@ -83,6 +86,10 @@ export async function POST(request: Request) {
         keywordCleanupTerms: String(payload.prompts?.keywordCleanupTerms ?? "").trim(),
         notesCleanupPhrases: String(payload.prompts?.notesCleanupPhrases ?? "").trim(),
         photoSummaryCleanupPhrases: String(payload.prompts?.photoSummaryCleanupPhrases ?? "").trim()
+      },
+      security: {
+        publicApiKey: String(payload.security?.publicApiKey ?? previousSettings.security.publicApiKey ?? "").trim(),
+        appBaseUrl: String(payload.security?.appBaseUrl ?? previousSettings.security.appBaseUrl ?? "").trim()
       },
       ai: {
         provider: asProvider(String(payload.ai?.provider ?? "lmstudio")),

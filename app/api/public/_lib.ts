@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { readAppSettingsSync } from "@/lib/settings";
 
 export function requirePublicApiKey(request: Request) {
-  const expectedKey = process.env.LAGERSYSTEM_API_KEY?.trim();
+  const expectedKey = readAppSettingsSync().security.publicApiKey?.trim() || process.env.LAGERSYSTEM_API_KEY?.trim();
 
   if (!expectedKey) {
     return null;
@@ -10,6 +11,7 @@ export function requirePublicApiKey(request: Request) {
   const apiKey =
     request.headers.get("x-api-key")?.trim() ||
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ||
+    new URL(request.url).searchParams.get("key")?.trim() ||
     "";
 
   if (apiKey === expectedKey) {

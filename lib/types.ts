@@ -149,6 +149,7 @@ export type AiSettings = {
 export type PromptSettings = {
   boxAnalysisInstructions: string;
   publicAskSystemPrompt: string;
+  voiceAskSystemPrompt: string;
   photoRolePrompt: string;
   photoRoleSystemPrompt: string;
   photoSummaryPrompt: string;
@@ -188,12 +189,18 @@ export type LabelSettings = {
   templates: LabelTemplate[];
 };
 
+export type SecuritySettings = {
+  publicApiKey: string;
+  appBaseUrl: string;
+};
+
 export type AppSettings = {
   appearance: AppearanceSettings;
   immich: ImmichSettings;
   ai: AiSettings;
   translationAi: AiSettings;
   prompts: PromptSettings;
+  security: SecuritySettings;
   labels: LabelSettings;
 };
 

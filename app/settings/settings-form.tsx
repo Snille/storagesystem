@@ -792,6 +792,50 @@ export function SettingsForm({
 
       <section className="panel shell">
         <div>
+          <h2>{t("settings.security.title", "Säkerhet")}</h2>
+          <p>{t("settings.security.intro", "Hantera API-nyckeln som skyddar de publika integrations-endpointerna.")}</p>
+        </div>
+
+        <label>
+          {t("settings.security.appBaseUrl", "Publik bas-URL")}
+          <input
+            value={settings.security.appBaseUrl}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                security: {
+                  ...current.security,
+                  appBaseUrl: event.target.value
+                }
+              }))
+            }
+            placeholder={t("settings.security.appBaseUrlPlaceholder", "Till exempel https://verkstad.snille.net")}
+          />
+        </label>
+
+        <label>
+          {t("settings.security.publicApiKey", "Publik API-nyckel")}
+          <input
+            type="password"
+            value={settings.security.publicApiKey}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                security: {
+                  ...current.security,
+                  publicApiKey: event.target.value
+                }
+              }))
+            }
+            placeholder={t("settings.security.publicApiKeyPlaceholder", "Lämna tomt om publika API:t inte ska skyddas")}
+          />
+        </label>
+
+        {renderSaveRow(t("settings.security.save", "Spara säkerhet"))}
+      </section>
+
+      <section className="panel shell">
+        <div>
           <h2>{t("settings.backup.title", "Backup")}</h2>
           <p>{t("settings.backup.intro", "Ladda ner backup eller exportera katalogen till Excel från samma ställe.")}</p>
         </div>
@@ -933,6 +977,22 @@ export function SettingsForm({
               }
             />
           </label>
+
+        <label>
+          {t("settings.prompts.voiceAsk", "Röstfråga: systemprompt")}
+          <textarea
+            value={settings.prompts.voiceAskSystemPrompt}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                prompts: {
+                  ...current.prompts,
+                  voiceAskSystemPrompt: event.target.value
+                }
+              }))
+            }
+          />
+        </label>
 
           <label>
             {t("settings.prompts.roleUser", "Bildroll: användarprompt")}

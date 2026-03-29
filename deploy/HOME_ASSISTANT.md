@@ -10,9 +10,10 @@ This app exposes a public REST API that works well with Home Assistant.
 
 ## Preparation
 
-1. Set `LAGERSYSTEM_API_KEY` in the app's `.env.local` on the server.
-2. Restart the app.
-3. Add the following to `secrets.yaml` in Home Assistant:
+1. Configure a public API key in `Settings -> Security` in the app, or set `LAGERSYSTEM_API_KEY` in `.env.local` as a fallback.
+2. Make sure the app also knows its public base URL. The preferred place is `Settings -> Security -> Public base URL`, with `APP_BASE_URL` in `.env.local` as a fallback.
+3. Restart the app if you changed fallback environment variables.
+4. Add the following to `secrets.yaml` in Home Assistant:
 
 ```yaml
 lagersystem_api_url: "https://lager.yourdomain.com/api/public/ask"
@@ -23,7 +24,7 @@ lagersystem_tts_entity: "tts.google_translate_sv"
 lagersystem_media_player: "media_player.storage"
 ```
 
-4. Place the package file at:
+5. Place the package file at:
 
 ```text
 /config/packages/lagersystem.yaml
@@ -39,14 +40,14 @@ For example:
 - copy [home-assistant-package.sv.yaml](./home-assistant-package.sv.yaml) to `/config/packages/lagersystem/lagersystem.yaml`
 
 - or copy [home-assistant-package.en.yaml](./home-assistant-package.en.yaml) to `/config/packages/lagersystem/lagersystem.yaml`
-5. Make sure `packages` is enabled in `configuration.yaml`:
+6. Make sure `packages` is enabled in `configuration.yaml`:
 
 ```yaml
 homeassistant:
   packages: !include_dir_named packages
 ```
 
-6. Restart Home Assistant.
+7. Restart Home Assistant.
 
 ## What The Package Adds
 
@@ -65,10 +66,12 @@ The package adds:
 - `input_text.lagersystem_last_source`
 - `input_text.lagersystem_last_summary`
 - `input_text.lagersystem_last_keywords`
+- `input_text.lagersystem_last_thumbnail_url`
+- `input_text.lagersystem_last_original_url`
 - `input_number.lagersystem_last_match_count`
 - `input_number.lagersystem_last_photo_count`
 - REST sensors for API health and API timestamp
-- template sensors for answer, location, location id, box id, label, session id, source, summary, keywords, match count, and photo count
+- template sensors for answer, location, location id, box id, label, session id, source, summary, keywords, thumbnail URL, original URL, match count, and photo count
 
 The bundled package is intentionally centered around `/api/public/ask`, because that is the most natural flow for voice assistants, buttons, and spoken feedback in Home Assistant.
 
@@ -77,6 +80,8 @@ The public API currently also exposes:
 - `GET /api/public/health`
 - `GET /api/public/search?q=...&limit=...`
 - `GET /api/public/boxes/:boxId`
+- `GET /api/public/assets/:assetId/thumbnail`
+- `GET /api/public/assets/:assetId/original`
 
 When the script runs:
 
@@ -84,7 +89,8 @@ When the script runs:
 2. the answer is stored in helpers
 3. the answer is spoken through TTS
 4. metadata such as `source`, `match_count`, `summary`, and `item_keywords` is also stored
-5. an event `lagersystem_result` is fired in Home Assistant
+5. the first match image URLs are stored when available
+6. an event `lagersystem_result` is fired in Home Assistant
 
 The package now also handles failed API responses more gracefully. If the app is unreachable or returns a non-2xx response, the helper entities are filled with safe fallback values instead of assuming the body is valid JSON.
 
@@ -141,6 +147,8 @@ The event now also contains:
 - `photo_count`
 - `summary`
 - `item_keywords`
+- `thumbnail_url`
+- `original_url`
 - `raw`
 
 ```yaml
@@ -195,5 +203,7 @@ The updated package now gives you enough metadata to build a much better dashboa
 - latest box id
 - latest label
 - latest session id
+- latest thumbnail URL
+- latest original URL
 - latest match count
 - latest photo count

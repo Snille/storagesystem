@@ -39,6 +39,12 @@ input_text:
   lagersystem_last_keywords:
     name: Lagersystem senaste nyckelord
     max: 255
+  lagersystem_last_thumbnail_url:
+    name: Lagersystem senaste miniatyrbild
+    max: 255
+  lagersystem_last_original_url:
+    name: Lagersystem senaste originalbild
+    max: 255
 
 input_number:
   lagersystem_last_match_count:
@@ -245,6 +251,38 @@ script:
             {% else %}
               {{ '' }}
             {% endif %}
+          lagersystem_thumbnail_url: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {% if match.photos is defined and match.photos | count > 0 %}
+                  {{ match.photos[0].thumbnailUrl | default('') }}
+                {% else %}
+                  {{ '' }}
+                {% endif %}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_original_url: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {% if match.photos is defined and match.photos | count > 0 %}
+                  {{ match.photos[0].originalUrl | default('') }}
+                {% else %}
+                  {{ '' }}
+                {% endif %}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
 
       - action: input_text.set_value
         target:
@@ -306,6 +344,18 @@ script:
         data:
           value: "{{ lagersystem_keywords[:255] }}"
 
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_thumbnail_url
+        data:
+          value: "{{ lagersystem_thumbnail_url[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_original_url
+        data:
+          value: "{{ lagersystem_original_url[:255] }}"
+
       - action: input_number.set_value
         target:
           entity_id: input_number.lagersystem_last_match_count
@@ -341,6 +391,8 @@ script:
           photo_count: "{{ lagersystem_photo_count }}"
           summary: "{{ lagersystem_summary }}"
           item_keywords: "{{ lagersystem_keywords }}"
+          thumbnail_url: "{{ lagersystem_thumbnail_url }}"
+          original_url: "{{ lagersystem_original_url }}"
           raw: "{{ lagersystem_payload }}"
 
   lagersystem_sok:
@@ -494,6 +546,38 @@ script:
             {% else %}
               {{ '' }}
             {% endif %}
+          lagersystem_thumbnail_url: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {% if match.photos is defined and match.photos | count > 0 %}
+                  {{ match.photos[0].thumbnailUrl | default('') }}
+                {% else %}
+                  {{ '' }}
+                {% endif %}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_original_url: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {% if match.photos is defined and match.photos | count > 0 %}
+                  {{ match.photos[0].originalUrl | default('') }}
+                {% else %}
+                  {{ '' }}
+                {% endif %}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
 
       - action: input_text.set_value
         target:
@@ -555,6 +639,18 @@ script:
         data:
           value: "{{ lagersystem_keywords[:255] }}"
 
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_thumbnail_url
+        data:
+          value: "{{ lagersystem_thumbnail_url[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_original_url
+        data:
+          value: "{{ lagersystem_original_url[:255] }}"
+
       - action: input_number.set_value
         target:
           entity_id: input_number.lagersystem_last_match_count
@@ -580,6 +676,8 @@ script:
           photo_count: "{{ lagersystem_photo_count }}"
           summary: "{{ lagersystem_summary }}"
           item_keywords: "{{ lagersystem_keywords }}"
+          thumbnail_url: "{{ lagersystem_thumbnail_url }}"
+          original_url: "{{ lagersystem_original_url }}"
           raw: "{{ lagersystem_payload }}"
 
 template:
@@ -619,6 +717,14 @@ template:
       - name: Lagersystem senaste nyckelord
         unique_id: lagersystem_latest_keywords
         state: "{{ states('input_text.lagersystem_last_keywords') }}"
+
+      - name: Lagersystem senaste miniatyrbild
+        unique_id: lagersystem_latest_thumbnail_url
+        state: "{{ states('input_text.lagersystem_last_thumbnail_url') }}"
+
+      - name: Lagersystem senaste originalbild
+        unique_id: lagersystem_latest_original_url
+        state: "{{ states('input_text.lagersystem_last_original_url') }}"
 
       - name: Lagersystem senaste antal träffar
         unique_id: lagersystem_latest_match_count

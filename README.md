@@ -4,7 +4,7 @@ Practical day-to-day usage is described in [MANUAL.md](./docs/MANUAL.md). This R
 
 Planned next steps are collected in [TODO.md](./docs/TODO.md).
 
-Current version: `v1.4.2`
+Current version: `v1.4.3`
 
 A web app for inventorying workshop / shed / house boxes and storage places with an album-based photo source, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
@@ -34,7 +34,7 @@ The home page combines search, storage statistics, and the album cover based ove
 
 ### Search Results
 
-Search results show matching boxes with their current location, summary, keywords, and linked photos. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card. A small green checkmark on an image means analysis text is already saved for that image.
+Search results show matching boxes with their current location, summary, keywords, and linked photos. Typed search keeps a short summary above the results, while voice search can produce a more natural spoken answer and read it aloud directly in the browser. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card. A small green checkmark on an image means analysis text is already saved for that image.
 
 ![Search results](./docs/screenshots/search01.png)
 
@@ -133,6 +133,7 @@ Contains everything that can be changed from the `Settings` page, including:
 - selected photo source, account/access token details, and album
 - AI provider and model
 - analysis prompts
+- public integration base URL and public API key
 - printer queue selection for label printing
 
 ## Photo Source Requirements
@@ -172,6 +173,7 @@ The start page is primarily used for search.
 It shows:
 
 - a text or voice search box
+- a short on-page answer for typed search and browser speech output for voice search
 - `Overview image` from the selected album cover, openable in its own lightbox
 - box cards with location, summary, keywords, and photos
 - all linked photos for each box in search results
@@ -284,7 +286,9 @@ Here you can change:
 - active album
 - AI provider and model
 - prompts that guide the model
+- separate prompts for public answers and voice-friendly spoken answers
 - cleanup phrases and filters for AI responses
+- public integration base URL and public API key under `Security`
 - backup download
 - catalog export to Excel
 - catalog import from an exported Excel file
@@ -342,8 +346,10 @@ The app exposes public REST endpoints for integrations such as Home Assistant:
 - `/api/public/search`
 - `/api/public/ask`
 - `/api/public/boxes/:boxId`
+- `/api/public/assets/:assetId/thumbnail`
+- `/api/public/assets/:assetId/original`
 
-The public API can be protected with `LAGERSYSTEM_API_KEY`.
+The public API can be protected with a public API key configured in `Settings -> Security`, with `LAGERSYSTEM_API_KEY` available as an environment fallback.
 
 ## Local Development
 

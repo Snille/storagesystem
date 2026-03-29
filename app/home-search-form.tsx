@@ -61,6 +61,9 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
   const [statusText, setStatusText] = useState("");
   const [speechRecognitionApi, setSpeechRecognitionApi] = useState<SpeechRecognitionConstructor | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const modeRef = useRef<HTMLInputElement | null>(null);
+  const capturedTranscriptRef = useRef("");
 
   useEffect(() => {
     const api = window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
@@ -75,6 +78,7 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
       return;
     }
 
+    capturedTranscriptRef.current = "";
     const recognition = new speechRecognitionApi();
     recognition.lang = speechRecognitionLocale;
     recognition.continuous = false;
@@ -87,6 +91,7 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
         .trim();
 
       setValue(transcript);
+      capturedTranscriptRef.current = transcript;
       setStatusText(transcript ? ui.voiceCaptured : ui.voiceListening);
     };
 
@@ -98,6 +103,13 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
     recognition.onend = () => {
       setIsListening(false);
       recognitionRef.current = null;
+      const transcript = capturedTranscriptRef.current.trim();
+      if (transcript) {
+        if (modeRef.current) {
+          modeRef.current.value = "voice";
+        }
+        formRef.current?.requestSubmit();
+      }
     };
 
     recognitionRef.current = recognition;
@@ -111,10 +123,12 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
     recognitionRef.current = null;
     setIsListening(false);
     setStatusText("");
+    capturedTranscriptRef.current = "";
   }
 
   return (
-    <form className="form-grid" method="get">
+    <form className="form-grid" method="get" ref={formRef}>
+      <input ref={modeRef} type="hidden" name="mode" defaultValue="" />
       <label>
         {ui.label}
         <div className="search-input-row">
@@ -144,7 +158,16 @@ export function HomeSearchForm({ query, speechRecognitionLocale, ui }: HomeSearc
         </div>
       </label>
       <div className="search-actions">
-        <button type="submit">{ui.submit}</button>
+        <button
+          type="submit"
+          onClick={() => {
+            if (modeRef.current) {
+              modeRef.current.value = "";
+            }
+          }}
+        >
+          {ui.submit}
+        </button>
         <span className="muted voice-status">
           {supportsVoice
             ? statusText || ui.voiceHint

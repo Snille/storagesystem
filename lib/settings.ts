@@ -57,6 +57,7 @@ const settingsSchema = z.object({
   prompts: z.object({
     boxAnalysisInstructions: z.string(),
     publicAskSystemPrompt: z.string(),
+    voiceAskSystemPrompt: z.string(),
     photoRolePrompt: z.string(),
     photoRoleSystemPrompt: z.string(),
     photoSummaryPrompt: z.string(),
@@ -67,6 +68,10 @@ const settingsSchema = z.object({
     keywordCleanupTerms: z.string(),
     notesCleanupPhrases: z.string(),
     photoSummaryCleanupPhrases: z.string()
+  }),
+  security: z.object({
+    publicApiKey: z.string(),
+    appBaseUrl: z.string()
   }),
   ai: aiSettingsSchema,
   translationAi: aiSettingsSchema,
@@ -244,6 +249,16 @@ export function getDefaultAppSettings(): AppSettings {
         "Svara kort och naturligt, lämpat för uppläsning i en röstassistent.",
         'Svara endast som JSON på formen {"answer":"..."}.'
       ].join(" "),
+      voiceAskSystemPrompt: [
+        "Du svarar på svenska om var saker finns i en verkstad eller ett lagersystem.",
+        "Använd endast den givna kontexten.",
+        "Om träffarna är osäkra, säg det tydligt.",
+        "Hitta inte på lådor, platser eller innehåll som inte finns i kontexten.",
+        "Svarstonen ska vara lite trevligare och mer naturlig för uppläsning.",
+        "Svara helst i 1 till 2 korta meningar, inte bara som en staplad platsrad.",
+        "Om flera kandidater verkar rimliga kan du kort nämna den tydligaste och att det finns fler möjliga träffar.",
+        'Svara endast som JSON på formen {"answer":"..."}.'
+      ].join(" "),
       photoRolePrompt: [
         "Classify exactly one image of a storage box or workshop box.",
         "Choose one photoRole from: label, location, inside, spread, detail.",
@@ -315,6 +330,10 @@ export function getDefaultAppSettings(): AppSettings {
         "katalogen"
       ].join("\n")
     },
+    security: {
+      publicApiKey: process.env.LAGERSYSTEM_API_KEY || "",
+      appBaseUrl: process.env.APP_BASE_URL || ""
+    },
     ai: defaultAiSettings,
     translationAi: defaultAiSettings,
     labels: getDefaultLabelSettings()
@@ -340,6 +359,10 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
     prompts: {
       ...base.prompts,
       ...(input?.prompts ?? {})
+    },
+    security: {
+      ...base.security,
+      ...(input?.security ?? {})
     },
     ai: {
       ...base.ai,

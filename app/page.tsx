@@ -1,3 +1,4 @@
+import { HomeSearchAnswer } from "@/app/home-search-answer";
 import { HomeSearchForm } from "@/app/home-search-form";
 import { HomeBoxCard } from "@/app/home-box-card";
 import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
@@ -7,17 +8,73 @@ import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/
 import { presentLocation } from "@/lib/location-presentation";
 import { parseBoxId, parseLocationId } from "@/lib/location-schema";
 import { compareBoxesByLocation } from "@/lib/location-sort";
+import { answerInventoryQuestion } from "@/lib/public-api";
 import { searchInventory } from "@/lib/search";
 import { readAppSettings } from "@/lib/settings";
 import packageJson from "@/package.json";
 
 type HomeProps = {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; mode?: string }>;
 };
+
+function buildSearchAnswer(
+  query: string,
+  results: ReturnType<typeof searchInventory>,
+  t: ReturnType<typeof createTranslator>
+) {
+  if (!query) {
+    return "";
+  }
+
+  if (results.length === 0) {
+    return t("home.searchAnswerNone", 'Jag hittade ingen tydlig träff för "{query}".', { query });
+  }
+
+  if (results.length === 1) {
+    const match = results[0];
+    const location = presentLocation(match.box.currentLocationId, match.box.boxId, {
+      shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+      bench: t("boxForm.bench", "Bänk"),
+      cabinet: t("boxForm.cabinet", "Skåp"),
+      surface: t("boxForm.surface", "Yta"),
+      slot: t("boxForm.place", "Plats")
+    });
+
+    return t("home.searchAnswerSingle", "{label} finns i {system}, {shelf}, {slot}.", {
+      label: match.box.label,
+      system: location.system,
+      shelf: location.shelf,
+      slot: location.slot
+    });
+  }
+
+  const topMatch = results[0];
+  const location = presentLocation(topMatch.box.currentLocationId, topMatch.box.boxId, {
+    shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+    bench: t("boxForm.bench", "Bänk"),
+    cabinet: t("boxForm.cabinet", "Skåp"),
+    surface: t("boxForm.surface", "Yta"),
+    slot: t("boxForm.place", "Plats")
+  });
+
+  return t(
+    "home.searchAnswerMultiple",
+    'Jag hittade {count} träffar för "{query}". Den tydligaste verkar vara {label} i {system}, {shelf}, {slot}.',
+    {
+      count: results.length,
+      query,
+      label: topMatch.box.label,
+      system: location.system,
+      shelf: location.shelf,
+      slot: location.slot
+    }
+  );
+}
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
+  const searchMode = params.mode === "voice" ? "voice" : "text";
   const [data, album, settings] = await Promise.all([
     readInventoryData(),
     fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
@@ -40,6 +97,11 @@ export default async function Home({ searchParams }: HomeProps) {
   );
   const assetFileNamesById = new Map(albumAssets.map((asset) => [asset.id, asset.originalFileName]));
   const results = query ? searchInventory(data, query, assetFileNamesById) : [];
+  const searchAnswer = buildSearchAnswer(query, results, t);
+  const spokenAnswer =
+    query && searchMode === "voice"
+      ? (await answerInventoryQuestion(query, "voice").catch(() => ({ answer: searchAnswer }))).answer
+      : searchAnswer;
   const sortedBoxes = [...data.boxes].sort(compareBoxesByLocation);
   const overviewAsset = album.albumThumbnailAssetId ? album.assets.find((asset) => asset.id === album.albumThumbnailAssetId) : null;
   const locationUnits = new Set<string>();
@@ -119,6 +181,19 @@ export default async function Home({ searchParams }: HomeProps) {
             submit: t("search.submit", "Sök")
           }}
         />
+        {query ? (
+          <HomeSearchAnswer
+            answer={spokenAnswer}
+            locale={languageCatalog._meta.speechRecognitionLocale}
+            autoSpeak={searchMode === "voice"}
+            ui={{
+              title: t("home.searchAnswerTitle", "Kort svar"),
+              readAloud: t("home.readAnswer", "Läs upp svaret"),
+              stopReading: t("home.stopReading", "Stoppa uppläsning"),
+              speechUnsupported: t("home.speechUnsupported", "Talstödet saknas i den här webbläsaren.")
+            }}
+          />
+        ) : null}
         {query ? (
           <div className="card-list" style={{ marginTop: 18 }}>
             {results.length > 0 ? (

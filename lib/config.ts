@@ -3,8 +3,9 @@ import { readAppSettingsSync } from "@/lib/settings";
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 export function getOpenRouterHeaders(title: string) {
+  const settings = readAppSettingsSync();
   const referer = trimTrailingSlash(
-    process.env.OPENROUTER_APP_URL || process.env.APP_BASE_URL || "https://lager.yourdomain.com"
+    settings.security.appBaseUrl || process.env.OPENROUTER_APP_URL || process.env.APP_BASE_URL || "https://lager.yourdomain.com"
   );
 
   return {
