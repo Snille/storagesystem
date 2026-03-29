@@ -1,0 +1,77 @@
+title: Lagersök
+path: lagersok
+icon: mdi:magnify-scan
+type: sections
+max_columns: 4
+cards:
+  - type: custom:lagersystem-search-card
+    title: Lagersök
+    language: sv
+    text_script: script.lagersystem_sok
+    voice_script: script.lagersystem_fraga
+    use_voice_script_for_microphone: true
+
+  - type: glance
+    title: Status
+    columns: 3
+    entities:
+      - entity: sensor.lagersystem_api_status
+        name: API
+      - entity: sensor.lagersystem_latest_source
+        name: Källa
+      - entity: sensor.lagersystem_latest_match_count
+        name: Träffar
+
+  - type: entities
+    title: Senaste träff
+    show_header_toggle: false
+    entities:
+      - entity: sensor.lagersystem_latest_label
+        name: Låda
+      - entity: sensor.lagersystem_latest_location
+        name: Plats
+      - entity: sensor.lagersystem_latest_box_id
+        name: Box-id
+      - entity: sensor.lagersystem_latest_session_id
+        name: Session
+      - entity: sensor.lagersystem_latest_photo_count
+        name: Bilder
+
+  - type: markdown
+    title: Svar
+    content: >-
+      **Svar:** {{ states('sensor.lagersystem_latest_answer') }}
+
+      {% set summary = states('sensor.lagersystem_latest_summary') %}
+      {% if summary not in ['unknown', 'unavailable', 'none', ''] %}
+      **Sammanfattning:** {{ summary }}
+      {% endif %}
+
+      {% set keywords = states('sensor.lagersystem_latest_keywords') %}
+      {% if keywords not in ['unknown', 'unavailable', 'none', ''] %}
+      **Nyckelord:** {{ keywords }}
+      {% endif %}
+
+  - type: markdown
+    title: Bild
+    content: >-
+      {% set image = states('sensor.lagersystem_latest_thumbnail_url') %}
+      {% if image not in ['unknown', 'unavailable', 'none', ''] %}
+      <img src="{{ image }}" style="width: 100%; border-radius: 16px;" />
+
+      {% set original = states('sensor.lagersystem_latest_original_url') %}
+      {% if original not in ['unknown', 'unavailable', 'none', ''] %}
+      [Öppna full bild]({{ original }})
+      {% endif %}
+      {% else %}
+      Ingen bild tillgänglig ännu.
+      {% endif %}
+
+  - type: entities
+    title: Fråga och sök
+    show_header_toggle: false
+    entities:
+      - entity: input_text.lagersystem_last_query
+        name: Senaste fråga
+      - entity: input_text.lagersystem_last_search_query
+        name: Senaste sökning

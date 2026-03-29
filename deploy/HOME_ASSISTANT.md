@@ -6,6 +6,8 @@ This app exposes a public REST API that works well with Home Assistant.
 
 - Swedish package: [home-assistant-package.sv.yaml](./home-assistant-package.sv.yaml)
 - English package: [home-assistant-package.en.yaml](./home-assistant-package.en.yaml)
+- Search card: [home-assistant-search-card.js](./home-assistant-search-card.js)
+- Example Lovelace view: [home-assistant-lovelace-view.sv.yaml](./home-assistant-lovelace-view.sv.yaml)
 - systemd service for the app: [lagersystem.service](./lagersystem.service)
 
 ## Preparation
@@ -48,6 +50,73 @@ homeassistant:
 ```
 
 7. Restart Home Assistant.
+
+## Optional: Search Card With Text and Microphone
+
+You can also use the included custom Lovelace card if you want a compact search UI inside Home Assistant with:
+
+- a text input
+- browser microphone input
+- answer text
+- matched box image
+- location and summary
+
+### Install the card
+
+1. Copy [home-assistant-search-card.js](./home-assistant-search-card.js) to:
+
+```text
+/config/www/lagersystem/home-assistant-search-card.js
+```
+
+2. Add it as a dashboard resource:
+
+```yaml
+url: /local/lagersystem/home-assistant-search-card.js
+type: module
+```
+
+3. Add a card like this to your dashboard:
+
+```yaml
+type: custom:lagersystem-search-card
+title: Lagersök
+language: sv
+text_script: script.lagersystem_sok
+voice_script: script.lagersystem_fraga
+use_voice_script_for_microphone: true
+```
+
+Recommended behavior:
+
+- `text_script: script.lagersystem_sok`
+  for short, structured search results
+- `voice_script: script.lagersystem_fraga`
+  if you want microphone queries to use the nicer AI-generated answer path
+
+If you do not want Home Assistant TTS to speak after microphone searches, set:
+
+```yaml
+use_voice_script_for_microphone: false
+```
+
+Then both text and microphone input will use `script.lagersystem_sok`.
+
+### Optional: Full example view
+
+If you want a ready-made Lovelace view with:
+
+- the search card
+- status chips
+- latest answer
+- latest match metadata
+- latest image
+
+you can start from:
+
+- [home-assistant-lovelace-view.sv.yaml](./home-assistant-lovelace-view.sv.yaml)
+
+It is intended as a copy-and-adjust example rather than a strict package file.
 
 ## What The Package Adds
 
