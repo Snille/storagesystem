@@ -1,8 +1,9 @@
-import { getAiConfig } from "@/lib/config";
+import { getAiConfig, getOpenRouterHeaders } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
 import { searchInventory } from "@/lib/search";
+import { readAppSettingsSync } from "@/lib/settings";
 
 type PublicPhoto = {
   photoId: string;
@@ -117,6 +118,7 @@ function extractResponseText(json: unknown) {
 
 async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[]) {
   const aiConfig = getAiConfig();
+  const settings = readAppSettingsSync();
   const context = matches.slice(0, 5).map((match) => ({
     boxId: match.boxId,
     label: match.label,
@@ -126,14 +128,13 @@ async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[]
   }));
 
   const systemText =
-    "Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser.";
+    settings.prompts.publicAskSystemPrompt?.trim() ||
+    'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}';
   const userText = [
     `Fråga: ${query}`,
     "",
     "Kandidater:",
     JSON.stringify(context, null, 2),
-    "",
-    'Svara endast som JSON på formen {"answer":"..."}'
   ].join("\n");
 
   if (aiConfig.provider === "anthropic") {
@@ -171,7 +172,8 @@ async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[]
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(aiConfig.apiKey ? { Authorization: `Bearer ${aiConfig.apiKey}` } : {})
+      ...(aiConfig.apiKey ? { Authorization: `Bearer ${aiConfig.apiKey}` } : {}),
+      ...(aiConfig.provider === "openrouter" ? getOpenRouterHeaders("Lagersystem - Public Ask") : {})
     },
     body: JSON.stringify({
       model: aiConfig.model,

@@ -4,7 +4,8 @@ This app exposes a public REST API that works well with Home Assistant.
 
 ## Files
 
-- package: [home-assistant-package.yaml](./home-assistant-package.yaml)
+- Swedish package: [home-assistant-package.sv.yaml](./home-assistant-package.sv.yaml)
+- English package: [home-assistant-package.en.yaml](./home-assistant-package.en.yaml)
 - systemd service for the app: [lagersystem.service](./lagersystem.service)
 
 ## Preparation
@@ -28,6 +29,16 @@ lagersystem_media_player: "media_player.storage"
 /config/packages/lagersystem.yaml
 ```
 
+You can choose either package variant:
+
+- Swedish, if you want Swedish helper names, aliases, and spoken fallback text
+- English, if you want the Home Assistant entities and scripts to read naturally in English
+
+For example:
+
+- copy [home-assistant-package.sv.yaml](./home-assistant-package.sv.yaml) to `/config/packages/lagersystem/lagersystem.yaml`
+
+- or copy [home-assistant-package.en.yaml](./home-assistant-package.en.yaml) to `/config/packages/lagersystem/lagersystem.yaml`
 5. Make sure `packages` is enabled in `configuration.yaml`:
 
 ```yaml

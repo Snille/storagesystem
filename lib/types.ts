@@ -148,6 +148,7 @@ export type AiSettings = {
 
 export type PromptSettings = {
   boxAnalysisInstructions: string;
+  publicAskSystemPrompt: string;
   photoRolePrompt: string;
   photoRoleSystemPrompt: string;
   photoSummaryPrompt: string;

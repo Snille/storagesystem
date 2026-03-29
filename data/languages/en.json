@@ -148,6 +148,7 @@
   "settings.prompts.title": "Prompts",
   "settings.prompts.intro": "Here you can fine-tune how the model is instructed. This is especially useful when testing new models.",
   "settings.prompts.boxAnalysis": "Box analysis: main instruction",
+  "settings.prompts.publicAsk": "Public ask: system prompt",
   "settings.prompts.roleSystem": "Photo role: system prompt",
   "settings.prompts.roleUser": "Photo role: user prompt",
   "settings.prompts.summarySystem": "Per-image analysis: system prompt",

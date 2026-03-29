@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       },
       prompts: {
         boxAnalysisInstructions: String(payload.prompts?.boxAnalysisInstructions ?? "").trim(),
+        publicAskSystemPrompt: String(
+          payload.prompts?.publicAskSystemPrompt ?? previousSettings.prompts.publicAskSystemPrompt ?? ""
+        ).trim(),
         photoRolePrompt: String(payload.prompts?.photoRolePrompt ?? "").trim(),
         photoRoleSystemPrompt: String(payload.prompts?.photoRoleSystemPrompt ?? "").trim(),
         photoSummaryPrompt: String(payload.prompts?.photoSummaryPrompt ?? "").trim(),

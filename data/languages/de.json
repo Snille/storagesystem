@@ -148,6 +148,7 @@
   "settings.prompts.title": "Anweisungen",
   "settings.prompts.intro": "Hier können Sie anpassen, wie das Modell angeleitet wird. Dies ist besonders nützlich beim Testen neuer Modelle.",
   "settings.prompts.boxAnalysis": "Box-Analyse: Hauptanweisung",
+  "settings.prompts.publicAsk": "Öffentliche Frage: System-Prompt",
   "settings.prompts.roleSystem": "Foto-Rolle: System-Prompt",
   "settings.prompts.roleUser": "Foto-Rolle: Benutzer-Prompt",
   "settings.prompts.summarySystem": "Bildanalyse (einzeln): System-Prompt",

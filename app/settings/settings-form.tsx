@@ -901,6 +901,22 @@ export function SettingsForm({
           />
         </label>
 
+        <label>
+          {t("settings.prompts.publicAsk", "Publik fråga: systemprompt")}
+          <textarea
+            value={settings.prompts.publicAskSystemPrompt}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                prompts: {
+                  ...current.prompts,
+                  publicAskSystemPrompt: event.target.value
+                }
+              }))
+            }
+          />
+        </label>
+
         <div className="grid two">
           <label>
             {t("settings.prompts.roleSystem", "Bildroll: systemprompt")}

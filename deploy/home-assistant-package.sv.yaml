@@ -1,0 +1,629 @@
+# Exempel-pack för Home Assistant
+# kopiera filen in i /config/packages/lagersystem/lagersystem.yaml
+# Kolla så att "packages: !include_dir_named packages/" finns i din configuration.yaml (under homeassistant: taggen).
+# så här:
+# homeassistant:
+#   packages: !include_dir_named packages/
+
+input_text:
+  lagersystem_last_query:
+    name: Lagersystem senaste fråga
+    max: 255
+  lagersystem_last_search_query:
+    name: Lagersystem senaste sökfråga
+    max: 255
+  lagersystem_last_answer:
+    name: Lagersystem senaste svar
+    max: 255
+  lagersystem_last_location:
+    name: Lagersystem senaste plats
+    max: 255
+  lagersystem_last_location_id:
+    name: Lagersystem senaste plats-id
+    max: 255
+  lagersystem_last_box_id:
+    name: Lagersystem senaste box-id
+    max: 255
+  lagersystem_last_label:
+    name: Lagersystem senaste boxnamn
+    max: 255
+  lagersystem_last_session_id:
+    name: Lagersystem senaste session-id
+    max: 255
+  lagersystem_last_source:
+    name: Lagersystem senaste svarskälla
+    max: 64
+  lagersystem_last_summary:
+    name: Lagersystem senaste sammanfattning
+    max: 255
+  lagersystem_last_keywords:
+    name: Lagersystem senaste nyckelord
+    max: 255
+
+input_number:
+  lagersystem_last_match_count:
+    name: Lagersystem senaste antal träffar
+    min: 0
+    max: 25
+    step: 1
+    mode: box
+  lagersystem_last_photo_count:
+    name: Lagersystem senaste antal bilder
+    min: 0
+    max: 200
+    step: 1
+    mode: box
+
+rest:
+  - resource: !secret lagersystem_api_health_url
+    scan_interval: 60
+    headers:
+      x-api-key: !secret lagersystem_api_key
+    sensor:
+      - name: Lagersystem API status
+        unique_id: lagersystem_api_status
+        value_template: >-
+          {% if value_json is defined and value_json.ok | default(false) %}
+            online
+          {% else %}
+            offline
+          {% endif %}
+      - name: Lagersystem API timestamp
+        unique_id: lagersystem_api_timestamp
+        value_template: >-
+          {% if value_json is defined and value_json.date is defined %}
+            {{ value_json.date }}
+          {% else %}
+            unavailable
+          {% endif %}
+
+rest_command:
+  lagersystem_ask:
+    url: !secret lagersystem_api_url
+    method: POST
+    content_type: application/json
+    headers:
+      x-api-key: !secret lagersystem_api_key
+    payload: >-
+      {{ {"query": query} | to_json }}
+  lagersystem_search:
+    url: !secret lagersystem_search_url
+    method: GET
+    headers:
+      x-api-key: !secret lagersystem_api_key
+
+script:
+  lagersystem_fraga:
+    alias: Lagersystem - Fråga
+    mode: restart
+    fields:
+      query:
+        name: Fråga
+        description: Vad letar du efter?
+        example: Var finns skarvdosorna?
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          effective_query: "{{ query | trim }}"
+      - if:
+          - condition: template
+            value_template: "{{ effective_query == '' }}"
+        then:
+          - stop: Ingen fråga angavs.
+
+      - action: rest_command.lagersystem_ask
+        data:
+          query: "{{ effective_query }}"
+        response_variable: lagersystem_response
+
+      - variables:
+          lagersystem_status: "{{ lagersystem_response.status | default(0) | int(0) }}"
+          lagersystem_payload: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 and lagersystem_response.content is mapping %}
+              {{ lagersystem_response.content }}
+            {% elif lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {{ lagersystem_response.content | from_json }}
+            {% else %}
+              {{ {"error": "api_call_failed", "status": lagersystem_status} }}
+            {% endif %}
+          lagersystem_answer: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {{ payload.answer | default('Jag hittade inget tydligt svar.') }}
+            {% else %}
+              Jag kunde inte kontakta Lagersystem just nu.
+            {% endif %}
+          lagersystem_source: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {{ payload.source | default('okand') }}
+            {% else %}
+              api_error
+            {% endif %}
+          lagersystem_match_count: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {{ payload.count | default(0) | int(0) }}
+            {% else %}
+              0
+            {% endif %}
+          lagersystem_location: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.location.system }}, {{ match.location.shelf }}, {{ match.location.slot }}
+              {% else %}
+                Okänd plats
+              {% endif %}
+            {% else %}
+              Okänd plats
+            {% endif %}
+          lagersystem_box_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.boxId }}
+              {% else %}
+                okand
+              {% endif %}
+            {% else %}
+              okand
+            {% endif %}
+          lagersystem_label: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.label | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_location_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.locationId | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_session_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.sessionId | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_photo_count: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.photos | default([]) | count }}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          lagersystem_summary: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.summary | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_keywords: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+              {% endif %}
+            {% endif %}
+            {% if match is defined and match.itemKeywords is defined and match.itemKeywords is iterable %}
+              {{ match.itemKeywords | join(', ') }}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_query
+        data:
+          value: "{{ effective_query[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_answer
+        data:
+          value: "{{ lagersystem_answer[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_location
+        data:
+          value: "{{ lagersystem_location[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_box_id
+        data:
+          value: "{{ lagersystem_box_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_label
+        data:
+          value: "{{ lagersystem_label[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_location_id
+        data:
+          value: "{{ lagersystem_location_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_session_id
+        data:
+          value: "{{ lagersystem_session_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_source
+        data:
+          value: "{{ lagersystem_source[:64] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_summary
+        data:
+          value: "{{ lagersystem_summary[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_keywords
+        data:
+          value: "{{ lagersystem_keywords[:255] }}"
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lagersystem_last_match_count
+        data:
+          value: "{{ lagersystem_match_count }}"
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lagersystem_last_photo_count
+        data:
+          value: "{{ lagersystem_photo_count }}"
+
+      # Byt ut entiteterna nedan mot din egen TTS- och media player-setup.
+      - action: tts.speak
+        target:
+          entity_id: !secret lagersystem_tts_entity
+        data:
+          media_player_entity_id: !secret lagersystem_media_player
+          message: "{{ lagersystem_answer }}"
+
+      # Exempel på event vidare till annan automation, MQTT-bridge eller ESPHome-logik.
+      - event: lagersystem_result
+        event_data:
+          query: "{{ effective_query }}"
+          answer: "{{ lagersystem_answer }}"
+          source: "{{ lagersystem_source }}"
+          match_count: "{{ lagersystem_match_count }}"
+          location: "{{ lagersystem_location }}"
+          location_id: "{{ lagersystem_location_id }}"
+          box_id: "{{ lagersystem_box_id }}"
+          label: "{{ lagersystem_label }}"
+          session_id: "{{ lagersystem_session_id }}"
+          photo_count: "{{ lagersystem_photo_count }}"
+          summary: "{{ lagersystem_summary }}"
+          item_keywords: "{{ lagersystem_keywords }}"
+          raw: "{{ lagersystem_payload }}"
+
+  lagersystem_sok:
+    alias: Lagersystem - Sök
+    mode: restart
+    fields:
+      query:
+        name: Sökfråga
+        description: Vad vill du söka efter?
+        example: skarvdosa
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          effective_query: "{{ query | trim }}"
+      - if:
+          - condition: template
+            value_template: "{{ effective_query == '' }}"
+        then:
+          - stop: Ingen sökfråga angavs.
+
+      - action: rest_command.lagersystem_search
+        data:
+          query: "{{ effective_query | urlencode }}"
+        response_variable: lagersystem_response
+
+      - variables:
+          lagersystem_status: "{{ lagersystem_response.status | default(0) | int(0) }}"
+          lagersystem_payload: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 and lagersystem_response.content is mapping %}
+              {{ lagersystem_response.content }}
+            {% elif lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {{ lagersystem_response.content | from_json }}
+            {% else %}
+              {{ {"error": "api_call_failed", "status": lagersystem_status} }}
+            {% endif %}
+          lagersystem_match_count: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {{ payload.count | default(0) | int(0) }}
+            {% else %}
+              0
+            {% endif %}
+          lagersystem_answer: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.label | default('Okänd box') }} i {{ match.location.system | default('Okänd plats') }}, {{ match.location.shelf | default('') }}, {{ match.location.slot | default('') }}
+              {% else %}
+                Jag hittade inga tydliga träffar.
+              {% endif %}
+            {% else %}
+              Jag kunde inte kontakta Lagersystem just nu.
+            {% endif %}
+          lagersystem_source: search
+          lagersystem_location: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.location.system }}, {{ match.location.shelf }}, {{ match.location.slot }}
+              {% else %}
+                Okänd plats
+              {% endif %}
+            {% else %}
+              Okänd plats
+            {% endif %}
+          lagersystem_box_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.boxId | default('okand') }}
+              {% else %}
+                okand
+              {% endif %}
+            {% else %}
+              okand
+            {% endif %}
+          lagersystem_label: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.label | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_location_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.locationId | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_session_id: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.sessionId | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_photo_count: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.photos | default([]) | count }}
+              {% else %}
+                0
+              {% endif %}
+            {% else %}
+              0
+            {% endif %}
+          lagersystem_summary: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+                {{ match.summary | default('') }}
+              {% else %}
+                {{ '' }}
+              {% endif %}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+          lagersystem_keywords: >-
+            {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
+              {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
+              {% if payload.matches is defined and payload.matches | count > 0 %}
+                {% set match = payload.matches[0] %}
+              {% endif %}
+            {% endif %}
+            {% if match is defined and match.itemKeywords is defined and match.itemKeywords is iterable %}
+              {{ match.itemKeywords | join(', ') }}
+            {% else %}
+              {{ '' }}
+            {% endif %}
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_search_query
+        data:
+          value: "{{ effective_query[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_answer
+        data:
+          value: "{{ lagersystem_answer[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_location
+        data:
+          value: "{{ lagersystem_location[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_location_id
+        data:
+          value: "{{ lagersystem_location_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_box_id
+        data:
+          value: "{{ lagersystem_box_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_label
+        data:
+          value: "{{ lagersystem_label[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_session_id
+        data:
+          value: "{{ lagersystem_session_id[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_source
+        data:
+          value: "{{ lagersystem_source[:64] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_summary
+        data:
+          value: "{{ lagersystem_summary[:255] }}"
+
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.lagersystem_last_keywords
+        data:
+          value: "{{ lagersystem_keywords[:255] }}"
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lagersystem_last_match_count
+        data:
+          value: "{{ lagersystem_match_count }}"
+
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lagersystem_last_photo_count
+        data:
+          value: "{{ lagersystem_photo_count }}"
+
+      - event: lagersystem_search_result
+        event_data:
+          query: "{{ effective_query }}"
+          source: "{{ lagersystem_source }}"
+          match_count: "{{ lagersystem_match_count }}"
+          location: "{{ lagersystem_location }}"
+          location_id: "{{ lagersystem_location_id }}"
+          box_id: "{{ lagersystem_box_id }}"
+          label: "{{ lagersystem_label }}"
+          session_id: "{{ lagersystem_session_id }}"
+          photo_count: "{{ lagersystem_photo_count }}"
+          summary: "{{ lagersystem_summary }}"
+          item_keywords: "{{ lagersystem_keywords }}"
+          raw: "{{ lagersystem_payload }}"
+
+template:
+  - sensor:
+      - name: Lagersystem senaste svar
+        unique_id: lagersystem_latest_answer
+        state: "{{ states('input_text.lagersystem_last_answer') }}"
+
+      - name: Lagersystem senaste plats
+        unique_id: lagersystem_latest_location
+        state: "{{ states('input_text.lagersystem_last_location') }}"
+
+      - name: Lagersystem senaste box-id
+        unique_id: lagersystem_latest_box_id
+        state: "{{ states('input_text.lagersystem_last_box_id') }}"
+
+      - name: Lagersystem senaste boxnamn
+        unique_id: lagersystem_latest_label
+        state: "{{ states('input_text.lagersystem_last_label') }}"
+
+      - name: Lagersystem senaste plats-id
+        unique_id: lagersystem_latest_location_id
+        state: "{{ states('input_text.lagersystem_last_location_id') }}"
+
+      - name: Lagersystem senaste session-id
+        unique_id: lagersystem_latest_session_id
+        state: "{{ states('input_text.lagersystem_last_session_id') }}"
+
+      - name: Lagersystem senaste svarskälla
+        unique_id: lagersystem_latest_source
+        state: "{{ states('input_text.lagersystem_last_source') }}"
+
+      - name: Lagersystem senaste sammanfattning
+        unique_id: lagersystem_latest_summary
+        state: "{{ states('input_text.lagersystem_last_summary') }}"
+
+      - name: Lagersystem senaste nyckelord
+        unique_id: lagersystem_latest_keywords
+        state: "{{ states('input_text.lagersystem_last_keywords') }}"
+
+      - name: Lagersystem senaste antal träffar
+        unique_id: lagersystem_latest_match_count
+        state: "{{ states('input_number.lagersystem_last_match_count') | int(0) }}"
+
+      - name: Lagersystem senaste antal bilder
+        unique_id: lagersystem_latest_photo_count
+        state: "{{ states('input_number.lagersystem_last_photo_count') | int(0) }}"

@@ -56,6 +56,7 @@ const settingsSchema = z.object({
   }),
   prompts: z.object({
     boxAnalysisInstructions: z.string(),
+    publicAskSystemPrompt: z.string(),
     photoRolePrompt: z.string(),
     photoRoleSystemPrompt: z.string(),
     photoSummaryPrompt: z.string(),
@@ -233,6 +234,15 @@ export function getDefaultAppSettings(): AppSettings {
         "Use suggestedNotes only for real uncertainty, such as a hard-to-read label or doubtful identification.",
         "Do not explain your reasoning, mention catalog matching, OCR steps, or why you selected a specific box.",
         "Reply only with JSON that follows the schema."
+      ].join(" "),
+      publicAskSystemPrompt: [
+        "Du svarar kort på svenska om var saker finns i en verkstad eller ett lagersystem.",
+        "Använd endast den givna kontexten.",
+        "Om träffarna är osäkra, säg det tydligt.",
+        "Hitta inte på lådor, platser eller innehåll som inte finns i kontexten.",
+        "Om flera kandidater verkar rimliga kan du nämna de tydligaste alternativen kort.",
+        "Svara kort och naturligt, lämpat för uppläsning i en röstassistent.",
+        'Svara endast som JSON på formen {"answer":"..."}.'
       ].join(" "),
       photoRolePrompt: [
         "Classify exactly one image of a storage box or workshop box.",

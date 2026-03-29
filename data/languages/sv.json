@@ -148,6 +148,7 @@
   "settings.prompts.title": "Promptar",
   "settings.prompts.intro": "Här kan du finjustera hur modellen instrueras. Det är särskilt användbart när du testar nya modeller.",
   "settings.prompts.boxAnalysis": "Lådanalys: huvudinstruktion",
+  "settings.prompts.publicAsk": "Publik fråga: systemprompt",
   "settings.prompts.roleSystem": "Bildroll: systemprompt",
   "settings.prompts.roleUser": "Bildroll: användarprompt",
   "settings.prompts.summarySystem": "Bildspecifik analys: systemprompt",

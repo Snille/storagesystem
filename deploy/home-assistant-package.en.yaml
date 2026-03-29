@@ -1,51 +1,54 @@
-# Exempelpaket för Home Assistant
-# Lägg filen i /config/packages/lagersystem.yaml
-# och se till att "packages: !include_dir_named packages" finns i configuration.yaml
+# Example package for Home Assistant
+# put the file in /config/packages/storagesystem/storagesystem.en.yaml
+# make sure "packages: !include_dir_named packages/" is in your configuration.yaml (under the homeassistant: tag).
+# Like so:
+# homeassistant:
+#   packages: !include_dir_named packages/
 
 input_text:
   lagersystem_last_query:
-    name: Lagersystem senaste fråga
+    name: Storage System latest question
     max: 255
   lagersystem_last_search_query:
-    name: Lagersystem senaste sökfråga
+    name: Storage System latest search query
     max: 255
   lagersystem_last_answer:
-    name: Lagersystem senaste svar
+    name: Storage System latest answer
     max: 255
   lagersystem_last_location:
-    name: Lagersystem senaste plats
+    name: Storage System latest location
     max: 255
   lagersystem_last_location_id:
-    name: Lagersystem senaste plats-id
+    name: Storage System latest location id
     max: 255
   lagersystem_last_box_id:
-    name: Lagersystem senaste box-id
+    name: Storage System latest box id
     max: 255
   lagersystem_last_label:
-    name: Lagersystem senaste boxnamn
+    name: Storage System latest box label
     max: 255
   lagersystem_last_session_id:
-    name: Lagersystem senaste session-id
+    name: Storage System latest session id
     max: 255
   lagersystem_last_source:
-    name: Lagersystem senaste svarskälla
+    name: Storage System latest answer source
     max: 64
   lagersystem_last_summary:
-    name: Lagersystem senaste sammanfattning
+    name: Storage System latest summary
     max: 255
   lagersystem_last_keywords:
-    name: Lagersystem senaste nyckelord
+    name: Storage System latest keywords
     max: 255
 
 input_number:
   lagersystem_last_match_count:
-    name: Lagersystem senaste antal träffar
+    name: Storage System latest match count
     min: 0
     max: 25
     step: 1
     mode: box
   lagersystem_last_photo_count:
-    name: Lagersystem senaste antal bilder
+    name: Storage System latest image count
     min: 0
     max: 200
     step: 1
@@ -57,7 +60,7 @@ rest:
     headers:
       x-api-key: !secret lagersystem_api_key
     sensor:
-      - name: Lagersystem API status
+      - name: Storage System API status
         unique_id: lagersystem_api_status
         value_template: >-
           {% if value_json is defined and value_json.ok | default(false) %}
@@ -65,7 +68,7 @@ rest:
           {% else %}
             offline
           {% endif %}
-      - name: Lagersystem API timestamp
+      - name: Storage System API timestamp
         unique_id: lagersystem_api_timestamp
         value_template: >-
           {% if value_json is defined and value_json.date is defined %}
@@ -91,13 +94,13 @@ rest_command:
 
 script:
   lagersystem_fraga:
-    alias: Lagersystem - Fråga
+    alias: Storage System - Ask
     mode: restart
     fields:
       query:
-        name: Fråga
-        description: Vad letar du efter?
-        example: Var finns skarvdosorna?
+        name: Question
+        description: What are you looking for?
+        example: Where are the junction boxes?
         required: true
         selector:
           text:
@@ -108,7 +111,7 @@ script:
           - condition: template
             value_template: "{{ effective_query == '' }}"
         then:
-          - stop: Ingen fråga angavs.
+          - stop: No question was provided.
 
       - action: rest_command.lagersystem_ask
         data:
@@ -128,14 +131,14 @@ script:
           lagersystem_answer: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
               {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
-              {{ payload.answer | default('Jag hittade inget tydligt svar.') }}
+              {{ payload.answer | default('I could not find a clear answer.') }}
             {% else %}
-              Jag kunde inte kontakta Lagersystem just nu.
+              I could not reach Storage System right now.
             {% endif %}
           lagersystem_source: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
               {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
-              {{ payload.source | default('okand') }}
+              {{ payload.source | default('unknown') }}
             {% else %}
               api_error
             {% endif %}
@@ -153,10 +156,10 @@ script:
                 {% set match = payload.matches[0] %}
                 {{ match.location.system }}, {{ match.location.shelf }}, {{ match.location.slot }}
               {% else %}
-                Okänd plats
+                Unknown location
               {% endif %}
             {% else %}
-              Okänd plats
+              Unknown location
             {% endif %}
           lagersystem_box_id: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
@@ -165,10 +168,10 @@ script:
                 {% set match = payload.matches[0] %}
                 {{ match.boxId }}
               {% else %}
-                okand
+                unknown
               {% endif %}
             {% else %}
-              okand
+              unknown
             {% endif %}
           lagersystem_label: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
@@ -315,7 +318,7 @@ script:
         data:
           value: "{{ lagersystem_photo_count }}"
 
-      # Byt ut entiteterna nedan mot din egen TTS- och media player-setup.
+      # Replace the entities below with your own TTS and media player setup.
       - action: tts.speak
         target:
           entity_id: !secret lagersystem_tts_entity
@@ -323,7 +326,7 @@ script:
           media_player_entity_id: !secret lagersystem_media_player
           message: "{{ lagersystem_answer }}"
 
-      # Exempel på event vidare till annan automation, MQTT-bridge eller ESPHome-logik.
+      # Example event forwarding to another automation, MQTT bridge, or ESPHome logic.
       - event: lagersystem_result
         event_data:
           query: "{{ effective_query }}"
@@ -341,13 +344,13 @@ script:
           raw: "{{ lagersystem_payload }}"
 
   lagersystem_sok:
-    alias: Lagersystem - Sök
+    alias: Storage System - Search
     mode: restart
     fields:
       query:
-        name: Sökfråga
-        description: Vad vill du söka efter?
-        example: skarvdosa
+        name: Search query
+        description: What do you want to search for?
+        example: junction box
         required: true
         selector:
           text:
@@ -358,7 +361,7 @@ script:
           - condition: template
             value_template: "{{ effective_query == '' }}"
         then:
-          - stop: Ingen sökfråga angavs.
+          - stop: No search query was provided.
 
       - action: rest_command.lagersystem_search
         data:
@@ -387,12 +390,12 @@ script:
               {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
               {% if payload.matches is defined and payload.matches | count > 0 %}
                 {% set match = payload.matches[0] %}
-                {{ match.label | default('Okänd box') }} i {{ match.location.system | default('Okänd plats') }}, {{ match.location.shelf | default('') }}, {{ match.location.slot | default('') }}
+                {{ match.label | default('Unknown box') }} in {{ match.location.system | default('Unknown location') }}, {{ match.location.shelf | default('') }}, {{ match.location.slot | default('') }}
               {% else %}
-                Jag hittade inga tydliga träffar.
+                I could not find any clear matches.
               {% endif %}
             {% else %}
-              Jag kunde inte kontakta Lagersystem just nu.
+              I could not reach Storage System right now.
             {% endif %}
           lagersystem_source: search
           lagersystem_location: >-
@@ -402,22 +405,22 @@ script:
                 {% set match = payload.matches[0] %}
                 {{ match.location.system }}, {{ match.location.shelf }}, {{ match.location.slot }}
               {% else %}
-                Okänd plats
+                Unknown location
               {% endif %}
             {% else %}
-              Okänd plats
+              Unknown location
             {% endif %}
           lagersystem_box_id: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
               {% set payload = lagersystem_response.content if lagersystem_response.content is mapping else (lagersystem_response.content | from_json) %}
               {% if payload.matches is defined and payload.matches | count > 0 %}
                 {% set match = payload.matches[0] %}
-                {{ match.boxId | default('okand') }}
+                {{ match.boxId | default('unknown') }}
               {% else %}
-                okand
+                unknown
               {% endif %}
             {% else %}
-              okand
+              unknown
             {% endif %}
           lagersystem_label: >-
             {% if lagersystem_status >= 200 and lagersystem_status < 300 %}
@@ -581,46 +584,46 @@ script:
 
 template:
   - sensor:
-      - name: Lagersystem senaste svar
+      - name: Storage System latest answer
         unique_id: lagersystem_latest_answer
         state: "{{ states('input_text.lagersystem_last_answer') }}"
 
-      - name: Lagersystem senaste plats
+      - name: Storage System latest location
         unique_id: lagersystem_latest_location
         state: "{{ states('input_text.lagersystem_last_location') }}"
 
-      - name: Lagersystem senaste box-id
+      - name: Storage System latest box id
         unique_id: lagersystem_latest_box_id
         state: "{{ states('input_text.lagersystem_last_box_id') }}"
 
-      - name: Lagersystem senaste boxnamn
+      - name: Storage System latest box label
         unique_id: lagersystem_latest_label
         state: "{{ states('input_text.lagersystem_last_label') }}"
 
-      - name: Lagersystem senaste plats-id
+      - name: Storage System latest location id
         unique_id: lagersystem_latest_location_id
         state: "{{ states('input_text.lagersystem_last_location_id') }}"
 
-      - name: Lagersystem senaste session-id
+      - name: Storage System latest session id
         unique_id: lagersystem_latest_session_id
         state: "{{ states('input_text.lagersystem_last_session_id') }}"
 
-      - name: Lagersystem senaste svarskälla
+      - name: Storage System latest answer source
         unique_id: lagersystem_latest_source
         state: "{{ states('input_text.lagersystem_last_source') }}"
 
-      - name: Lagersystem senaste sammanfattning
+      - name: Storage System latest summary
         unique_id: lagersystem_latest_summary
         state: "{{ states('input_text.lagersystem_last_summary') }}"
 
-      - name: Lagersystem senaste nyckelord
+      - name: Storage System latest keywords
         unique_id: lagersystem_latest_keywords
         state: "{{ states('input_text.lagersystem_last_keywords') }}"
 
-      - name: Lagersystem senaste antal träffar
+      - name: Storage System latest match count
         unique_id: lagersystem_latest_match_count
         state: "{{ states('input_number.lagersystem_last_match_count') | int(0) }}"
 
-      - name: Lagersystem senaste antal bilder
+      - name: Storage System latest image count
         unique_id: lagersystem_latest_photo_count
         state: "{{ states('input_number.lagersystem_last_photo_count') | int(0) }}"
