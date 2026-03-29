@@ -3,12 +3,13 @@ import { HomeSearchForm } from "@/app/home-search-form";
 import { HomeBoxCard } from "@/app/home-box-card";
 import { ImageLightboxButton } from "@/app/components/image-lightbox-button";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
 import { parseBoxId, parseLocationId } from "@/lib/location-schema";
 import { compareBoxesByLocation } from "@/lib/location-sort";
 import { answerInventoryQuestion } from "@/lib/public-api";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { searchInventory } from "@/lib/search";
 import { readAppSettings } from "@/lib/settings";
 import packageJson from "@/package.json";
@@ -80,7 +81,7 @@ export default async function Home({ searchParams }: HomeProps) {
     fetchAlbumDetails().catch(() => ({ id: "", assets: [], albumThumbnailAssetId: "", albumName: "" })),
     readAppSettings()
   ]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const albumAssets = query ? album.assets : [];
   const sessionsByBox = getCurrentSessionByBox(data);
@@ -100,8 +101,8 @@ export default async function Home({ searchParams }: HomeProps) {
   const searchAnswer = buildSearchAnswer(query, results, t);
   const spokenAnswer =
     query && searchMode === "voice"
-      ? (await answerInventoryQuestion(query, "voice").catch(() => ({ answer: searchAnswer }))).answer
-      : searchAnswer;
+      ? (await answerInventoryQuestion(query, "voice", languageCatalog._meta.code).catch(() => ({ answer: searchAnswer }))).answer
+        : searchAnswer;
   const sortedBoxes = [...data.boxes].sort(compareBoxesByLocation);
   const overviewAsset = album.albumThumbnailAssetId ? album.assets.find((asset) => asset.id === album.albumThumbnailAssetId) : null;
   const locationUnits = new Set<string>();

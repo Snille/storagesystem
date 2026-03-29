@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAssetThumbnailUrl } from "@/lib/immich";
 import { readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import { getShelfUnitBySlug, presentShelfUnitTitle } from "@/lib/shelf-map";
 
@@ -37,7 +38,7 @@ function presentRowLabel(
 export default async function ShelfSystemPage({ params }: ShelfSystemPageProps) {
   const { system } = await params;
   const [data, settings] = await Promise.all([readInventoryData(), readAppSettings()]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const unit = getShelfUnitBySlug(data, system);
 

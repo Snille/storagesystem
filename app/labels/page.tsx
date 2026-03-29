@@ -1,8 +1,9 @@
 import { LabelEditor } from "@/app/labels/label-editor";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
 import { buildLabelDescription } from "@/lib/label-presentation";
 import { presentLocation } from "@/lib/location-presentation";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 
 type LabelsPageProps = {
@@ -12,7 +13,7 @@ type LabelsPageProps = {
 export default async function LabelsPage({ searchParams }: LabelsPageProps) {
   const params = await searchParams;
   const [data, settings] = await Promise.all([readInventoryData(), readAppSettings()]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const sessionsByBox = getCurrentSessionByBox(data);
 

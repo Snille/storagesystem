@@ -57,9 +57,9 @@ type PublicBoxResult = {
   score?: number;
 };
 
-function getPublicLocationLabels() {
+function getPublicLocationLabels(languageCode?: string) {
   const settings = readAppSettingsSync();
-  const catalog = readLanguageCatalogSync(settings.appearance.language);
+  const catalog = readLanguageCatalogSync(languageCode || settings.appearance.language);
   const t = createTranslator(catalog);
 
   return {
@@ -71,8 +71,8 @@ function getPublicLocationLabels() {
   };
 }
 
-function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number]): PublicBoxResult {
-  const location = presentLocation(input.box.currentLocationId, input.box.boxId, getPublicLocationLabels());
+function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number], languageCode?: string): PublicBoxResult {
+  const location = presentLocation(input.box.currentLocationId, input.box.boxId, getPublicLocationLabels(languageCode));
 
   return {
     boxId: input.box.boxId,
@@ -153,7 +153,12 @@ function extractResponseText(json: unknown) {
   return chunks.join("\n").trim();
 }
 
-async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[], mode: "public" | "voice" = "public") {
+async function askAiForInventoryAnswer(
+  query: string,
+  matches: PublicBoxResult[],
+  mode: "public" | "voice" = "public",
+  languageCode?: string
+) {
   const aiConfig = getAiConfig();
   const settings = readAppSettingsSync();
   const context = matches.slice(0, 5).map((match) => ({
@@ -249,15 +254,15 @@ function parseAnswerText(text: string) {
   return trimmed.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
 }
 
-export async function searchPublicInventory(query: string, limit = 10) {
+export async function searchPublicInventory(query: string, limit = 10, languageCode?: string) {
   const data = await readInventoryData();
   const albumAssets = await fetchAlbumAssets().catch(() => []);
   const assetFileNamesById = new Map(albumAssets.map((asset) => [asset.id, asset.originalFileName]));
   const results = searchInventory(data, query, assetFileNamesById).slice(0, Math.max(1, Math.min(limit, 25)));
-  return results.map(buildPublicBoxResult);
+  return results.map((result) => buildPublicBoxResult(result, languageCode));
 }
 
-export async function getPublicBoxById(boxId: string) {
+export async function getPublicBoxById(boxId: string, languageCode?: string) {
   const data = await readInventoryData();
   const sessionsByBox = getCurrentSessionByBox(data);
   const box = data.boxes.find((entry) => entry.boxId === boxId);
@@ -274,11 +279,11 @@ export async function getPublicBoxById(boxId: string) {
     session,
     photos,
     score: 0
-  });
+  }, languageCode);
 }
 
-export async function answerInventoryQuestion(query: string, mode: "public" | "voice" = "public") {
-  const matches = await searchPublicInventory(query, 5);
+export async function answerInventoryQuestion(query: string, mode: "public" | "voice" = "public", languageCode?: string) {
+  const matches = await searchPublicInventory(query, 5, languageCode);
   const localAnswer = buildLocalAnswer(query, matches);
 
   if (matches.length === 0) {
@@ -290,7 +295,7 @@ export async function answerInventoryQuestion(query: string, mode: "public" | "v
   }
 
   try {
-    const aiAnswer = await askAiForInventoryAnswer(query, matches, mode);
+    const aiAnswer = await askAiForInventoryAnswer(query, matches, mode, languageCode);
     if (aiAnswer) {
       return {
         answer: aiAnswer,

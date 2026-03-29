@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { presentLocation } from "@/lib/location-presentation";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import { AttachPhotosForm } from "@/app/boxes/[boxId]/attach-photos-form";
 import { DeleteBoxForm } from "@/app/boxes/[boxId]/delete-box-form";
@@ -19,7 +20,7 @@ export default async function BoxPage({ params }: BoxPageProps) {
     redirect(`/boxes/IVAR-${boxId.slice(4)}`);
   }
   const [data, albumAssets, settings] = await Promise.all([readInventoryData(), fetchAlbumAssets(), readAppSettings()]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const box = data.boxes.find((entry) => entry.boxId === boxId);
 

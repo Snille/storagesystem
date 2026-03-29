@@ -1,13 +1,14 @@
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { getUnmappedInboxAssets } from "@/lib/album-assets";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import { InboxWorkspace } from "@/app/inbox/inbox-workspace";
 
 export default async function InboxPage() {
   const [album, data, settings] = await Promise.all([fetchAlbumDetails(), readInventoryData(), readAppSettings()]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const currentSessionIds = new Set([...getCurrentSessionByBox(data).values()].map((session) => session.sessionId));
   const mappedAssetIds = new Set<string>(

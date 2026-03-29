@@ -1,7 +1,8 @@
 import { SessionForm } from "@/app/boxes/new/session-form";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
 import { fetchAlbumDetails, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import type { PhotoRole } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export default async function NewBoxPage({ searchParams }: NewBoxPageProps) {
     readInventoryData(),
     readAppSettings()
   ]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const currentSessionsByBox = getCurrentSessionByBox(data);
   const existingBox = params.boxId ? data.boxes.find((box) => box.boxId === params.boxId) ?? null : null;

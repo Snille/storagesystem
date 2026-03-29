@@ -7,7 +7,8 @@ import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
 import { getUnmappedInboxAssets } from "@/lib/album-assets";
 import { fetchAlbumDetails } from "@/lib/immich";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import { getShelfSystemCount } from "@/lib/shelf-map";
 import { ThemeController } from "@/app/theme-controller";
@@ -33,7 +34,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       shareKey: settings.immich.shareKey,
       currentAlbumId: settings.immich.albumId
     }).catch(() => [] as AvailableAlbum[]),
-    readLanguageCatalog(settings.appearance.language)
+    readResolvedLanguageCatalog(settings.appearance.language)
   ]);
   const t = createTranslator(languageCatalog);
   const currentSessionIds = new Set([...getCurrentSessionByBox(data).values()].map((session) => session.sessionId));

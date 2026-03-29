@@ -2,7 +2,8 @@ import { SettingsForm } from "@/app/settings/settings-form";
 import { fetchAvailableModels } from "@/lib/ai-models";
 import { listAvailablePrinterQueues } from "@/lib/cups-printers";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
-import { createTranslator, listAvailableLanguages, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator, listAvailableLanguages } from "@/lib/i18n";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import type { AvailableAlbum, AvailableModel, AvailablePrinter } from "@/lib/types";
 
@@ -64,7 +65,7 @@ export default async function SettingsPage() {
     readInitialPrinters(),
     listAvailableLanguages()
   ]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
 
   return (

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { readInventoryData } from "@/lib/data-store";
-import { createTranslator, readLanguageCatalog } from "@/lib/i18n";
+import { createTranslator } from "@/lib/i18n";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { getShelfUnits, presentShelfUnitTitle } from "@/lib/shelf-map";
 import { readAppSettings } from "@/lib/settings";
 
 export default async function ShelfSystemsPage() {
   const [data, settings] = await Promise.all([readInventoryData(), readAppSettings()]);
-  const languageCatalog = await readLanguageCatalog(settings.appearance.language);
+  const languageCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(languageCatalog);
   const shelfUnits = getShelfUnits(data);
 

@@ -1,6 +1,7 @@
 import { TranslationsEditor } from "@/app/settings/translations/translations-editor";
 import { fetchAvailableModels } from "@/lib/ai-models";
 import { createTranslator, listAvailableLanguages, readLanguageCatalog } from "@/lib/i18n";
+import { readResolvedLanguageCatalog } from "@/lib/request-language";
 import { readAppSettings } from "@/lib/settings";
 import type { AvailableModel } from "@/lib/types";
 
@@ -11,7 +12,7 @@ type TranslationsPageProps = {
 export default async function TranslationsPage({ searchParams }: TranslationsPageProps) {
   const params = await searchParams;
   const [settings, languageOptions] = await Promise.all([readAppSettings(), listAvailableLanguages()]);
-  const currentCatalog = await readLanguageCatalog(settings.appearance.language);
+  const currentCatalog = await readResolvedLanguageCatalog(settings.appearance.language);
   const t = createTranslator(currentCatalog);
   const inheritedTranslationAi = {
     ...settings.translationAi,
