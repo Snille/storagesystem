@@ -1,5 +1,21 @@
 # History
 
+## v1.4.4 - 2026-03-29
+
+Patch release focused on language override links and smoother settings behavior.
+
+### Language and Voice
+
+- Added URL-based language override support such as `?lang=sv` and `?lang=en`.
+- The override is stored in a browser cookie so navigation keeps the same UI and voice-search language.
+- Added `?lang=default` to clear the temporary override and return to the normal saved app language.
+- Public voice/API answers now use the current localized storage terms from the language files instead of older internal names such as `Ivar` or `CABINET`.
+
+### Settings
+
+- Saving `Settings` now clears any active QR/URL language override so the newly saved app language takes effect normally.
+- Reduced unnecessary full-page refreshes on most settings saves so the page feels less like it hangs while reloading remote lists.
+
 ## v1.4.3 - 2026-03-29
 
 Patch release focused on voice-search polish, public integration security, and Home Assistant image support.

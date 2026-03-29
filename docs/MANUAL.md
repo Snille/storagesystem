@@ -2,7 +2,7 @@
 
 This manual is intended for day-to-day use of the app. For technical details, see [README.md](../README.md).
 
-Current version: `v1.4.3`
+Current version: `v1.4.4`
 
 ## The Basic Idea
 
@@ -67,6 +67,7 @@ From the start page you can:
 - use voice search
 - hear a browser-spoken answer after voice search
 - use `Read answer` for typed search results when you want the short answer spoken aloud
+- open the app through a QR-friendly link such as `?lang=sv` when you want a fixed interface language on that device
 - open the `Overview image` in its own lightbox
 - open a box by clicking the box card
 - click photos to view them in a lightbox
@@ -209,6 +210,8 @@ From the `Settings` page you can change:
 - a separate spoken-answer prompt for voice search
 - cleanup phrases and other filters that clean up AI output
 - public integration base URL and public API key under `Security`
+
+If the app was opened through a temporary language link such as `?lang=sv`, saving `Settings` clears that override and returns the browser to the normal saved app language.
 - download a backup
 - export the catalog to Excel
 - import a catalog from an exported Excel file

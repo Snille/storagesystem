@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { LANGUAGE_COOKIE_NAME } from "@/lib/language-cookie";
 import { normalizeLabelSettings } from "@/lib/label-templates";
 import { syncLmStudioLoadedModel, unloadAllLmStudioModels } from "@/lib/lmstudio-runtime";
 import { readAppSettings, writeAppSettings } from "@/lib/settings";
@@ -222,7 +223,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    response.cookies.delete(LANGUAGE_COOKIE_NAME);
+    return response;
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Kunde inte spara inställningarna." },

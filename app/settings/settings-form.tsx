@@ -257,7 +257,7 @@ export function SettingsForm({
     });
   }
 
-  async function saveSettings() {
+  async function saveSettings(refreshAfterSave = false) {
     setStatus(t("settings.status.saving", "Sparar inställningar..."));
     startSaving(async () => {
       try {
@@ -273,7 +273,9 @@ export function SettingsForm({
         }
 
         setStatus(t("settings.status.saved", "Inställningarna sparades."));
-        router.refresh();
+        if (refreshAfterSave) {
+          router.refresh();
+        }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : t("settings.status.saveError", "Kunde inte spara inställningarna."));
       }
@@ -350,10 +352,10 @@ export function SettingsForm({
     });
   }
 
-  function renderSaveRow(label = "Spara inställningar") {
+  function renderSaveRow(label = "Spara inställningar", refreshAfterSave = false) {
     return (
       <div className="action-row">
-        <button type="button" onClick={saveSettings} disabled={isSaving}>
+        <button type="button" onClick={() => saveSettings(refreshAfterSave)} disabled={isSaving}>
           {isSaving ? t("settings.button.saving", "Sparar...") : label}
         </button>
         <span className="muted">{status}</span>
@@ -445,7 +447,7 @@ export function SettingsForm({
           <span>{t("settings.appearance.reduceMotion", "Minska animationer och övergångar")}</span>
         </label>
 
-        {renderSaveRow(t("settings.appearance.save", "Spara utseende"))}
+        {renderSaveRow(t("settings.appearance.save", "Spara utseende"), true)}
       </section>
 
       <section className="panel shell">
@@ -1132,7 +1134,7 @@ export function SettingsForm({
         {renderSaveRow(t("settings.prompts.save", "Spara promptar"))}
       </section>
 
-      {renderSaveRow(t("settings.all.save", "Spara alla inställningar"))}
+      {renderSaveRow(t("settings.all.save", "Spara alla inställningar"), true)}
     </div>
   );
 }

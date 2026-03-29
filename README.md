@@ -4,7 +4,7 @@ Practical day-to-day usage is described in [MANUAL.md](./docs/MANUAL.md). This R
 
 Planned next steps are collected in [TODO.md](./docs/TODO.md).
 
-Current version: `v1.4.3`
+Current version: `v1.4.4`
 
 A web app for inventorying workshop / shed / house boxes and storage places with an album-based photo source, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
@@ -35,6 +35,8 @@ The home page combines search, storage statistics, and the album cover based ove
 ### Search Results
 
 Search results show matching boxes with their current location, summary, keywords, and linked photos. Typed search keeps a short summary above the results, while voice search can produce a more natural spoken answer and read it aloud directly in the browser. Where a linked image already has saved analysis text, hover effects can reveal that text directly from the image card. A small green checkmark on an image means analysis text is already saved for that image.
+
+The app can also be opened with a language override in the URL, for example `?lang=sv` or `?lang=en`. This is useful for QR codes that should force a known UI and voice-search language on a shared device. Saving `Settings` clears that temporary override and returns the browser to the app's normal saved language setting.
 
 ![Search results](./docs/screenshots/search01.png)
 
