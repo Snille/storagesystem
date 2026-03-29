@@ -1,6 +1,7 @@
 import { getAiConfig, getOpenRouterHeaders } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
+import { createTranslator, readLanguageCatalogSync } from "@/lib/i18n";
 import { presentLocation } from "@/lib/location-presentation";
 import { searchInventory } from "@/lib/search";
 import { readAppSettingsSync } from "@/lib/settings";
@@ -56,8 +57,22 @@ type PublicBoxResult = {
   score?: number;
 };
 
+function getPublicLocationLabels() {
+  const settings = readAppSettingsSync();
+  const catalog = readLanguageCatalogSync(settings.appearance.language);
+  const t = createTranslator(catalog);
+
+  return {
+    shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
+    bench: t("boxForm.bench", "Bänk"),
+    cabinet: t("boxForm.cabinet", "Skåp"),
+    surface: t("boxForm.surface", "Yta"),
+    slot: t("boxForm.place", "Plats")
+  };
+}
+
 function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number]): PublicBoxResult {
-  const location = presentLocation(input.box.currentLocationId, input.box.boxId);
+  const location = presentLocation(input.box.currentLocationId, input.box.boxId, getPublicLocationLabels());
 
   return {
     boxId: input.box.boxId,
