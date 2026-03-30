@@ -162,18 +162,22 @@ async function askAiForInventoryAnswer(
   const aiConfig = getAiConfig();
   const settings = readAppSettingsSync();
   const context = matches.slice(0, 5).map((match) => ({
-    boxId: match.boxId,
     label: match.label,
     location: `${match.location.system}, ${match.location.shelf}, ${match.location.slot}`,
     summary: match.summary ?? "",
     keywords: match.itemKeywords
   }));
 
+  const immutableInstruction =
+    'Om du nämner en plats ska du alltid använda det mänskligt läsbara location-fältet exakt som det ges i kontexten. Nämn aldrig interna ID:n eller kodliknande värden som boxId, locationId eller strängar som liknar IVAR-B-H3-P1-A eller CABINET-A-H1-P1.';
+
   const systemText =
-    (mode === "voice" ? settings.prompts.voiceAskSystemPrompt : settings.prompts.publicAskSystemPrompt)?.trim() ||
-    (mode === "voice"
-      ? 'Du svarar på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Svara naturligt och uppläsningsvänligt i 1 till 2 korta meningar. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}'
-      : 'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}');
+    `${
+      (mode === "voice" ? settings.prompts.voiceAskSystemPrompt : settings.prompts.publicAskSystemPrompt)?.trim() ||
+      (mode === "voice"
+        ? 'Du svarar på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Svara naturligt och uppläsningsvänligt i 1 till 2 korta meningar. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}'
+        : 'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}')
+    }\n\n${immutableInstruction}`;
   const userText = [
     `Fråga: ${query}`,
     "",
