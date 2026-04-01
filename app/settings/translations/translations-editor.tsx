@@ -191,7 +191,7 @@ export function TranslationsEditor({
     [entries, selectedSection, sourceEntries]
   );
   const targetQuery = useMemo(
-    () => `/settings/translations?from=${encodeURIComponent(sourceCode)}&lang=${encodeURIComponent(targetCode)}`,
+    () => `/settings/translations?from=${encodeURIComponent(sourceCode)}&to=${encodeURIComponent(targetCode)}`,
     [sourceCode, targetCode]
   );
   const activeTranslationConnection = useMemo(() => {
@@ -212,7 +212,7 @@ export function TranslationsEditor({
         ? languageOptions.find((language) => language.code !== nextSourceCode)?.code ?? nextTargetCode
         : nextTargetCode;
     router.push(
-      `/settings/translations?from=${encodeURIComponent(nextSourceCode)}&lang=${encodeURIComponent(fallbackTargetCode)}`
+      `/settings/translations?from=${encodeURIComponent(nextSourceCode)}&to=${encodeURIComponent(fallbackTargetCode)}`
     );
   }
 
@@ -298,7 +298,7 @@ export function TranslationsEditor({
         }
 
         setStatus(t("translations.createdLanguage", "Språket skapades."));
-        router.push(`/settings/translations?from=${encodeURIComponent(sourceCode)}&lang=${encodeURIComponent(code)}`);
+        router.push(`/settings/translations?from=${encodeURIComponent(sourceCode)}&to=${encodeURIComponent(code)}`);
         router.refresh();
       } catch (error) {
         setStatus(error instanceof Error ? error.message : t("translations.createLanguageFailed", "Kunde inte skapa språket."));

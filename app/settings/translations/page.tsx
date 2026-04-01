@@ -6,7 +6,7 @@ import { readAppSettings } from "@/lib/settings";
 import type { AvailableModel } from "@/lib/types";
 
 type TranslationsPageProps = {
-  searchParams: Promise<{ from?: string; lang?: string }>;
+  searchParams: Promise<{ from?: string; to?: string }>;
 };
 
 export default async function TranslationsPage({ searchParams }: TranslationsPageProps) {
@@ -46,7 +46,7 @@ export default async function TranslationsPage({ searchParams }: TranslationsPag
     return "sv";
   })();
   const targetCode = (() => {
-    const requested = String(params.lang ?? "").trim();
+    const requested = String(params.to ?? "").trim();
     if (requested && requested !== sourceCode && languageOptions.some((language) => language.code === requested)) {
       return requested;
     }

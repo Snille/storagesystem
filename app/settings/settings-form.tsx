@@ -420,7 +420,7 @@ export function SettingsForm({
           <div className="action-row" style={{ alignSelf: "end" }}>
             <Link
               className="button secondary"
-              href={`/settings/translations?lang=${encodeURIComponent(settings.appearance.language === "sv" ? "en" : settings.appearance.language)}`}
+              href={`/settings/translations?to=${encodeURIComponent(settings.appearance.language === "sv" ? "en" : settings.appearance.language)}`}
             >
               {t("settings.appearance.translations", "Översättningar")}
             </Link>
