@@ -46,7 +46,7 @@ function asPhotoSourceProvider(value: string): PhotoSourceProvider {
 export async function POST(request: Request) {
   try {
     const previousSettings = await readAppSettings();
-    const payload = (await request.json()) as AppSettings;
+    const payload = (await request.json()) as AppSettings & { clearLanguageOverride?: boolean };
     const photoSourceProvider = asPhotoSourceProvider(String(payload.immich?.provider ?? previousSettings.immich.provider ?? "immich"));
     const requestedAccessMode = asImmichAccessMode(String(payload.immich?.accessMode ?? "apiKey"));
     const photoSourceAccessMode = photoSourceProvider === "photoprism" ? "apiKey" : requestedAccessMode;
@@ -224,7 +224,9 @@ export async function POST(request: Request) {
     }
 
     const response = NextResponse.json({ ok: true });
-    response.cookies.delete(LANGUAGE_COOKIE_NAME);
+    if (payload.clearLanguageOverride) {
+      response.cookies.delete(LANGUAGE_COOKIE_NAME);
+    }
     return response;
   } catch (error) {
     return NextResponse.json(

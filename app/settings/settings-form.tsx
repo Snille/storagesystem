@@ -257,14 +257,17 @@ export function SettingsForm({
     });
   }
 
-  async function saveSettings(refreshAfterSave = false) {
+  async function saveSettings(refreshAfterSave = false, clearLanguageOverride = false) {
     setStatus(t("settings.status.saving", "Sparar inställningar..."));
     startSaving(async () => {
       try {
         const response = await fetch("/api/settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(settings)
+          body: JSON.stringify({
+            ...settings,
+            clearLanguageOverride
+          })
         });
 
         const json = (await response.json()) as { ok?: boolean; error?: string };
@@ -352,10 +355,10 @@ export function SettingsForm({
     });
   }
 
-  function renderSaveRow(label = "Spara inställningar", refreshAfterSave = false) {
+  function renderSaveRow(label = "Spara inställningar", refreshAfterSave = false, clearLanguageOverride = false) {
     return (
       <div className="action-row">
-        <button type="button" onClick={() => saveSettings(refreshAfterSave)} disabled={isSaving}>
+        <button type="button" onClick={() => saveSettings(refreshAfterSave, clearLanguageOverride)} disabled={isSaving}>
           {isSaving ? t("settings.button.saving", "Sparar...") : label}
         </button>
         <span className="muted">{status}</span>
@@ -447,7 +450,7 @@ export function SettingsForm({
           <span>{t("settings.appearance.reduceMotion", "Minska animationer och övergångar")}</span>
         </label>
 
-        {renderSaveRow(t("settings.appearance.save", "Spara utseende"), true)}
+        {renderSaveRow(t("settings.appearance.save", "Spara utseende"), true, true)}
       </section>
 
       <section className="panel shell">
@@ -1134,7 +1137,7 @@ export function SettingsForm({
         {renderSaveRow(t("settings.prompts.save", "Spara promptar"))}
       </section>
 
-      {renderSaveRow(t("settings.all.save", "Spara alla inställningar"), true)}
+      {renderSaveRow(t("settings.all.save", "Spara alla inställningar"), true, true)}
     </div>
   );
 }
