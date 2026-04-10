@@ -11,12 +11,14 @@ import type {
   AvailablePrinter,
   FontFamilyChoice,
   LanguageOption,
+  PhotoRole,
   PhotoSourceProvider,
   ThemePreference
 } from "@/lib/types";
 
 type SettingsFormProps = {
   initialSettings: AppSettings;
+  defaultPrompts: AppSettings["prompts"];
   initialModels: AvailableModel[];
   initialAlbums: AvailableAlbum[];
   initialPrinters: AvailablePrinter[];
@@ -39,6 +41,7 @@ const photoSourceProviderOptions: Array<{ value: PhotoSourceProvider; labelKey: 
 
 export function SettingsForm({
   initialSettings,
+  defaultPrompts,
   initialModels,
   initialAlbums,
   initialPrinters,
@@ -76,6 +79,7 @@ export function SettingsForm({
   const [catalogImportStatus, setCatalogImportStatus] = useState("");
   const [selectedBackupFileName, setSelectedBackupFileName] = useState("");
   const [selectedCatalogFileName, setSelectedCatalogFileName] = useState("");
+  const [selectedPromptModelKey, setSelectedPromptModelKey] = useState<string>("");
   const [isSaving, startSaving] = useTransition();
   const [isLoadingModels, startLoadingModels] = useTransition();
   const [isLoadingAlbums, startLoadingAlbums] = useTransition();
@@ -128,6 +132,13 @@ export function SettingsForm({
     }));
   }
 
+  function syncPromptModelKey(provider: string, model: string) {
+    const key = `${provider}:${model}`;
+    setSelectedPromptModelKey((prev) =>
+      key in settings.modelPrompts ? key : prev === key ? "" : prev
+    );
+  }
+
   function patchAiSection(
     section: "lmstudio" | "openai" | "anthropic" | "openrouter" | "openwebui",
     updates: Record<string, string | number | undefined>
@@ -142,6 +153,9 @@ export function SettingsForm({
         }
       }
     }));
+    if (typeof updates.model === "string") {
+      syncPromptModelKey(section, updates.model);
+    }
   }
 
   function patchImmich(updates: Partial<AppSettings["immich"]>) {
@@ -625,13 +639,23 @@ export function SettingsForm({
             {t("settings.ai.provider", "Provider")}
             <select
               value={settings.ai.provider}
-              onChange={(event) => setSettings((current) => ({
-                ...current,
-                ai: {
-                  ...current.ai,
-                  provider: event.target.value as AiProvider
-                }
-              }))}
+              onChange={(event) => {
+                const newProvider = event.target.value as AiProvider;
+                setSettings((current) => ({
+                  ...current,
+                  ai: {
+                    ...current.ai,
+                    provider: newProvider
+                  }
+                }));
+                const modelForProvider =
+                  newProvider === "openai" ? settings.ai.openai.model
+                  : newProvider === "anthropic" ? settings.ai.anthropic.model
+                  : newProvider === "openrouter" ? settings.ai.openrouter.model
+                  : newProvider === "openwebui" ? settings.ai.openwebui.model
+                  : settings.ai.lmstudio.model;
+                syncPromptModelKey(newProvider, modelForProvider);
+              }}
             >
               {providerOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -934,205 +958,351 @@ export function SettingsForm({
           <p>{t("settings.prompts.intro", "Här kan du finjustera hur modellen instrueras. Det är särskilt användbart när du testar nya modeller.")}</p>
         </div>
 
-        <label>
-          {t("settings.prompts.boxAnalysis", "Lådanalys: huvudinstruktion")}
-          <textarea
-            value={settings.prompts.boxAnalysisInstructions}
-            onChange={(event) =>
+        {/* Model selector — Default or per-model override */}
+        <div className="grid two">
+          <label>
+            {t("settings.prompts.modelSelector", "Redigerar promptar för")}
+            <select
+              value={selectedPromptModelKey}
+              onChange={(event) => setSelectedPromptModelKey(event.target.value)}
+            >
+              <option value="">{t("settings.prompts.modelDefault", "Standard (alla modeller)")}</option>
+              {Object.keys(settings.modelPrompts).map((key) => (
+                <option key={key} value={key}>{key}</option>
+              ))}
+            </select>
+          </label>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem", flexWrap: "wrap" }}>
+            {(() => {
+              const currentKey = `${settings.ai.provider}:${activeConnection.model}`;
+              const alreadyExists = currentKey in settings.modelPrompts;
+              return (
+                <>
+                  {!alreadyExists && activeConnection.model && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettings((current) => ({
+                          ...current,
+                          modelPrompts: {
+                            ...current.modelPrompts,
+                            [currentKey]: {}
+                          }
+                        }));
+                        setSelectedPromptModelKey(currentKey);
+                      }}
+                    >
+                      {t("settings.prompts.modelAdd", "+ Lägg till {key}", { key: currentKey })}
+                    </button>
+                  )}
+                  {selectedPromptModelKey && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettings((current) => {
+                          const next = { ...current.modelPrompts };
+                          delete next[selectedPromptModelKey];
+                          return { ...current, modelPrompts: next };
+                        });
+                        setSelectedPromptModelKey("");
+                      }}
+                    >
+                      {t("settings.prompts.modelRemove", "Ta bort {key}", { key: selectedPromptModelKey })}
+                    </button>
+                  )}
+                  {!selectedPromptModelKey && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!confirm(t("settings.prompts.resetConfirm", "Återställa alla standardpromptarna till kodens inbyggda värden?"))) return;
+                        setSettings((current) => ({
+                          ...current,
+                          prompts: defaultPrompts
+                        }));
+                      }}
+                    >
+                      {t("settings.prompts.resetDefaults", "Återställ till standard")}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {selectedPromptModelKey && (
+          <p className="muted">
+            {t("settings.prompts.modelOverrideNote", "Tomma fält ärver standardpromptarna.")}
+          </p>
+        )}
+
+        {/* Helper functions for reading/writing the active prompt target */}
+        {(() => {
+          const isOverride = Boolean(selectedPromptModelKey);
+          const override = selectedPromptModelKey ? (settings.modelPrompts[selectedPromptModelKey] ?? {}) : null;
+
+          function getPromptValue(key: keyof Omit<typeof settings.prompts, "photoRoleSpecificPrompts">): string {
+            if (isOverride && override) {
+              return (override[key] as string | undefined) ?? "";
+            }
+            return settings.prompts[key];
+          }
+
+          function setPromptValue(key: keyof Omit<typeof settings.prompts, "photoRoleSpecificPrompts">, value: string) {
+            if (isOverride && selectedPromptModelKey) {
+              setSettings((current) => ({
+                ...current,
+                modelPrompts: {
+                  ...current.modelPrompts,
+                  [selectedPromptModelKey]: {
+                    ...current.modelPrompts[selectedPromptModelKey],
+                    [key]: value
+                  }
+                }
+              }));
+            } else {
+              setSettings((current) => ({
+                ...current,
+                prompts: { ...current.prompts, [key]: value }
+              }));
+            }
+          }
+
+          function getRoleValue(role: PhotoRole, field: "prompt" | "systemPrompt"): string {
+            if (isOverride && override) {
+              return override.photoRoleSpecificPrompts?.[role]?.[field] ?? "";
+            }
+            return settings.prompts.photoRoleSpecificPrompts[role][field];
+          }
+
+          function setRoleValue(role: PhotoRole, field: "prompt" | "systemPrompt", value: string) {
+            if (isOverride && selectedPromptModelKey) {
+              setSettings((current) => {
+                const currentOverride = current.modelPrompts[selectedPromptModelKey] ?? {};
+                return {
+                  ...current,
+                  modelPrompts: {
+                    ...current.modelPrompts,
+                    [selectedPromptModelKey]: {
+                      ...currentOverride,
+                      photoRoleSpecificPrompts: {
+                        ...currentOverride.photoRoleSpecificPrompts,
+                        [role]: {
+                          ...currentOverride.photoRoleSpecificPrompts?.[role],
+                          [field]: value
+                        }
+                      }
+                    }
+                  }
+                };
+              });
+            } else {
               setSettings((current) => ({
                 ...current,
                 prompts: {
                   ...current.prompts,
-                  boxAnalysisInstructions: event.target.value
+                  photoRoleSpecificPrompts: {
+                    ...current.prompts.photoRoleSpecificPrompts,
+                    [role]: {
+                      ...current.prompts.photoRoleSpecificPrompts[role],
+                      [field]: value
+                    }
+                  }
                 }
-              }))
+              }));
             }
-          />
-        </label>
+          }
 
-        <label>
-          {t("settings.prompts.publicAsk", "Publik fråga: systemprompt")}
-          <textarea
-            value={settings.prompts.publicAskSystemPrompt}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                prompts: {
-                  ...current.prompts,
-                  publicAskSystemPrompt: event.target.value
-                }
-              }))
-            }
-          />
-        </label>
+          const defaultRolePlaceholder = (role: PhotoRole, field: "prompt" | "systemPrompt") =>
+            isOverride ? settings.prompts.photoRoleSpecificPrompts[role][field] : undefined;
 
-        <div className="grid two">
-          <label>
-            {t("settings.prompts.roleSystem", "Bildroll: systemprompt")}
-            <textarea
-              value={settings.prompts.photoRoleSystemPrompt}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    photoRoleSystemPrompt: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
+          const roleEntries: Array<{ role: PhotoRole; labelKey: string; fallback: string }> = [
+            { role: "label", labelKey: "settings.prompts.role.label", fallback: "Etikettbild" },
+            { role: "location", labelKey: "settings.prompts.role.location", fallback: "Platsbild" },
+            { role: "inside", labelKey: "settings.prompts.role.inside", fallback: "Innehållsbild (innuti)" },
+            { role: "spread", labelKey: "settings.prompts.role.spread", fallback: "Innehållsbild (utspritt)" },
+            { role: "detail", labelKey: "settings.prompts.role.detail", fallback: "Detaljbild" }
+          ];
 
-        <label>
-          {t("settings.prompts.voiceAsk", "Röstfråga: systemprompt")}
-          <textarea
-            value={settings.prompts.voiceAskSystemPrompt}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                prompts: {
-                  ...current.prompts,
-                  voiceAskSystemPrompt: event.target.value
-                }
-              }))
-            }
-          />
-        </label>
+          return (
+            <>
+              <label>
+                {t("settings.prompts.boxAnalysis", "Lådanalys: huvudinstruktion")}
+                <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                  {t("settings.prompts.boxAnalysis.help", "Skickas med alla valda bilder vid lådanalys. Styr etikett-, plats- och innehållsförslag samt roller för varje bild.")}
+                </span>
+                <textarea
+                  value={getPromptValue("boxAnalysisInstructions")}
+                  placeholder={isOverride ? settings.prompts.boxAnalysisInstructions : undefined}
+                  onChange={(event) => setPromptValue("boxAnalysisInstructions", event.target.value)}
+                />
+              </label>
 
-          <label>
-            {t("settings.prompts.roleUser", "Bildroll: användarprompt")}
-            <textarea
-              value={settings.prompts.photoRolePrompt}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    photoRolePrompt: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
-        </div>
+              <label>
+                {t("settings.prompts.anthropicSystem", "Anthropic: systemprompt för lådanalys")}
+                <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                  {t("settings.prompts.anthropicSystem.help", "Används bara när AI-motorn är Anthropic. Ersätter separat system-fält i API-anropet.")}
+                </span>
+                <textarea
+                  value={getPromptValue("anthropicBoxSystemPrompt")}
+                  placeholder={isOverride ? settings.prompts.anthropicBoxSystemPrompt : undefined}
+                  onChange={(event) => setPromptValue("anthropicBoxSystemPrompt", event.target.value)}
+                />
+              </label>
 
-        <div className="grid two">
-          <label>
-            {t("settings.prompts.summarySystem", "Bildspecifik analys: systemprompt")}
-            <textarea
-              value={settings.prompts.photoSummarySystemPrompt}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    photoSummarySystemPrompt: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
+              <div className="grid two">
+                <label>
+                  {t("settings.prompts.roleSystem", "Bildrollklassificering: systemprompt")}
+                  <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                    {t("settings.prompts.roleSystem.help", "Används per bild för att avgöra roll (etikett, plats, innehåll…) om lådanalysen inte klarar det.")}
+                  </span>
+                  <textarea
+                    value={getPromptValue("photoRoleSystemPrompt")}
+                    placeholder={isOverride ? settings.prompts.photoRoleSystemPrompt : undefined}
+                    onChange={(event) => setPromptValue("photoRoleSystemPrompt", event.target.value)}
+                  />
+                </label>
+                <label>
+                  {t("settings.prompts.roleUser", "Bildrollklassificering: användarprompt")}
+                  <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                    {t("settings.prompts.roleUser.help", "Frågan som ställs per bild för att klassificera dess roll.")}
+                  </span>
+                  <textarea
+                    value={getPromptValue("photoRolePrompt")}
+                    placeholder={isOverride ? settings.prompts.photoRolePrompt : undefined}
+                    onChange={(event) => setPromptValue("photoRolePrompt", event.target.value)}
+                  />
+                </label>
+              </div>
 
-          <label>
-            {t("settings.prompts.summaryUser", "Bildspecifik analys: användarprompt")}
-            <textarea
-              value={settings.prompts.photoSummaryPrompt}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    photoSummaryPrompt: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
-        </div>
+              <div className="grid two">
+                <label>
+                  {t("settings.prompts.publicAsk", "Publik sökning: systemprompt")}
+                  <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                    {t("settings.prompts.publicAsk.help", "Används av /api/public/ask (t.ex. Home Assistant) vid textsökning.")}
+                  </span>
+                  <textarea
+                    value={getPromptValue("publicAskSystemPrompt")}
+                    placeholder={isOverride ? settings.prompts.publicAskSystemPrompt : undefined}
+                    onChange={(event) => setPromptValue("publicAskSystemPrompt", event.target.value)}
+                  />
+                </label>
+                <label>
+                  {t("settings.prompts.voiceAsk", "Röstfråga: systemprompt")}
+                  <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                    {t("settings.prompts.voiceAsk.help", "Används vid röstfråga på startsidan. Ger mer naturliga svar anpassade för uppläsning.")}
+                  </span>
+                  <textarea
+                    value={getPromptValue("voiceAskSystemPrompt")}
+                    placeholder={isOverride ? settings.prompts.voiceAskSystemPrompt : undefined}
+                    onChange={(event) => setPromptValue("voiceAskSystemPrompt", event.target.value)}
+                  />
+                </label>
+              </div>
 
-        <label>
-          {t("settings.prompts.anthropicSystem", "Anthropic: systemprompt för lådanalys")}
-          <textarea
-            value={settings.prompts.anthropicBoxSystemPrompt}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                prompts: {
-                  ...current.prompts,
-                  anthropicBoxSystemPrompt: event.target.value
-                }
-              }))
-            }
-          />
-        </label>
+              <div>
+                <h3 style={{ marginBottom: "0.5rem" }}>{t("settings.prompts.perRoleSection", "Bildspecifik analys per bildroll")}</h3>
+                <p className="muted" style={{ marginBottom: "1rem" }}>
+                  {t("settings.prompts.perRoleIntro", "Dessa promptar används när du analyserar ett enskilt foto i låd-vyn. Rätt prompt väljs automatiskt baserat på bildens roll.")}
+                </p>
 
-        <div className="grid two">
-          <label>
-            {t("settings.prompts.summaryCleanup", "Rensningsfraser: sammanfattning (en per rad)")}
-            <textarea
-              value={settings.prompts.summaryCleanupPrefixes}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    summaryCleanupPrefixes: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
+                <div className="grid two">
+                  <label>
+                    {t("settings.prompts.summarySystem", "Bildspecifik analys: generisk systemprompt")}
+                    <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                      {t("settings.prompts.summarySystem.help", "Reserv-systemprompt om ingen rollspecifik är konfigurerad.")}
+                    </span>
+                    <textarea
+                      value={getPromptValue("photoSummarySystemPrompt")}
+                      placeholder={isOverride ? settings.prompts.photoSummarySystemPrompt : undefined}
+                      onChange={(event) => setPromptValue("photoSummarySystemPrompt", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    {t("settings.prompts.summaryUser", "Bildspecifik analys: generisk användarprompt")}
+                    <span className="muted" style={{ fontSize: "0.85em", display: "block", marginBottom: "0.25rem" }}>
+                      {t("settings.prompts.summaryUser.help", "Reserv-prompt om ingen rollspecifik är konfigurerad.")}
+                    </span>
+                    <textarea
+                      value={getPromptValue("photoSummaryPrompt")}
+                      placeholder={isOverride ? settings.prompts.photoSummaryPrompt : undefined}
+                      onChange={(event) => setPromptValue("photoSummaryPrompt", event.target.value)}
+                    />
+                  </label>
+                </div>
 
-          <label>
-            {t("settings.prompts.keywordCleanup", "Rensningsord: sökord (en per rad)")}
-            <textarea
-              value={settings.prompts.keywordCleanupTerms}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    keywordCleanupTerms: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
-        </div>
+                {roleEntries.map(({ role, labelKey, fallback }) => (
+                  <details key={role} style={{ marginTop: "0.75rem" }}>
+                    <summary style={{ cursor: "pointer", fontWeight: 500 }}>
+                      {t(labelKey, fallback)}
+                      {isOverride && (
+                        (override?.photoRoleSpecificPrompts?.[role]?.prompt || override?.photoRoleSpecificPrompts?.[role]?.systemPrompt)
+                          ? <span style={{ marginLeft: "0.5rem", color: "var(--color-accent, #4a9eff)", fontSize: "0.8em" }}>✎</span>
+                          : <span style={{ marginLeft: "0.5rem", color: "var(--color-muted, #999)", fontSize: "0.8em" }}>({t("settings.prompts.inheritingDefault", "ärver standard")})</span>
+                      )}
+                    </summary>
+                    <div className="grid two" style={{ marginTop: "0.5rem" }}>
+                      <label>
+                        {t("settings.prompts.roleSystemLabel", "Systemprompt")}
+                        <textarea
+                          value={getRoleValue(role, "systemPrompt")}
+                          placeholder={defaultRolePlaceholder(role, "systemPrompt")}
+                          onChange={(event) => setRoleValue(role, "systemPrompt", event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        {t("settings.prompts.roleUserLabel", "Användarprompt")}
+                        <textarea
+                          value={getRoleValue(role, "prompt")}
+                          placeholder={defaultRolePlaceholder(role, "prompt")}
+                          onChange={(event) => setRoleValue(role, "prompt", event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </details>
+                ))}
+              </div>
 
-        <div className="grid two">
-          <label>
-            {t("settings.prompts.notesCleanup", "Rensningsfraser: noteringar (en per rad)")}
-            <textarea
-              value={settings.prompts.notesCleanupPhrases}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    notesCleanupPhrases: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
+              <div className="grid two">
+                <label>
+                  {t("settings.prompts.summaryCleanup", "Rensningsfraser: sammanfattning (en per rad)")}
+                  <textarea
+                    value={getPromptValue("summaryCleanupPrefixes")}
+                    placeholder={isOverride ? settings.prompts.summaryCleanupPrefixes : undefined}
+                    onChange={(event) => setPromptValue("summaryCleanupPrefixes", event.target.value)}
+                  />
+                </label>
+                <label>
+                  {t("settings.prompts.keywordCleanup", "Rensningsord: sökord (en per rad)")}
+                  <textarea
+                    value={getPromptValue("keywordCleanupTerms")}
+                    placeholder={isOverride ? settings.prompts.keywordCleanupTerms : undefined}
+                    onChange={(event) => setPromptValue("keywordCleanupTerms", event.target.value)}
+                  />
+                </label>
+              </div>
 
-          <label>
-            {t("settings.prompts.photoCleanup", "Rensningsfraser: bildtext (en per rad)")}
-            <textarea
-              value={settings.prompts.photoSummaryCleanupPhrases}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  prompts: {
-                    ...current.prompts,
-                    photoSummaryCleanupPhrases: event.target.value
-                  }
-                }))
-              }
-            />
-          </label>
-        </div>
+              <div className="grid two">
+                <label>
+                  {t("settings.prompts.notesCleanup", "Rensningsfraser: noteringar (en per rad)")}
+                  <textarea
+                    value={getPromptValue("notesCleanupPhrases")}
+                    placeholder={isOverride ? settings.prompts.notesCleanupPhrases : undefined}
+                    onChange={(event) => setPromptValue("notesCleanupPhrases", event.target.value)}
+                  />
+                </label>
+                <label>
+                  {t("settings.prompts.photoCleanup", "Rensningsfraser: bildtext (en per rad)")}
+                  <textarea
+                    value={getPromptValue("photoSummaryCleanupPhrases")}
+                    placeholder={isOverride ? settings.prompts.photoSummaryCleanupPhrases : undefined}
+                    onChange={(event) => setPromptValue("photoSummaryCleanupPhrases", event.target.value)}
+                  />
+                </label>
+              </div>
+            </>
+          );
+        })()}
 
         {renderSaveRow(t("settings.prompts.save", "Spara promptar"))}
       </section>

@@ -4,7 +4,7 @@ import { listAvailablePrinterQueues } from "@/lib/cups-printers";
 import { fetchAvailableAlbums } from "@/lib/immich-albums";
 import { createTranslator, listAvailableLanguages } from "@/lib/i18n";
 import { readResolvedLanguageCatalog } from "@/lib/request-language";
-import { readAppSettings } from "@/lib/settings";
+import { getDefaultAppSettings, readAppSettings } from "@/lib/settings";
 import type { AvailableAlbum, AvailableModel, AvailablePrinter } from "@/lib/types";
 
 async function readInitialModels() {
@@ -77,6 +77,7 @@ export default async function SettingsPage() {
 
       <SettingsForm
         initialSettings={settings}
+        defaultPrompts={getDefaultAppSettings().prompts}
         initialModels={availableModels}
         initialAlbums={availableAlbums}
         initialPrinters={availablePrinters}

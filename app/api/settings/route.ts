@@ -86,8 +86,10 @@ export async function POST(request: Request) {
         summaryCleanupPrefixes: String(payload.prompts?.summaryCleanupPrefixes ?? "").trim(),
         keywordCleanupTerms: String(payload.prompts?.keywordCleanupTerms ?? "").trim(),
         notesCleanupPhrases: String(payload.prompts?.notesCleanupPhrases ?? "").trim(),
-        photoSummaryCleanupPhrases: String(payload.prompts?.photoSummaryCleanupPhrases ?? "").trim()
+        photoSummaryCleanupPhrases: String(payload.prompts?.photoSummaryCleanupPhrases ?? "").trim(),
+        photoRoleSpecificPrompts: payload.prompts?.photoRoleSpecificPrompts ?? previousSettings.prompts.photoRoleSpecificPrompts
       },
+      modelPrompts: payload.modelPrompts ?? previousSettings.modelPrompts ?? {},
       security: {
         publicApiKey: String(payload.security?.publicApiKey ?? previousSettings.security.publicApiKey ?? "").trim(),
         appBaseUrl: String(payload.security?.appBaseUrl ?? previousSettings.security.appBaseUrl ?? "").trim()

@@ -1,5 +1,38 @@
 # History
 
+## v1.5.0 - 2026-04-10
+
+Feature release focused on per-role prompts, per-model prompt overrides, and language-aware AI responses.
+
+### Per-photo-role prompts
+
+- Each photo type (`label`, `location`, `inside`, `spread`, `detail`) now has its own dedicated prompt pair (user prompt + system prompt).
+- When a photo has an assigned role, the app uses the role-specific prompt for that photo's analysis instead of the general photo prompt.
+- Per-role prompts are editable in `Settings → Prompts` under expandable sections for each role.
+
+### Per-model prompt overrides
+
+- Each AI model can have its own complete or partial set of prompts, keyed by `provider:model`.
+- Switching AI model in Settings automatically activates that model's saved prompts if a set exists.
+- Built-in default prompt sets are included for `openrouter:google/gemma-4-26b-a4b` and `openrouter:qwen/qwen3-vl-32b-instruct`.
+- The model selector in the Prompts section shows all saved model overrides and lets you add or remove them.
+- Empty fields in a model override inherit the default prompts.
+- A `Reset to defaults` button restores all default prompts to the built-in code values.
+
+### Language-aware AI responses
+
+- All AI responses now follow the app's configured language (`Settings → Appearance → Language`).
+- The language instruction is injected at the front of every system prompt and reinforced in every user prompt.
+- This applies to box analysis, per-photo analysis, public ask, and voice ask.
+- All default prompts are now written in English; the language is controlled dynamically at runtime.
+- System messages are now sent to OpenRouter and Open WebUI so that language and role instructions actually reach the model.
+
+### Settings and UX
+
+- The Prompts section now shows help text explaining what each prompt does.
+- The model selector in Prompts automatically switches to the active model's prompts when you change the AI provider or model.
+- `getEffectivePrompts` is now shared via `lib/config.ts` so both analysis and public-api flows benefit from model overrides.
+
 ## v1.4.4 - 2026-03-29
 
 Patch release focused on language override links and smoother settings behavior.

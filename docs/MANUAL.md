@@ -2,7 +2,7 @@
 
 This manual is intended for day-to-day use of the app. For technical details, see [README.md](../README.md).
 
-Current version: `v1.4.4`
+Current version: `v1.5.0`
 
 ## The Basic Idea
 
@@ -210,8 +210,6 @@ From the `Settings` page you can change:
 - a separate spoken-answer prompt for voice search
 - cleanup phrases and other filters that clean up AI output
 - public integration base URL and public API key under `Security`
-
-If the app was opened through a temporary language link such as `?lang=sv`, saving `Settings` clears that override and returns the browser to the normal saved app language.
 - download a backup
 - export the catalog to Excel
 - import a catalog from an exported Excel file
@@ -219,6 +217,51 @@ If the app was opened through a temporary language link such as `?lang=sv`, savi
 - choose the app language
 - open the translation tool
 - configure a separate AI model for translation drafts
+
+If the app was opened through a temporary language link such as `?lang=sv`, saving `Settings` clears that override and returns the browser to the normal saved app language.
+
+## Prompts
+
+The `Prompts` section in Settings lets you fine-tune every instruction sent to the AI model.
+
+### Per-photo-role prompts
+
+Each photo type has its own pair of prompts:
+
+- `Label` — reading box labels, shelf codes, and handwritten text
+- `Location` — describing where the box is stored
+- `Inside` — listing visible contents of the box
+- `Spread` — contents laid out flat on a surface
+- `Detail` — a close-up of a specific item or part
+
+When a photo has an assigned role, the app uses the matching role prompt. When no role is assigned yet (or for overview analysis), the general photo prompt is used.
+
+### Per-model prompt overrides
+
+Each AI model can have its own set of prompts.
+
+Switching AI model in `Settings → AI` automatically activates that model's saved prompts if a set exists. When you leave the model, the default prompts return.
+
+To create a new prompt set for a model:
+
+1. Set the AI provider and model in `Settings → AI`.
+2. Open `Settings → Prompts`.
+3. Click `+ Add [provider:model]`.
+4. Edit the prompts that need to differ from the default.
+5. Leave other fields empty — empty fields inherit the default.
+
+Two model-specific prompt sets are built in:
+
+- `openrouter:google/gemma-4-26b-a4b` — compact prompts with strict JSON-only enforcement.
+- `openrouter:qwen/qwen3-vl-32b-instruct` — leverages strong OCR with `/no_think` prefix to suppress thinking output.
+
+### Language
+
+All AI responses follow the `Language` setting in `Settings → Appearance`. The language instruction is injected automatically into every prompt — you do not need to translate the prompts themselves. The prompt text is always written in English regardless of the UI language.
+
+### Reset to defaults
+
+The `Reset to defaults` button (visible when `Default (all models)` is selected) restores all default prompts to the values built into the app code. You still need to click `Save` for the change to take effect.
 
 ## Translation Tool
 

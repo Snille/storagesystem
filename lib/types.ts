@@ -146,6 +146,19 @@ export type AiSettings = {
   openwebui: OpenWebUiSettings;
 };
 
+export type PhotoRolePromptPair = {
+  prompt: string;
+  systemPrompt: string;
+};
+
+export type PhotoRoleSpecificPrompts = {
+  label: PhotoRolePromptPair;
+  location: PhotoRolePromptPair;
+  inside: PhotoRolePromptPair;
+  spread: PhotoRolePromptPair;
+  detail: PhotoRolePromptPair;
+};
+
 export type PromptSettings = {
   boxAnalysisInstructions: string;
   publicAskSystemPrompt: string;
@@ -160,6 +173,7 @@ export type PromptSettings = {
   keywordCleanupTerms: string;
   notesCleanupPhrases: string;
   photoSummaryCleanupPhrases: string;
+  photoRoleSpecificPrompts: PhotoRoleSpecificPrompts;
 };
 
 export type LabelTemplate = {
@@ -194,12 +208,23 @@ export type SecuritySettings = {
   appBaseUrl: string;
 };
 
+export type ModelPromptOverride = Partial<Omit<PromptSettings, "photoRoleSpecificPrompts">> & {
+  photoRoleSpecificPrompts?: {
+    label?: Partial<PhotoRolePromptPair>;
+    location?: Partial<PhotoRolePromptPair>;
+    inside?: Partial<PhotoRolePromptPair>;
+    spread?: Partial<PhotoRolePromptPair>;
+    detail?: Partial<PhotoRolePromptPair>;
+  };
+};
+
 export type AppSettings = {
   appearance: AppearanceSettings;
   immich: ImmichSettings;
   ai: AiSettings;
   translationAi: AiSettings;
   prompts: PromptSettings;
+  modelPrompts: Record<string, ModelPromptOverride>;
   security: SecuritySettings;
   labels: LabelSettings;
 };

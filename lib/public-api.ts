@@ -1,4 +1,4 @@
-import { getAiConfig, getOpenRouterHeaders } from "@/lib/config";
+import { getAiConfig, getEffectivePrompts, getOpenRouterHeaders, languageNameForPrompt } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { createTranslator, readLanguageCatalogSync } from "@/lib/i18n";
@@ -161,6 +161,9 @@ async function askAiForInventoryAnswer(
 ) {
   const aiConfig = getAiConfig();
   const settings = readAppSettingsSync();
+  const effectivePrompts = getEffectivePrompts(settings);
+  const langCode = languageCode ?? settings.appearance.language ?? "en";
+  const langName = languageNameForPrompt(langCode);
   const context = matches.slice(0, 5).map((match) => ({
     label: match.label,
     location: `${match.location.system}, ${match.location.shelf}, ${match.location.slot}`,
@@ -169,19 +172,23 @@ async function askAiForInventoryAnswer(
   }));
 
   const immutableInstruction =
-    'Om du nämner en plats ska du alltid använda det mänskligt läsbara location-fältet exakt som det ges i kontexten. Nämn aldrig interna ID:n eller kodliknande värden som boxId, locationId eller strängar som liknar IVAR-B-H3-P1-A eller CABINET-A-H1-P1.';
+    langCode === "sv"
+      ? 'Om du nämner en plats ska du alltid använda det mänskligt läsbara location-fältet exakt som det ges i kontexten. Nämn aldrig interna ID:n eller kodliknande värden som boxId, locationId eller strängar som liknar IVAR-B-H3-P1-A eller CABINET-A-H1-P1.'
+      : langCode === "de"
+        ? 'Wenn du einen Ort nennst, verwende immer das menschenlesbare location-Feld genau wie es im Kontext angegeben ist. Nenne niemals interne IDs oder kodeartige Werte wie boxId, locationId oder Zeichenfolgen wie IVAR-B-H3-P1-A oder CABINET-A-H1-P1.'
+        : 'When mentioning a location, always use the human-readable location field exactly as given in the context. Never mention internal IDs or code-like values such as boxId, locationId, or strings resembling IVAR-B-H3-P1-A or CABINET-A-H1-P1.';
 
-  const systemText =
-    `${
-      (mode === "voice" ? settings.prompts.voiceAskSystemPrompt : settings.prompts.publicAskSystemPrompt)?.trim() ||
-      (mode === "voice"
-        ? 'Du svarar på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Svara naturligt och uppläsningsvänligt i 1 till 2 korta meningar. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}'
-        : 'Du svarar kort på svenska om var saker finns i en verkstad. Använd endast den givna kontexten. Om träffarna är osäkra, säg det. Hitta inte på lådor eller platser. Svara endast som JSON på formen {"answer":"..."}')
-    }\n\n${immutableInstruction}`;
+  const baseSystemPrompt =
+    (mode === "voice" ? effectivePrompts.voiceAskSystemPrompt : effectivePrompts.publicAskSystemPrompt)?.trim() ||
+    (mode === "voice"
+      ? 'You answer questions about where things are stored in a workshop. Use only the provided context. Answer naturally in 1 to 2 short sentences. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}'
+      : 'You answer briefly about where things are stored in a workshop. Use only the provided context. If the matches are uncertain, say so. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}');
+
+  const systemText = `You must answer in ${langName}. Do not use any other language.\n\n${baseSystemPrompt}\n\n${immutableInstruction}`;
   const userText = [
-    `Fråga: ${query}`,
+    `Query: ${query}`,
     "",
-    "Kandidater:",
+    "Candidates:",
     JSON.stringify(context, null, 2),
   ].join("\n");
 

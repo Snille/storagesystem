@@ -1,6 +1,47 @@
 import { readAppSettingsSync } from "@/lib/settings";
+import type { AppSettings } from "@/lib/types";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+
+export function languageNameForPrompt(code?: string): string {
+  if (code === "sv") return "Swedish";
+  if (code === "de") return "German";
+  return "English";
+}
+
+export function getEffectivePrompts(settings: AppSettings) {
+  const aiConfig = getAiConfig();
+  const key = `${aiConfig.provider}:${aiConfig.model}`;
+  const override = settings.modelPrompts?.[key] ?? {};
+  return {
+    ...settings.prompts,
+    ...override,
+    photoRoleSpecificPrompts: {
+      ...settings.prompts.photoRoleSpecificPrompts,
+      ...(override.photoRoleSpecificPrompts ?? {}),
+      label: {
+        ...settings.prompts.photoRoleSpecificPrompts.label,
+        ...(override.photoRoleSpecificPrompts?.label ?? {})
+      },
+      location: {
+        ...settings.prompts.photoRoleSpecificPrompts.location,
+        ...(override.photoRoleSpecificPrompts?.location ?? {})
+      },
+      inside: {
+        ...settings.prompts.photoRoleSpecificPrompts.inside,
+        ...(override.photoRoleSpecificPrompts?.inside ?? {})
+      },
+      spread: {
+        ...settings.prompts.photoRoleSpecificPrompts.spread,
+        ...(override.photoRoleSpecificPrompts?.spread ?? {})
+      },
+      detail: {
+        ...settings.prompts.photoRoleSpecificPrompts.detail,
+        ...(override.photoRoleSpecificPrompts?.detail ?? {})
+      }
+    }
+  };
+}
 
 export function getOpenRouterHeaders(title: string) {
   const settings = readAppSettingsSync();

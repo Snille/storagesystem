@@ -1,4 +1,4 @@
-import { getAiConfig, getImmichConfig, getOpenRouterHeaders } from "@/lib/config";
+import { getAiConfig, getEffectivePrompts, getImmichConfig, getOpenRouterHeaders, languageNameForPrompt } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
 import { fetchAlbumAssets } from "@/lib/immich";
 import { buildLocationId, normalizeLocationUnit, parseBoxId, parseLocationId } from "@/lib/location-schema";
@@ -1240,9 +1240,10 @@ async function inferPhotoRoles(
   onProgress?: AnalysisProgressCallback
 ): Promise<AnalysisSuggestion["suggestedPhotos"]> {
   const settings = readAppSettingsSync();
+  const effectivePromptsForRoles = getEffectivePrompts(settings);
   const roleResults: AnalysisSuggestion["suggestedPhotos"] = [];
-  const rolePrompt = settings.prompts.photoRolePrompt;
-  const roleSystemPrompt = settings.prompts.photoRoleSystemPrompt;
+  const rolePrompt = effectivePromptsForRoles.photoRolePrompt;
+  const roleSystemPrompt = effectivePromptsForRoles.photoRoleSystemPrompt;
 
   await onProgress?.("Klassificerar bildroller...");
 
@@ -1544,7 +1545,9 @@ function parseSinglePhotoSummaryResponse(responseText: string) {
 
 export async function analyzeSinglePhoto(
   assetId: string,
-  onProgress?: AnalysisProgressCallback
+  onProgress?: AnalysisProgressCallback,
+  photoRole?: PhotoRole,
+  language?: string
 ): Promise<string> {
   const aiConfig = getAiConfig();
   const settings = readAppSettingsSync();
@@ -1560,8 +1563,13 @@ export async function analyzeSinglePhoto(
       throw new Error("API-nyckel saknas för vald AI-motor.");
     }
   }
-  const summaryPrompt = settings.prompts.photoSummaryPrompt;
-  const summarySystemPrompt = settings.prompts.photoSummarySystemPrompt;
+  const effectivePrompts = getEffectivePrompts(settings);
+  const roleSpecific = photoRole ? effectivePrompts.photoRoleSpecificPrompts[photoRole] : null;
+  const basePrompt = roleSpecific?.prompt || effectivePrompts.photoSummaryPrompt;
+  const langName = languageNameForPrompt(language ?? settings.appearance.language);
+  const langInstruction = `You must respond in ${langName}. Do not use any other language.`;
+  const summarySystemPrompt = langInstruction + "\n" + (roleSpecific?.systemPrompt || effectivePrompts.photoSummarySystemPrompt);
+  const summaryPrompt = basePrompt + `\n\nIMPORTANT: Write your entire response in ${langName}.`;
 
   try {
     await onProgress?.("Hämtar bild från Immich...");
@@ -1584,6 +1592,10 @@ export async function analyzeSinglePhoto(
           ? await sendAiRequest(aiConfig, {
               model: aiConfig.model,
               messages: [
+                {
+                  role: "system",
+                  content: summarySystemPrompt
+                },
                 {
                   role: "user",
                   content: [
@@ -1639,14 +1651,18 @@ export async function analyzeSinglePhoto(
       await onProgress?.("Första svaret var otydligt. Försöker igen...");
       const relaxedPrompt = `${summaryPrompt}
 
-Var pragmatisk. Svara med ett enda JSON-objekt på formen {"summary":"..."}.
-Om du inte kan identifiera allt, skriv ändå en kort svensk beskrivning av det mest synliga i bilden.`;
+Be pragmatic. Reply only with a single JSON object on the form {"summary":"..."}.
+If you cannot identify everything, write a short description of the most visible content in ${langName}.`;
       const relaxedResponseText = await sendAiRequest(
         aiConfig,
         aiConfig.provider === "openrouter" || aiConfig.provider === "openwebui"
           ? {
               model: aiConfig.model,
               messages: [
+                {
+                  role: "system",
+                  content: summarySystemPrompt
+                },
                 {
                   role: "user",
                   content: [
@@ -1761,8 +1777,12 @@ async function buildOpenAiSuggestion(
     }
   };
 
-  const instructions = settings.prompts.boxAnalysisInstructions;
-  const summaryCleanupPrefixes = parseSummaryCleanupPrefixes(settings.prompts.summaryCleanupPrefixes);
+  const effectivePrompts = getEffectivePrompts(settings);
+  const langName = languageNameForPrompt(settings.appearance.language);
+  const langInstruction = `You must write suggestedSummary, suggestedLabel, and suggestedKeywords in ${langName}. Do not use any other language for these fields.`;
+  const boxSystemPrompt = langInstruction + "\n" + effectivePrompts.anthropicBoxSystemPrompt;
+  const instructions = effectivePrompts.boxAnalysisInstructions + `\n\nIMPORTANT: Write suggestedSummary, suggestedLabel, and suggestedKeywords in ${langName}.`;
+  const summaryCleanupPrefixes = parseSummaryCleanupPrefixes(effectivePrompts.summaryCleanupPrefixes);
   await onProgress?.("Förbereder bilder och katalog för analys...");
 
   const textPart = {
@@ -1792,7 +1812,7 @@ async function buildOpenAiSuggestion(
   const responseText =
     aiConfig.provider === "anthropic"
       ? await sendAnthropicRequest(aiConfig, {
-          system: settings.prompts.anthropicBoxSystemPrompt,
+          system: boxSystemPrompt,
           userText: `${textPart.text}\n\nJSON-schema:\n${JSON.stringify(schema.schema)}`,
           images: await Promise.all(assets.map((asset) => fetchAssetImagePayload(asset.id))),
           maxTokens: 1400
@@ -1801,6 +1821,10 @@ async function buildOpenAiSuggestion(
         ? await sendAiRequest(aiConfig, {
             model: aiConfig.model,
             messages: [
+              {
+                role: "system",
+                content: boxSystemPrompt
+              },
               {
                 role: "user",
                 content: [
@@ -1845,10 +1869,10 @@ async function buildOpenAiSuggestion(
     await onProgress?.("Första svaret var otydligt. Försöker igen med enklare instruktion...");
     const relaxedPrompt = `${instructions}
 
-Svara med ett enda JSON-objekt.
-Var pragmatisk: hellre ett kort användbart förslag än tomma fält.
-Om du är osäker på box_id, lämna det tomt men försök ändå ge label, plats, summary och keywords.
-JSON-fält: suggestedBoxId, suggestedLabel, suggestedLocationId, suggestedSummary, suggestedKeywords, suggestedNotes, confidence, suggestedPhotos.
+Reply with a single JSON object. Be pragmatic — a short useful suggestion is better than empty fields.
+If unsure about box_id, leave it empty but still provide label, location, summary, and keywords.
+JSON fields: suggestedBoxId, suggestedLabel, suggestedLocationId, suggestedSummary, suggestedKeywords, suggestedNotes, confidence, suggestedPhotos.
+Always write suggestedSummary, suggestedLabel, and suggestedKeywords in ${langName}.
 `;
     const relaxedResponseText = await sendAiRequest(
       aiConfig,

@@ -37,6 +37,42 @@ const aiSettingsSchema = z.object({
   })
 });
 
+const photoRolePromptPairSchema = z.object({
+  prompt: z.string(),
+  systemPrompt: z.string()
+});
+
+const photoRoleSpecificPromptsSchema = z.object({
+  label: photoRolePromptPairSchema,
+  location: photoRolePromptPairSchema,
+  inside: photoRolePromptPairSchema,
+  spread: photoRolePromptPairSchema,
+  detail: photoRolePromptPairSchema
+});
+
+const modelPromptOverrideSchema = z.object({
+  boxAnalysisInstructions: z.string().optional(),
+  publicAskSystemPrompt: z.string().optional(),
+  voiceAskSystemPrompt: z.string().optional(),
+  photoRolePrompt: z.string().optional(),
+  photoRoleSystemPrompt: z.string().optional(),
+  photoSummaryPrompt: z.string().optional(),
+  photoSummarySystemPrompt: z.string().optional(),
+  anthropicBoxSystemPrompt: z.string().optional(),
+  translationDraftSystemPrompt: z.string().optional(),
+  summaryCleanupPrefixes: z.string().optional(),
+  keywordCleanupTerms: z.string().optional(),
+  notesCleanupPhrases: z.string().optional(),
+  photoSummaryCleanupPhrases: z.string().optional(),
+  photoRoleSpecificPrompts: z.object({
+    label: photoRolePromptPairSchema.partial().optional(),
+    location: photoRolePromptPairSchema.partial().optional(),
+    inside: photoRolePromptPairSchema.partial().optional(),
+    spread: photoRolePromptPairSchema.partial().optional(),
+    detail: photoRolePromptPairSchema.partial().optional()
+  }).optional()
+});
+
 const settingsSchema = z.object({
   appearance: z.object({
     theme: z.enum(["auto", "light", "dark"]),
@@ -67,8 +103,10 @@ const settingsSchema = z.object({
     summaryCleanupPrefixes: z.string(),
     keywordCleanupTerms: z.string(),
     notesCleanupPhrases: z.string(),
-    photoSummaryCleanupPhrases: z.string()
+    photoSummaryCleanupPhrases: z.string(),
+    photoRoleSpecificPrompts: photoRoleSpecificPromptsSchema
   }),
+  modelPrompts: z.record(z.string(), modelPromptOverrideSchema).default({}),
   security: z.object({
     publicApiKey: z.string(),
     appBaseUrl: z.string()
@@ -241,23 +279,23 @@ export function getDefaultAppSettings(): AppSettings {
         "Reply only with JSON that follows the schema."
       ].join(" "),
       publicAskSystemPrompt: [
-        "Du svarar kort på svenska om var saker finns i en verkstad eller ett lagersystem.",
-        "Använd endast den givna kontexten.",
-        "Om träffarna är osäkra, säg det tydligt.",
-        "Hitta inte på lådor, platser eller innehåll som inte finns i kontexten.",
-        "Om flera kandidater verkar rimliga kan du nämna de tydligaste alternativen kort.",
-        "Svara kort och naturligt, lämpat för uppläsning i en röstassistent.",
-        'Svara endast som JSON på formen {"answer":"..."}.'
+        "You answer briefly about where items are stored in a workshop or storage system.",
+        "Use only the provided context.",
+        "If matches are uncertain, say so clearly.",
+        "Do not invent boxes, locations, or contents not found in the context.",
+        "If several candidates seem plausible, briefly mention the most likely ones.",
+        "Keep your answer short and natural.",
+        'Reply only as JSON on the form {"answer":"..."}.'
       ].join(" "),
       voiceAskSystemPrompt: [
-        "Du svarar på svenska om var saker finns i en verkstad eller ett lagersystem.",
-        "Använd endast den givna kontexten.",
-        "Om träffarna är osäkra, säg det tydligt.",
-        "Hitta inte på lådor, platser eller innehåll som inte finns i kontexten.",
-        "Svarstonen ska vara lite trevligare och mer naturlig för uppläsning.",
-        "Svara helst i 1 till 2 korta meningar, inte bara som en staplad platsrad.",
-        "Om flera kandidater verkar rimliga kan du kort nämna den tydligaste och att det finns fler möjliga träffar.",
-        'Svara endast som JSON på formen {"answer":"..."}.'
+        "You answer questions about where items are stored in a workshop or storage system.",
+        "Use only the provided context.",
+        "If matches are uncertain, say so clearly.",
+        "Do not invent boxes, locations, or contents not found in the context.",
+        "Use a friendly, natural tone suited for being read aloud.",
+        "Answer in 1 to 2 short sentences, not just a location string.",
+        "If several candidates seem plausible, briefly mention the most likely one and note that there are more.",
+        'Reply only as JSON on the form {"answer":"..."}.'
       ].join(" "),
       photoRolePrompt: [
         "Classify exactly one image of a storage box or workshop box.",
@@ -271,7 +309,6 @@ export function getDefaultAppSettings(): AppSettings {
       photoSummaryPrompt: [
         "Analyze exactly one image from a storage box or workshop box.",
         "Describe only what is visible in this specific image.",
-        "Write in the app's current UI language when possible, otherwise use English.",
         "Do not mention OCR, catalog matching, or your reasoning.",
         "If the image shows the inside of the box, describe the visible objects briefly and concretely.",
         "If the image shows a label, describe what kind of box it appears to be.",
@@ -328,7 +365,63 @@ export function getDefaultAppSettings(): AppSettings {
         "ocr läser",
         "matchar katalogen",
         "katalogen"
-      ].join("\n")
+      ].join("\n"),
+      photoRoleSpecificPrompts: {
+        label: {
+          systemPrompt: "You describe workshop and storage images briefly and reply only with JSON.",
+          prompt: [
+            "Analyze exactly one image showing the label or front of a storage box.",
+            "Focus on reading all visible text: label name, shelf marker, location codes, handwritten notes.",
+            "Use OCR-like interpretation of all text in the image.",
+            "Describe what the label says and what kind of box this appears to be.",
+            "Write your response in the language specified in the system prompt.",
+            "Do not mention OCR, catalog matching, or your reasoning.",
+            'Reply with JSON in the form {"summary":"..."}.'
+          ].join(" ")
+        },
+        location: {
+          systemPrompt: "You describe workshop and storage images briefly and reply only with JSON.",
+          prompt: [
+            "Analyze exactly one image showing the storage location of a box.",
+            "Read all visible shelf labels, row numbers, slot markers, and position codes.",
+            "Describe where this box is located as precisely as the image allows.",
+            "Write your response in the language specified in the system prompt.",
+            "Do not mention OCR, catalog matching, or your reasoning.",
+            'Reply with JSON in the form {"summary":"..."}.'
+          ].join(" ")
+        },
+        inside: {
+          systemPrompt: "You describe workshop and storage images briefly and reply only with JSON.",
+          prompt: [
+            "Analyze exactly one image showing the inside contents of a storage box.",
+            "List the visible objects, tools, components, cables, or materials concretely and briefly.",
+            "Focus on what you can identify, not on what might be there.",
+            "Write your response in the language specified in the system prompt.",
+            "Do not mention OCR, catalog matching, or your reasoning.",
+            'Reply with JSON in the form {"summary":"..."}.'
+          ].join(" ")
+        },
+        spread: {
+          systemPrompt: "You describe workshop and storage images briefly and reply only with JSON.",
+          prompt: [
+            "Analyze exactly one image showing the contents of a storage box spread out or laid flat.",
+            "List the visible objects, tools, components, and materials as concretely as possible.",
+            "Write your response in the language specified in the system prompt.",
+            "Do not mention OCR, catalog matching, or your reasoning.",
+            'Reply with JSON in the form {"summary":"..."}.'
+          ].join(" ")
+        },
+        detail: {
+          systemPrompt: "You describe workshop and storage images briefly and reply only with JSON.",
+          prompt: [
+            "Analyze exactly one detail image of a storage box item.",
+            "Describe what is shown in this specific detail shot: type, markings, model numbers, connectors, or condition.",
+            "Write your response in the language specified in the system prompt.",
+            "Do not mention OCR, catalog matching, or your reasoning.",
+            'Reply with JSON in the form {"summary":"..."}.'
+          ].join(" ")
+        }
+      }
     },
     security: {
       publicApiKey: process.env.LAGERSYSTEM_API_KEY || "",
@@ -336,6 +429,194 @@ export function getDefaultAppSettings(): AppSettings {
     },
     ai: defaultAiSettings,
     translationAi: defaultAiSettings,
+    modelPrompts: {
+      "openrouter:google/gemma-4-26b-a4b": {
+        boxAnalysisInstructions: [
+          "You analyze photos of storage boxes. Reply ONLY with a JSON object matching the given schema. No text, explanation, or markdown outside the JSON.",
+          "Inspect all images carefully. Look for: text on labels, handwritten notes, shelf markers, location codes.",
+          "Also identify visible objects, tools, cables, connectors, and materials.",
+          "Assign a photoRole to each image. Use \"label\" only when a label or location tag is clearly the main subject.",
+          "Use \"inside\" or \"spread\" when contents are shown, even if a small edge label is incidentally visible.",
+          "Use \"location\" when the image primarily shows the storage position.",
+          "If unsure between \"label\" and \"inside\", choose \"inside\".",
+          "A catalog of known boxes is provided. Reuse box_id, label, and location only when visible text in the images confirms the match.",
+          "If OCR text contradicts the catalog location, do not reuse the box_id. If no match is credible, leave suggestedBoxId empty.",
+          "Always provide suggestedSummary (one sentence), 3–8 specific suggestedKeywords, and leave suggestedNotes empty unless genuinely uncertain.",
+          "Reply ONLY with the JSON object."
+        ].join(" "),
+        photoRoleSystemPrompt: "You classify storage images. Reply ONLY with JSON. No text outside the JSON object.",
+        photoRolePrompt: [
+          "Classify this image. Choose one photoRole: label, location, inside, spread, detail.",
+          "Use \"label\" only when a label or location tag is the clear main subject.",
+          "Use \"inside\" or \"spread\" for content images even if a small label is visible.",
+          "If unsure between \"label\" and \"inside\", choose \"inside\".",
+          'Reply ONLY with JSON: {"photoRole":"inside"}'
+        ].join(" "),
+        publicAskSystemPrompt: [
+          "You answer questions about where items are stored in a workshop or storage system.",
+          "Use only the provided context. If matches are uncertain, say so.",
+          "Do not invent boxes, locations, or contents.",
+          "Keep answers short and natural.",
+          "Answer in the same language as the question (Swedish, English, or German).",
+          'Reply ONLY as JSON: {"answer":"..."}'
+        ].join(" "),
+        voiceAskSystemPrompt: [
+          "You answer questions about where items are stored in a workshop or storage system.",
+          "Use only the provided context. If uncertain, say so.",
+          "Do not invent anything not in the context.",
+          "Answer in 1–2 natural sentences suited for being read aloud.",
+          "Answer in the same language as the question (Swedish, English, or German).",
+          'Reply ONLY as JSON: {"answer":"..."}'
+        ].join(" "),
+        photoSummarySystemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+        photoSummaryPrompt: [
+          "Describe what is visible in this image of a storage box. Be concrete and brief.",
+          "Write your response in the language specified in the system prompt.",
+          'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+        ].join(" "),
+        anthropicBoxSystemPrompt: "You analyze storage and workshop boxes. Reply ONLY with a JSON object. No text outside the JSON.",
+        photoRoleSpecificPrompts: {
+          label: {
+            systemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+            prompt: [
+              "Read all visible text in this image of a storage box label: label name, shelf code, location marker, handwritten notes.",
+              "Describe what the label says and what kind of box this appears to be.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+            ].join(" ")
+          },
+          location: {
+            systemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+            prompt: [
+              "Read all location identifiers in this image: shelf labels, row numbers, slot markers, rack codes.",
+              "Describe where this box is located as precisely as possible.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+            ].join(" ")
+          },
+          inside: {
+            systemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+            prompt: [
+              "List the visible objects inside this storage box: tools, components, cables, packages, materials. Be specific and concrete.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+            ].join(" ")
+          },
+          spread: {
+            systemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+            prompt: [
+              "List all visible objects spread out in this image. Name each item specifically.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+            ].join(" ")
+          },
+          detail: {
+            systemPrompt: "You analyze storage images. Reply ONLY with JSON. No text outside the JSON object.",
+            prompt: [
+              "Describe what is shown in this detail image: item type, markings, model numbers, connectors, or condition. Be specific.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}. No text outside the JSON.'
+            ].join(" ")
+          }
+        }
+      },
+      "openrouter:qwen/qwen3-vl-32b-instruct": {
+        boxAnalysisInstructions: [
+          "/no_think You analyze photos of storage boxes and workshop boxes. Reply ONLY with a JSON object matching the given schema.",
+          "Apply precise OCR to all visible text in every image: label text, handwritten notes, shelf codes, slot numbers, stickers, barcodes, and any text on objects inside the box.",
+          "Also identify visible objects, tools, electronic components, cables (note connector types when readable), and materials — be as specific as possible.",
+          "Assign a photoRole to each image: use \"label\" only when a label or location tag is clearly the main subject and its text is readable.",
+          "Use \"inside\" or \"spread\" for content images even when a small edge label is incidentally visible.",
+          "Use \"location\" when the image primarily shows the shelf or storage position.",
+          "If unsure between \"label\" and \"inside\", choose \"inside\".",
+          "A catalog of known boxes is provided. Reuse box_id, label, and location only when OCR-read text and visible markers confirm the catalog entry.",
+          "If OCR reads a different shelf or slot than the catalog, do not reuse the box_id. If no catalog match is credible, leave suggestedBoxId empty.",
+          "Always output: suggestedSummary (one precise sentence), 3–8 specific suggestedKeywords (prefer technical terms), suggestedNotes only when genuinely uncertain.",
+          "Reply ONLY with the JSON object."
+        ].join(" "),
+        photoRoleSystemPrompt: "You classify storage images and reply ONLY with valid JSON. Do not include thinking, explanation, or any text outside the JSON object.",
+        photoRolePrompt: [
+          "/no_think Classify this image. Choose exactly one photoRole: label, location, inside, spread, or detail.",
+          "Use \"label\" only when a label or location tag is clearly the main subject with readable text.",
+          "Use \"inside\" or \"spread\" for content images even if a small label is visible.",
+          "Use \"location\" when the image primarily shows the storage position.",
+          "If unsure between \"label\" and \"inside\", choose \"inside\".",
+          'Reply ONLY with JSON: {"photoRole":"inside"}'
+        ].join(" "),
+        publicAskSystemPrompt: [
+          "/no_think You answer questions about where items are stored in a workshop or storage system.",
+          "Use only the provided context. If matches are uncertain, say so clearly.",
+          "Do not invent boxes, locations, or contents not in the context.",
+          "Answer concisely in the same language as the question (Swedish, English, or German).",
+          'Reply ONLY as JSON: {"answer":"..."}'
+        ].join(" "),
+        voiceAskSystemPrompt: [
+          "/no_think You answer questions about where items are stored in a workshop or storage system.",
+          "Use only the provided context. If uncertain, say so.",
+          "Do not invent anything not in the context.",
+          "Answer in 1–2 natural sentences suited for text-to-speech.",
+          "Answer in the same language as the question (Swedish, English, or German).",
+          'Reply ONLY as JSON: {"answer":"..."}'
+        ].join(" "),
+        photoSummarySystemPrompt: "You are a precise image analysis assistant with strong OCR capabilities. Reply ONLY with valid JSON. Do not include thinking, explanation, or any text outside the JSON object.",
+        photoSummaryPrompt: [
+          "/no_think Analyze this storage image. Describe what is visible concretely. Read any visible text using OCR.",
+          "Write your response in the language specified in the system prompt.",
+          'Reply ONLY with JSON: {"summary":"..."}'
+        ].join(" "),
+        anthropicBoxSystemPrompt: "You are a precise image analysis assistant with strong OCR capabilities. Reply ONLY with a JSON object. Do not include thinking, explanation, or any text outside the JSON.",
+        photoRoleSpecificPrompts: {
+          label: {
+            systemPrompt: "You are a precise OCR and image analysis assistant. Reply ONLY with valid JSON. No thinking, explanation, or text outside the JSON.",
+            prompt: [
+              "/no_think Apply precise OCR to this storage box label image.",
+              "Transcribe all readable text: label name, shelf code, location marker, handwritten notes, sticker text, any alphanumeric codes.",
+              "Then describe what kind of box this appears to be based on what you read.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}'
+            ].join(" ")
+          },
+          location: {
+            systemPrompt: "You are a precise OCR and image analysis assistant. Reply ONLY with valid JSON. No thinking, explanation, or text outside the JSON.",
+            prompt: [
+              "/no_think Read all location identifiers in this image using OCR: shelf labels, row numbers, slot markers, rack codes, position tags.",
+              "Describe the storage location as precisely as the image allows.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}'
+            ].join(" ")
+          },
+          inside: {
+            systemPrompt: "You are a precise image analysis assistant. Reply ONLY with valid JSON. No thinking, explanation, or text outside the JSON.",
+            prompt: [
+              "/no_think Identify all visible objects inside this storage box.",
+              "Name each item specifically: tools (with type), electronic components (with type/connector), cables (with connector types if readable), packages, and materials.",
+              "Also read any visible text on items using OCR.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}'
+            ].join(" ")
+          },
+          spread: {
+            systemPrompt: "You are a precise image analysis assistant. Reply ONLY with valid JSON. No thinking, explanation, or text outside the JSON.",
+            prompt: [
+              "/no_think Identify all visible objects spread out in this image.",
+              "Name each item with as much specificity as possible: type, subtype, connector types, visible markings. Read any text using OCR.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}'
+            ].join(" ")
+          },
+          detail: {
+            systemPrompt: "You are a precise OCR and image analysis assistant. Reply ONLY with valid JSON. No thinking, explanation, or text outside the JSON.",
+            prompt: [
+              "/no_think Examine this detail image closely.",
+              "Apply OCR to read any markings, model numbers, serial numbers, specifications, or codes.",
+              "Describe the item type, its identifiable characteristics, and condition.",
+              "Write your response in the language specified in the system prompt.",
+              'Reply ONLY with JSON: {"summary":"..."}'
+            ].join(" ")
+          }
+        }
+      }
+    },
     labels: getDefaultLabelSettings()
   };
 }
@@ -358,7 +639,35 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
     },
     prompts: {
       ...base.prompts,
-      ...(input?.prompts ?? {})
+      ...(input?.prompts ?? {}),
+      photoRoleSpecificPrompts: {
+        ...base.prompts.photoRoleSpecificPrompts,
+        ...(input?.prompts?.photoRoleSpecificPrompts ?? {}),
+        label: {
+          ...base.prompts.photoRoleSpecificPrompts.label,
+          ...(input?.prompts?.photoRoleSpecificPrompts?.label ?? {})
+        },
+        location: {
+          ...base.prompts.photoRoleSpecificPrompts.location,
+          ...(input?.prompts?.photoRoleSpecificPrompts?.location ?? {})
+        },
+        inside: {
+          ...base.prompts.photoRoleSpecificPrompts.inside,
+          ...(input?.prompts?.photoRoleSpecificPrompts?.inside ?? {})
+        },
+        spread: {
+          ...base.prompts.photoRoleSpecificPrompts.spread,
+          ...(input?.prompts?.photoRoleSpecificPrompts?.spread ?? {})
+        },
+        detail: {
+          ...base.prompts.photoRoleSpecificPrompts.detail,
+          ...(input?.prompts?.photoRoleSpecificPrompts?.detail ?? {})
+        }
+      }
+    },
+    modelPrompts: {
+      ...base.modelPrompts,
+      ...(input?.modelPrompts ?? {})
     },
     security: {
       ...base.security,

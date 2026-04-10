@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { analyzeSinglePhoto } from "@/lib/analysis";
-import { updatePhotoNotes } from "@/lib/data-store";
+import { readInventoryData, updatePhotoNotes } from "@/lib/data-store";
 import {
   completePhotoAnalysisJob,
   createPhotoAnalysisJob,
@@ -8,6 +8,8 @@ import {
   getAnalysisJob,
   updateAnalysisJob
 } from "@/lib/analysis-jobs";
+import { readResolvedLanguageCode } from "@/lib/request-language";
+import { readAppSettings } from "@/lib/settings";
 
 export async function POST(request: Request) {
   try {
@@ -25,13 +27,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ summary: "" });
     }
 
+    const settings = await readAppSettings();
+    const language = await readResolvedLanguageCode(settings.appearance.language ?? "en");
+    const data = await readInventoryData();
+    const photoRecord = photoId ? data.photos.find((p) => p.photoId === photoId) : undefined;
+    const photoRole = photoRecord?.photoRole;
+
     const job = createPhotoAnalysisJob("Köar bildanalys...");
     void (async () => {
       try {
         updateAnalysisJob(job.jobId, { phase: "running", message: "Startar bildanalys..." });
         const summary = await analyzeSinglePhoto(assetId, async (message) => {
           updateAnalysisJob(job.jobId, { phase: "running", message });
-        });
+        }, photoRole, language);
         if (photoId) {
           await updatePhotoNotes({ photoId, notes: summary });
         }
