@@ -4,7 +4,7 @@ Practical day-to-day usage is described in [MANUAL.md](./docs/MANUAL.md). This R
 
 Planned next steps are collected in [TODO.md](./docs/TODO.md).
 
-Current version: `v1.4.4`
+Current version: `v1.5.0`
 
 A web app for inventorying workshop / shed / house boxes and storage places with an album-based photo source, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
