@@ -1,5 +1,22 @@
 # History
 
+## v1.5.1 - 2026-07-07
+
+Patch release fixing Immich v3 compatibility and hardening live deployment.
+
+### Immich integration
+
+- Fixed photo fetching against Immich server v3.0.1+, which removed the embedded `assets` array from `GET /albums/{id}` and changed the thumbnail query parameters. Album assets are now fetched via paginated `POST /search/metadata` for API-key access, and via `GET /shared-links/me` for share-key access.
+- Fixed a share-key bug where the adapter sent a nonstandard `x-share-key` header instead of the `key` query parameter Immich actually expects.
+- Album owner name now reads from the current `albumUsers` field instead of the removed `owner` field.
+
+### Deployment
+
+- The live server (`/opt/lagersystem`) is now a real git checkout of `origin/main` instead of manually copied files. `scripts/deploy_safe.sh` pulls, builds, and restarts in one step, so a deploy is just "push to GitHub, then run the script."
+- The deploy script now uses `sudo -n systemctl restart` so it no longer needs a manual follow-up restart.
+- Added `.gitattributes` (`*.sh text eol=lf`) and switched local git to `core.autocrlf=input` to stop Windows CRLF line endings from leaking into shell scripts deployed to Linux.
+- Removed a few orphaned pre-refactor files left over from before the server tracked git (`app/boxes/new/actions.ts`, `app/components/globals.css`, `app/label-editor.tsx`).
+
 ## v1.5.0 - 2026-04-10
 
 Feature release focused on per-role prompts, per-model prompt overrides, and language-aware AI responses.
