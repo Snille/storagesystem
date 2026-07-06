@@ -3,10 +3,25 @@ set -euo pipefail
 
 APP_DIR="${1:-/opt/lagersystem}"
 SERVICE_NAME="${2:-lagersystem.service}"
+BRANCH="${3:-main}"
 STAGING_DIR=".next-deploy"
 PREVIOUS_DIR=".next-prev"
 
 cd "$APP_DIR"
+
+echo "[deploy] fetching origin/${BRANCH}"
+git fetch origin "$BRANCH"
+
+echo "[deploy] checking for live-only tracked edits in data/languages"
+if ! git diff --quiet origin/"$BRANCH" -- data/languages; then
+  echo "[deploy] ABORT: data/languages differs from origin/${BRANCH}."
+  echo "[deploy] Someone likely edited translations live via Settings > Translations."
+  echo "[deploy] Commit/export those changes first, or the reset below will overwrite them."
+  exit 1
+fi
+
+echo "[deploy] resetting working tree to origin/${BRANCH}"
+git reset --hard origin/"$BRANCH"
 
 echo "[deploy] building into ${STAGING_DIR}"
 rm -rf "$STAGING_DIR"
