@@ -20,7 +20,7 @@ fi
 mv "$STAGING_DIR" ".next"
 
 echo "[deploy] restarting ${SERVICE_NAME}"
-systemctl restart "$SERVICE_NAME"
+sudo -n systemctl restart "$SERVICE_NAME"
 sleep 3
 systemctl is-active --quiet "$SERVICE_NAME"
 
