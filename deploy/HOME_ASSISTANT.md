@@ -1,5 +1,18 @@
 # Home Assistant Integration
 
+> **The recommended way is now the HACS integration:**
+> [Snille/storagesystem-ha](https://github.com/Snille/storagesystem-ha)
+>
+> It installs through HACS, is configured in the UI instead of `secrets.yaml`,
+> replaces the helper entities with real sensors that are not capped at 255
+> characters, replaces the two scripts with `storagesystem.ask` and
+> `storagesystem.search`, and ships the search card so nothing has to be copied
+> into `/config/www`. Automations listening for `lagersystem_result` keep
+> working unchanged.
+>
+> The YAML package below is kept for setups that do not use HACS. See the
+> migration section in the integration's README when moving over.
+
 This app exposes a public REST API that works well with Home Assistant.
 
 ## Files
