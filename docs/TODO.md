@@ -38,5 +38,14 @@
 ## General
 
 - Continue scanning for remaining hardcoded UI strings during normal usage.
-- Split `app/settings/settings-form.tsx` and `app/labels/label-editor.tsx` into one component per section; verify each section in the browser.
 - Consider MCP write tools (move box, edit notes) once read-only use has settled.
+
+## Next session (left over from the v1.6 review, 2026-10-07)
+
+- Split `app/settings/settings-form.tsx` (1300 lines) and `app/labels/label-editor.tsx` (1300 lines) into one component per section. Verify each section in the browser before moving on.
+- Fix the 5 remaining ESLint warnings (`npm run lint`): unused `setBoxId`/`setSessionId` in `app/boxes/new/session-form.tsx`, and missing hook dependencies in `app/labels/label-editor.tsx` and `app/settings/translations/translations-editor.tsx`.
+- Translations edited live on the server (Settings -> Translations) still have no way back into git. `deploy_safe.sh` refuses to deploy while they are uncommitted; add an export or commit step.
+- The settings page waits for the model, album and printer lists before it renders (up to 5 s each when a host is down). Load them in the browser after the page shows.
+- Remove `getImmichConfig` from `lib/config.ts`; nothing uses it since analysis goes through the photo source adapter.
+- `saveBoxSessionFromFormData` checks for location conflicts before it takes the inventory lock. Move the check inside `updateInventoryData` if two people ever edit at the same time.
+- Secrets live in `data/app-settings.json`, which overrides the environment. Decide whether the app should read keys from the environment instead, so rotation does not mean editing the settings file.
