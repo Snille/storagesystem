@@ -1,5 +1,36 @@
 # History
 
+## v1.6.0 - 2026-10-07
+
+### New
+
+- Read-only MCP server at `/api/mcp` with five tools: `search_inventory`, `get_box`, `list_locations`, `list_boxes_at_location`, `get_box_photo`. Same API key as the public API.
+- Test suite (`npm test`, Vitest) covering the Home Assistant API contract, the MCP server, the AI client, photo analysis and the data store. `npm run lint` now runs ESLint directly.
+
+### Reliability
+
+- `inventory.json`, `app-settings.json` and language files are written atomically. Inventory changes run as one locked step, so two saves at the same time no longer lose data. The catalog import script takes the same lock and also writes atomically.
+- A broken `app-settings.json` is now logged instead of silently replaced by defaults.
+- `deploy_safe.sh` only aborts on uncommitted translation edits on the server. Before, any commit that changed `data/languages` blocked the deploy.
+
+### Performance
+
+- Settings, inventory and language files are parsed once and reused until they change on disk.
+- Public search reuses the photo album listing for up to five minutes instead of fetching the whole album on every request.
+- The settings page gives up on an unreachable AI host after 5 seconds.
+
+### Security
+
+- Photo URLs in public API responses carry a per-photo signature instead of the API key. Old `?key=` links still work.
+- API key comparison is constant-time. The asset ID in placeholder images is escaped.
+
+### Clean-up
+
+- One AI client (`lib/ai-client.ts`) replaces three copies of the provider code. This fixes Open WebUI in two analysis steps (photo roles and label recovery), which sent the wrong request format, and public ask, which used the wrong endpoint for OpenRouter and Open WebUI.
+- `lib/analysis.ts` is split into `lib/analysis/` (`index.ts`, `matching.ts`, `response-parsing.ts`, `text.ts`). Analysis now fetches photos through the photo source adapter, so it also works with PhotoPrism.
+- The public API translates its local answers, 404 message and shelf names. `search` and `boxes` accept `?lang=`, `ask` accepts `language`. Swedish output is unchanged.
+- The four photo proxy routes share one helper.
+
 ## v1.5.1 - 2026-07-07
 
 Patch release fixing Immich v3 compatibility and hardening live deployment.

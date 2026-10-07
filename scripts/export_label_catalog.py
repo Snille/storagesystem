@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, UTC
@@ -13,7 +14,8 @@ from openpyxl.styles import Font
 
 
 ROOT = Path(__file__).resolve().parent.parent
-INVENTORY_PATH = ROOT / "data" / "inventory.json"
+DATA_DIR = Path(os.environ.get("LAGERSYSTEM_DATA_DIR") or ROOT / "data")
+INVENTORY_PATH = DATA_DIR / "inventory.json"
 DEFAULT_OUTPUT_PATH = ROOT / "data" / "Lagersystem - Katalog-export.xlsx"
 
 

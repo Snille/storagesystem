@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
-import { readAppSettingsSync } from "@/lib/settings";
+import { hasPublicApiAccess, hasPublicAssetAccess, type PublicAssetVariant } from "@/lib/public-api-auth";
+
+function unauthorized() {
+  return NextResponse.json({ error: "Invalid or missing API key." }, { status: 401 });
+}
 
 export function requirePublicApiKey(request: Request) {
-  const expectedKey = readAppSettingsSync().security.publicApiKey?.trim() || process.env.LAGERSYSTEM_API_KEY?.trim();
+  return hasPublicApiAccess(request) ? null : unauthorized();
+}
 
-  if (!expectedKey) {
-    return null;
-  }
-
-  const apiKey =
-    request.headers.get("x-api-key")?.trim() ||
-    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ||
-    new URL(request.url).searchParams.get("key")?.trim() ||
-    "";
-
-  if (apiKey === expectedKey) {
-    return null;
-  }
-
-  return NextResponse.json({ error: "Invalid or missing API key." }, { status: 401 });
+/** Photo routes also accept the per-photo signature that API responses put in photo URLs. */
+export function requirePublicAssetAccess(request: Request, assetId: string, variant: PublicAssetVariant) {
+  return hasPublicAssetAccess(request, assetId, variant) ? null : unauthorized();
 }

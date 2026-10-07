@@ -526,6 +526,11 @@
   "translations.empty": "Keine Texte entsprechen dem aktuellen Filter.",
   "translations.aiTitle": "KI-Entwurf",
   "translations.aiHint": "KI kann jetzt fehlende Texte im ausgewählten Abschnitt ausfüllen. Prüfen Sie den Entwurf und speichern Sie, wenn Sie zufrieden sind.",
+  "publicApi.answerNone": "Ich habe keinen eindeutigen Treffer für \"{query}\" gefunden.",
+  "publicApi.answerSingle": "{label} befindet sich in {location}.",
+  "publicApi.answerMatchItem": "{label} in {location}",
+  "publicApi.answerMultiple": "Ich habe {count} mögliche Treffer für \"{query}\" gefunden. Die eindeutigsten sind: {matches}.",
+  "publicApi.boxNotFound": "Die Kiste wurde nicht gefunden.",
   "_meta": {
     "code": "de",
     "label": "Deutsch",

@@ -526,6 +526,11 @@
   "translations.empty": "No strings match the current filtering.",
   "translations.aiTitle": "AI draft",
   "translations.aiHint": "AI can now fill missing strings in the selected section. Review the draft and save when you are satisfied.",
+  "publicApi.answerNone": "I found no clear match for \"{query}\".",
+  "publicApi.answerSingle": "{label} is in {location}.",
+  "publicApi.answerMatchItem": "{label} in {location}",
+  "publicApi.answerMultiple": "I found {count} possible matches for \"{query}\". The clearest are: {matches}.",
+  "publicApi.boxNotFound": "The box could not be found.",
   "_meta": {
     "code": "en",
     "label": "English",

@@ -4,7 +4,7 @@ Practical day-to-day usage is described in [MANUAL.md](./docs/MANUAL.md). This R
 
 Planned next steps are collected in [TODO.md](./docs/TODO.md).
 
-Current version: `v1.5.1`
+Current version: `v1.6.0`
 
 A web app for inventorying workshop / shed / house boxes and storage places with an album-based photo source, JSON as the data store, and AI assistance for recognizing labels, contents, and likely box/location matches.
 
@@ -93,6 +93,9 @@ That means the same inventory model works for shelves, workbenches, and cabinets
 - `Immich` or `PhotoPrism` as image source
 - `data/inventory.json` as inventory database
 - `data/app-settings.json` for user settings
+- `Vitest` and `ESLint` for checks
+
+The JSON files are written atomically (temp file, then rename), and every inventory change runs as one locked read-change-write step, so concurrent saves cannot overwrite each other.
 
 ## Data Files
 
@@ -353,9 +356,43 @@ The app exposes public REST endpoints for integrations such as Home Assistant:
 
 The public API can be protected with a public API key configured in `Settings -> Security`, with `LAGERSYSTEM_API_KEY` available as an environment fallback.
 
+## MCP Server
+
+The app also exposes a read-only [MCP](https://modelcontextprotocol.io/) server at `/api/mcp` (Streamable HTTP, stateless), so LLM clients can look things up directly. It uses the same API key as the public API, sent as `Authorization: Bearer <key>` or `x-api-key`.
+
+Tools:
+
+- `search_inventory` - find boxes by content
+- `get_box` - full details for one box
+- `list_locations` - every shelving unit, bench and cabinet with box counts
+- `list_boxes_at_location` - all boxes in one unit
+- `get_box_photo` - a thumbnail of a box, returned as an image
+
+Example for Claude Code:
+
+```bash
+claude mcp add --transport http storagesystem https://lager.yourdomain.com/api/mcp --header "Authorization: Bearer <key>"
+```
+
+Tool output never contains the API key. Photo URLs from the public API are left out; use `get_box_photo` instead.
+
+Photo URLs in public API responses carry a per-photo signature (`?sig=...`) instead of the API key. A signature opens only that one photo and stops working when the API key changes. Old links with `?key=` still work.
+
 ## Local Development
 
 For local development and troubleshooting, see [LOCAL-TESTING.md](./docs/LOCAL-TESTING.md).
+
+Checks:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+```
+
+The tests use a temporary data folder and never touch `data/` or the network. `tests/public-api.test.ts` pins the response fields the Home Assistant integration reads; keep it passing when changing `/api/public/*`.
+
+`LAGERSYSTEM_DATA_DIR` moves the data folder (default `./data`).
 
 ## Deployment and Integrations
 

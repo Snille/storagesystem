@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { createFileCache, dataFilePath, fileStamp, fileStampSync, writeFileAtomic } from "@/lib/json-file";
 
 export type LanguageMeta = {
   code: string;
@@ -20,7 +21,15 @@ export type LanguageOption = {
   speechRecognitionLocale: string;
 };
 
-const languagesDirPath = path.join(process.cwd(), "data", "languages");
+const catalogCache = createFileCache<LanguageCatalog>();
+
+function getLanguagesDirPath() {
+  return dataFilePath("languages");
+}
+
+function getCatalogFilePath(code: string) {
+  return path.join(getLanguagesDirPath(), `${code}.json`);
+}
 const defaultLanguageCode = "en";
 
 function formatTemplate(template: string, values?: Record<string, string | number>) {
@@ -32,19 +41,34 @@ function formatTemplate(template: string, values?: Record<string, string | numbe
 }
 
 function loadCatalogSync(code: string): LanguageCatalog | null {
-  const filePath = path.join(languagesDirPath, `${code}.json`);
-  if (!existsSync(filePath)) {
+  const filePath = getCatalogFilePath(code);
+  const stamp = fileStampSync(filePath);
+  if (!stamp) {
     return null;
   }
 
-  return JSON.parse(readFileSync(filePath, "utf8")) as LanguageCatalog;
+  const cached = catalogCache.get(filePath, stamp);
+  if (cached) {
+    return cached;
+  }
+
+  const catalog = JSON.parse(readFileSync(filePath, "utf8")) as LanguageCatalog;
+  catalogCache.set(filePath, stamp, catalog);
+  return catalog;
 }
 
 async function loadCatalog(code: string): Promise<LanguageCatalog | null> {
   try {
-    const filePath = path.join(languagesDirPath, `${code}.json`);
-    const raw = await fs.readFile(filePath, "utf8");
-    return JSON.parse(raw) as LanguageCatalog;
+    const filePath = getCatalogFilePath(code);
+    const stamp = await fileStamp(filePath);
+    const cached = catalogCache.get(filePath, stamp);
+    if (cached) {
+      return cached;
+    }
+
+    const catalog = JSON.parse(await fs.readFile(filePath, "utf8")) as LanguageCatalog;
+    catalogCache.set(filePath, stamp, catalog);
+    return catalog;
   } catch {
     return null;
   }
@@ -84,7 +108,7 @@ export async function readLanguageCatalog(code?: string): Promise<LanguageCatalo
 
 export async function listAvailableLanguages(): Promise<LanguageOption[]> {
   try {
-    const fileNames = await fs.readdir(languagesDirPath);
+    const fileNames = await fs.readdir(getLanguagesDirPath());
     const catalogs = await Promise.all(
       fileNames
         .filter((fileName) => fileName.endsWith(".json"))
@@ -133,6 +157,5 @@ export async function writeLanguageCatalog(code: string, entries: Record<string,
     }
   };
 
-  await fs.mkdir(languagesDirPath, { recursive: true });
-  await fs.writeFile(path.join(languagesDirPath, `${code}.json`), `${JSON.stringify(nextCatalog, null, 2)}\n`, "utf8");
+  await writeFileAtomic(getCatalogFilePath(code), `${JSON.stringify(nextCatalog, null, 2)}\n`);
 }

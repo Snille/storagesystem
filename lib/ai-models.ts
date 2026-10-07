@@ -2,10 +2,14 @@ import type { AiProvider, AvailableModel } from "@/lib/types";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
+// The settings page waits for this list; an unreachable AI host must not hang the page.
+const MODEL_LIST_TIMEOUT_MS = 5_000;
+
 async function fetchJson(url: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(MODEL_LIST_TIMEOUT_MS)
   });
 
   if (!response.ok) {

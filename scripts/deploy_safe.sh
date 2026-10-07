@@ -12,9 +12,11 @@ cd "$APP_DIR"
 echo "[deploy] fetching origin/${BRANCH}"
 git fetch origin "$BRANCH"
 
-echo "[deploy] checking for live-only tracked edits in data/languages"
-if ! git diff --quiet origin/"$BRANCH" -- data/languages; then
-  echo "[deploy] ABORT: data/languages differs from origin/${BRANCH}."
+echo "[deploy] checking for live-only edits in data/languages"
+# Compare against HEAD, not origin: a new commit that changes translations must not block
+# the deploy, but uncommitted edits made on the server must not be overwritten.
+if [ -n "$(git status --porcelain -- data/languages)" ]; then
+  echo "[deploy] ABORT: data/languages has uncommitted changes on this server."
   echo "[deploy] Someone likely edited translations live via Settings > Translations."
   echo "[deploy] Commit/export those changes first, or the reset below will overwrite them."
   exit 1

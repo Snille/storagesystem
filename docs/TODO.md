@@ -38,4 +38,5 @@
 ## General
 
 - Continue scanning for remaining hardcoded UI strings during normal usage.
-- Add a small smoke test around public API fields used by the Home Assistant package.
+- Split `app/settings/settings-form.tsx` and `app/labels/label-editor.tsx` into one component per section; verify each section in the browser.
+- Consider MCP write tools (move box, edit notes) once read-only use has settled.

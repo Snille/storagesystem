@@ -16,7 +16,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "The q parameter is required." }, { status: 400 });
   }
 
-  const matches = await searchPublicInventory(query, Number.isFinite(limit) ? limit : 10);
+  const language = searchParams.get("lang")?.trim() || undefined;
+  const matches = await searchPublicInventory(query, Number.isFinite(limit) ? limit : 10, language);
   return NextResponse.json({
     query,
     count: matches.length,

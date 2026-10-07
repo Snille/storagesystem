@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import { z } from "zod";
+import { createFileCache, dataFilePath, fileStamp, withFileLock, writeFileAtomic } from "@/lib/json-file";
 import type { BoxRecord, InventoryData, PhotoRecord, SessionRecord } from "@/lib/types";
 
 export const inventorySchema = z.object({
@@ -37,7 +37,12 @@ export const inventorySchema = z.object({
   )
 });
 
-const dataFilePath = path.join(process.cwd(), "data", "inventory.json");
+const INVENTORY_LOCK = "inventory";
+const inventoryCache = createFileCache<InventoryData>();
+
+function getInventoryFilePath() {
+  return dataFilePath("inventory.json");
+}
 
 function getHighestPhotoIndexForSession(photos: Array<Pick<PhotoRecord, "photoId" | "sessionId">>, sessionId: string) {
   return photos.reduce((highest, photo) => {
@@ -51,25 +56,63 @@ function getHighestPhotoIndexForSession(photos: Array<Pick<PhotoRecord, "photoId
   }, 0);
 }
 
-async function ensureDataFile() {
-  await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-  try {
-    await fs.access(dataFilePath);
-  } catch {
-    await fs.writeFile(dataFilePath, JSON.stringify({ boxes: [], sessions: [], photos: [] }, null, 2), "utf8");
+async function readInventoryFromDisk(): Promise<InventoryData> {
+  const filePath = getInventoryFilePath();
+  const stamp = await fileStamp(filePath);
+  if (!stamp) {
+    return { boxes: [], sessions: [], photos: [] };
   }
+
+  const cached = inventoryCache.get(filePath, stamp);
+  if (cached) {
+    return cached;
+  }
+
+  const raw = await fs.readFile(filePath, "utf8");
+  const data = inventorySchema.parse(JSON.parse(raw));
+  inventoryCache.set(filePath, stamp, data);
+  return structuredClone(data);
 }
 
-export async function readInventoryData(): Promise<InventoryData> {
-  await ensureDataFile();
-  const raw = await fs.readFile(dataFilePath, "utf8");
-  return inventorySchema.parse(JSON.parse(raw));
-}
-
-export async function writeInventoryData(data: InventoryData) {
-  await ensureDataFile();
+async function writeInventoryToDisk(data: InventoryData) {
+  const filePath = getInventoryFilePath();
   const validated = inventorySchema.parse(data);
-  await fs.writeFile(dataFilePath, JSON.stringify(validated, null, 2), "utf8");
+  await writeFileAtomic(filePath, JSON.stringify(validated, null, 2));
+  inventoryCache.set(filePath, await fileStamp(filePath), validated);
+}
+
+/** Returns a private copy of the inventory; changing it does not change the file. */
+export async function readInventoryData(): Promise<InventoryData> {
+  return readInventoryFromDisk();
+}
+
+/** Replaces the whole inventory, waiting for any change already in progress. */
+export async function writeInventoryData(data: InventoryData) {
+  await withFileLock(INVENTORY_LOCK, () => writeInventoryToDisk(data));
+}
+
+/**
+ * Reads, changes and writes the inventory as one step. No other change can slip in
+ * between the read and the write, so concurrent saves never overwrite each other.
+ */
+export async function updateInventoryData<T>(mutate: (data: InventoryData) => T | Promise<T>): Promise<T> {
+  return withFileLock(INVENTORY_LOCK, async () => {
+    const data = await readInventoryFromDisk();
+    const result = await mutate(data);
+    await writeInventoryToDisk(data);
+    return result;
+  });
+}
+
+/** Runs work that changes inventory.json outside this module (for example the catalog import script). */
+export async function withInventoryLock<T>(task: () => Promise<T>): Promise<T> {
+  return withFileLock(INVENTORY_LOCK, async () => {
+    try {
+      return await task();
+    } finally {
+      inventoryCache.clear();
+    }
+  });
 }
 
 export async function appendPhotosToSession(payload: {
@@ -77,81 +120,81 @@ export async function appendPhotosToSession(payload: {
   sessionId: string;
   photos: Array<Omit<PhotoRecord, "photoId" | "sessionId">>;
 }) {
-  const data = await readInventoryData();
-  const box = data.boxes.find((entry) => entry.boxId === payload.boxId);
-  const session = data.sessions.find((entry) => entry.sessionId === payload.sessionId && entry.boxId === payload.boxId);
+  await updateInventoryData((data) => {
+    const box = data.boxes.find((entry) => entry.boxId === payload.boxId);
+    const session = data.sessions.find((entry) => entry.sessionId === payload.sessionId && entry.boxId === payload.boxId);
 
-  if (!box || !session) {
-    throw new Error("Kunde inte hitta låda eller aktuell session.");
-  }
-
-  const usedAssetIds = new Set(data.photos.map((photo) => photo.immichAssetId));
-  let nextIndex = getHighestPhotoIndexForSession(data.photos, payload.sessionId);
-
-  for (const photo of payload.photos) {
-    if (usedAssetIds.has(photo.immichAssetId)) {
-      continue;
+    if (!box || !session) {
+      throw new Error("Kunde inte hitta låda eller aktuell session.");
     }
 
-    nextIndex += 1;
-    data.photos.push({
-      photoId: `${payload.sessionId}:${nextIndex}`,
-      sessionId: payload.sessionId,
-      immichAssetId: photo.immichAssetId,
-      photoRole: photo.photoRole,
-      capturedAt: photo.capturedAt,
-      notes: photo.notes
-    });
-    usedAssetIds.add(photo.immichAssetId);
-  }
+    const usedAssetIds = new Set(data.photos.map((photo) => photo.immichAssetId));
+    let nextIndex = getHighestPhotoIndexForSession(data.photos, payload.sessionId);
 
-  box.updatedAt = new Date().toISOString();
-  await writeInventoryData(data);
+    for (const photo of payload.photos) {
+      if (usedAssetIds.has(photo.immichAssetId)) {
+        continue;
+      }
+
+      nextIndex += 1;
+      data.photos.push({
+        photoId: `${payload.sessionId}:${nextIndex}`,
+        sessionId: payload.sessionId,
+        immichAssetId: photo.immichAssetId,
+        photoRole: photo.photoRole,
+        capturedAt: photo.capturedAt,
+        notes: photo.notes
+      });
+      usedAssetIds.add(photo.immichAssetId);
+    }
+
+    box.updatedAt = new Date().toISOString();
+  });
 }
 
 export async function updatePhotoNotes(payload: { photoId: string; notes: string }) {
-  const data = await readInventoryData();
-  const photo = data.photos.find((entry) => entry.photoId === payload.photoId);
+  await updateInventoryData((data) => {
+    const photo = data.photos.find((entry) => entry.photoId === payload.photoId);
 
-  if (!photo) {
-    throw new Error("Kunde inte hitta bilden i inventariet.");
-  }
+    if (!photo) {
+      throw new Error("Kunde inte hitta bilden i inventariet.");
+    }
 
-  photo.notes = payload.notes;
-  await writeInventoryData(data);
+    photo.notes = payload.notes;
+  });
 }
 
 export async function removePhotoFromSession(photoId: string) {
-  const data = await readInventoryData();
-  const index = data.photos.findIndex((entry) => entry.photoId === photoId);
+  await updateInventoryData((data) => {
+    const index = data.photos.findIndex((entry) => entry.photoId === photoId);
 
-  if (index < 0) {
-    throw new Error("Kunde inte hitta bilden i inventariet.");
-  }
+    if (index < 0) {
+      throw new Error("Kunde inte hitta bilden i inventariet.");
+    }
 
-  data.photos.splice(index, 1);
-  await writeInventoryData(data);
+    data.photos.splice(index, 1);
+  });
 }
 
 export async function deleteBoxCascade(boxId: string) {
-  const data = await readInventoryData();
-  const box = data.boxes.find((entry) => entry.boxId === boxId);
+  await updateInventoryData((data) => {
+    const box = data.boxes.find((entry) => entry.boxId === boxId);
 
-  if (!box) {
-    throw new Error("Kunde inte hitta lådan i inventariet.");
-  }
+    if (!box) {
+      throw new Error("Kunde inte hitta lådan i inventariet.");
+    }
 
-  const sessionIds = new Set(
-    data.sessions
-      .filter((session) => session.boxId === boxId)
-      .map((session) => session.sessionId)
-  );
+    const sessionIds = new Set(
+      data.sessions
+        .filter((session) => session.boxId === boxId)
+        .map((session) => session.sessionId)
+    );
 
-  data.boxes = data.boxes.filter((entry) => entry.boxId !== boxId);
-  data.sessions = data.sessions.filter((session) => session.boxId !== boxId);
-  data.photos = data.photos.filter((photo) => !sessionIds.has(photo.sessionId));
+    data.boxes = data.boxes.filter((entry) => entry.boxId !== boxId);
+    data.sessions = data.sessions.filter((session) => session.boxId !== boxId);
+    data.photos = data.photos.filter((photo) => !sessionIds.has(photo.sessionId));
 
-  await writeInventoryData(data);
+  });
 }
 
 export async function upsertBoxSession(payload: {
@@ -159,48 +202,48 @@ export async function upsertBoxSession(payload: {
   session: Omit<SessionRecord, "createdAt" | "isCurrent"> & { createdAt?: string };
   photos: Array<Omit<PhotoRecord, "photoId">>;
 }) {
-  const data = await readInventoryData();
-  const now = new Date().toISOString();
+  await updateInventoryData((data) => {
+    const now = new Date().toISOString();
 
-  const existingBox = data.boxes.find((box) => box.boxId === payload.box.boxId);
-  if (existingBox) {
-    existingBox.label = payload.box.label;
-    existingBox.currentLocationId = payload.box.currentLocationId;
-    existingBox.notes = payload.box.notes;
-    existingBox.updatedAt = now;
-  } else {
-    data.boxes.push({ ...payload.box, createdAt: now, updatedAt: now });
-  }
-
-  const existingSession = data.sessions.find((session) => session.sessionId === payload.session.sessionId);
-
-  for (const session of data.sessions) {
-    if (session.boxId === payload.box.boxId) {
-      session.isCurrent = false;
+    const existingBox = data.boxes.find((box) => box.boxId === payload.box.boxId);
+    if (existingBox) {
+      existingBox.label = payload.box.label;
+      existingBox.currentLocationId = payload.box.currentLocationId;
+      existingBox.notes = payload.box.notes;
+      existingBox.updatedAt = now;
+    } else {
+      data.boxes.push({ ...payload.box, createdAt: now, updatedAt: now });
     }
-  }
 
-  const createdAt = existingSession?.createdAt ?? payload.session.createdAt ?? now;
-  if (existingSession) {
-    existingSession.boxId = payload.session.boxId;
-    existingSession.createdAt = createdAt;
-    existingSession.summary = payload.session.summary;
-    existingSession.notes = payload.session.notes;
-    existingSession.itemKeywords = payload.session.itemKeywords;
-    existingSession.isCurrent = true;
-  } else {
-    data.sessions.push({ ...payload.session, createdAt, isCurrent: true });
-  }
+    const existingSession = data.sessions.find((session) => session.sessionId === payload.session.sessionId);
 
-  data.photos = data.photos.filter((photo) => photo.sessionId !== payload.session.sessionId);
-  data.photos.push(
-    ...payload.photos.map((photo, index) => ({
-      ...photo,
-      photoId: `${payload.session.sessionId}:${index + 1}`
-    }))
-  );
+    for (const session of data.sessions) {
+      if (session.boxId === payload.box.boxId) {
+        session.isCurrent = false;
+      }
+    }
 
-  await writeInventoryData(data);
+    const createdAt = existingSession?.createdAt ?? payload.session.createdAt ?? now;
+    if (existingSession) {
+      existingSession.boxId = payload.session.boxId;
+      existingSession.createdAt = createdAt;
+      existingSession.summary = payload.session.summary;
+      existingSession.notes = payload.session.notes;
+      existingSession.itemKeywords = payload.session.itemKeywords;
+      existingSession.isCurrent = true;
+    } else {
+      data.sessions.push({ ...payload.session, createdAt, isCurrent: true });
+    }
+
+    data.photos = data.photos.filter((photo) => photo.sessionId !== payload.session.sessionId);
+    data.photos.push(
+      ...payload.photos.map((photo, index) => ({
+        ...photo,
+        photoId: `${payload.session.sessionId}:${index + 1}`
+      }))
+    );
+
+  });
 }
 
 export function getCurrentSessionByBox(data: InventoryData) {

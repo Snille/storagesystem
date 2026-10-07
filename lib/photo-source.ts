@@ -45,9 +45,43 @@ export async function fetchAlbumDetails(): Promise<PhotoSourceAlbum> {
   return adapter.fetchAlbumDetails(config);
 }
 
+const ALBUM_ASSETS_CACHE_MS = 5 * 60_000;
+let albumAssetsCache: { configKey: string; expiresAt: number; assets: Promise<ImmichAsset[]> } | null = null;
+
+function getAlbumConfigKey() {
+  return JSON.stringify(getPhotoSourceConfig());
+}
+
+/** Always asks the photo source. Use it where new photos must show up at once (inbox, analysis). */
 export async function fetchAlbumAssets(): Promise<ImmichAsset[]> {
+  const configKey = getAlbumConfigKey();
   const album = await fetchAlbumDetails();
-  return getNonCoverAlbumAssets(album).sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
+  const assets = getNonCoverAlbumAssets(album).sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt));
+  albumAssetsCache = { configKey, expiresAt: Date.now() + ALBUM_ASSETS_CACHE_MS, assets: Promise.resolve(assets) };
+  return structuredClone(assets);
+}
+
+/**
+ * Reuses an album listing up to a few minutes old. For lookups such as search, where
+ * a full paginated album fetch on every request costs far more than a slightly stale list.
+ */
+export async function fetchAlbumAssetsCached(): Promise<ImmichAsset[]> {
+  const configKey = getAlbumConfigKey();
+  let entry = albumAssetsCache;
+
+  if (!entry || entry.configKey !== configKey || entry.expiresAt <= Date.now()) {
+    const assets = fetchAlbumAssets();
+    const pending = { configKey, expiresAt: Date.now() + ALBUM_ASSETS_CACHE_MS, assets };
+    entry = pending;
+    albumAssetsCache = pending;
+    assets.catch(() => {
+      if (albumAssetsCache === pending) {
+        albumAssetsCache = null;
+      }
+    });
+  }
+
+  return structuredClone(await entry.assets);
 }
 
 export async function fetchAvailableAlbums(input: {

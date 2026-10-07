@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import { z } from "zod";
+import { createFileCache, dataFilePath, fileStamp, fileStampSync, withFileLock, writeFileAtomic } from "@/lib/json-file";
 import { getDefaultLabelSettings, normalizeLabelSettings } from "@/lib/label-templates";
 import type { AppSettings } from "@/lib/types";
 
-const settingsFilePath = path.join(process.cwd(), "data", "app-settings.json");
 const aiProviderSchema = z.enum(["lmstudio", "openai", "anthropic", "openrouter", "openwebui"]);
 const aiSettingsSchema = z.object({
   provider: aiProviderSchema,
@@ -735,34 +734,71 @@ function mergeSettings(base: AppSettings, input?: Partial<AppSettings>): AppSett
   };
 }
 
-export function readAppSettingsSync(): AppSettings {
-  const defaults = getDefaultAppSettings();
+const settingsCache = createFileCache<AppSettings>();
 
-  if (!existsSync(settingsFilePath)) {
-    return defaults;
-  }
+function getSettingsFilePath() {
+  return dataFilePath("app-settings.json");
+}
 
+function parseSettingsFile(raw: string, filePath: string) {
   try {
-    const raw = readFileSync(settingsFilePath, "utf8");
-    return mergeSettings(defaults, JSON.parse(raw) as Partial<AppSettings>);
-  } catch {
-    return defaults;
+    return mergeSettings(getDefaultAppSettings(), JSON.parse(raw) as Partial<AppSettings>);
+  } catch (error) {
+    // Running on defaults hides real settings; make the cause visible in the service log.
+    console.error(`[settings] Could not parse ${filePath}; using defaults.`, error);
+    return null;
   }
 }
 
-export async function readAppSettings(): Promise<AppSettings> {
-  const defaults = getDefaultAppSettings();
-
-  try {
-    const raw = await fs.readFile(settingsFilePath, "utf8");
-    return mergeSettings(defaults, JSON.parse(raw) as Partial<AppSettings>);
-  } catch {
-    return defaults;
+/** Returns a private copy of the settings. The file is parsed again only when it changes on disk. */
+export function readAppSettingsSync(): AppSettings {
+  const filePath = getSettingsFilePath();
+  const stamp = fileStampSync(filePath);
+  if (!stamp) {
+    return getDefaultAppSettings();
   }
+
+  const cached = settingsCache.get(filePath, stamp);
+  if (cached) {
+    return cached;
+  }
+
+  const settings = parseSettingsFile(readFileSync(filePath, "utf8"), filePath);
+  if (!settings) {
+    return getDefaultAppSettings();
+  }
+
+  settingsCache.set(filePath, stamp, settings);
+  return structuredClone(settings);
+}
+
+export async function readAppSettings(): Promise<AppSettings> {
+  const filePath = getSettingsFilePath();
+  const stamp = await fileStamp(filePath);
+  if (!stamp) {
+    return getDefaultAppSettings();
+  }
+
+  const cached = settingsCache.get(filePath, stamp);
+  if (cached) {
+    return cached;
+  }
+
+  const settings = parseSettingsFile(await fs.readFile(filePath, "utf8"), filePath);
+  if (!settings) {
+    return getDefaultAppSettings();
+  }
+
+  settingsCache.set(filePath, stamp, settings);
+  return structuredClone(settings);
 }
 
 export async function writeAppSettings(input: AppSettings) {
   const data = settingsSchema.parse(input);
-  await fs.mkdir(path.dirname(settingsFilePath), { recursive: true });
-  await fs.writeFile(settingsFilePath, JSON.stringify(data, null, 2), "utf8");
+  const filePath = getSettingsFilePath();
+  await withFileLock("app-settings", async () => {
+    await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
+    // Saved data skips the merge with defaults, so let the next read parse it like any other.
+    settingsCache.clear();
+  });
 }

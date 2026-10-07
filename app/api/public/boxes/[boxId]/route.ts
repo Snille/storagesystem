@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePublicApiKey } from "@/app/api/public/_lib";
-import { getPublicBoxById } from "@/lib/public-api";
+import { getPublicBoxById, publicBoxNotFoundMessage } from "@/lib/public-api";
 
 type RouteProps = {
   params: Promise<{ boxId: string }>;
@@ -13,10 +13,11 @@ export async function GET(request: Request, { params }: RouteProps) {
   }
 
   const { boxId } = await params;
-  const box = await getPublicBoxById(boxId);
+  const language = new URL(request.url).searchParams.get("lang")?.trim() || undefined;
+  const box = await getPublicBoxById(boxId, language);
 
   if (!box) {
-    return NextResponse.json({ error: "Lådan kunde inte hittas." }, { status: 404 });
+    return NextResponse.json({ error: publicBoxNotFoundMessage(language) }, { status: 404 });
   }
 
   return NextResponse.json(box);

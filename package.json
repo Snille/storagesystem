@@ -1,13 +1,15 @@
 {
   "name": "lagersystem-app",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "jszip": "^3.10.1",
@@ -17,9 +19,13 @@
     "zod": "3.24.2"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@types/node": "22.14.0",
     "@types/react": "19.1.1",
     "@types/react-dom": "19.1.2",
-    "typescript": "5.8.3"
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.14",
+    "typescript": "5.8.3",
+    "vitest": "^3.2.7"
   }
 }

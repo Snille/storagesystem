@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { withInventoryLock } from "@/lib/data-store";
 
 function runCommand(command: string, args: string[], cwd: string) {
   return new Promise<string>((resolve, reject) => {
@@ -48,12 +49,14 @@ export async function importLabelCatalogWorkbook(fileName: string, fileBuffer: B
   try {
     await fs.writeFile(inputPath, fileBuffer);
 
-    let stdout = "";
-    try {
-      stdout = await runCommand("python3", ["scripts/import_label_catalog.py", inputPath], process.cwd());
-    } catch {
-      stdout = await runCommand("python", ["scripts/import_label_catalog.py", inputPath], process.cwd());
-    }
+    // The script rewrites inventory.json itself, so it must not overlap with saves from the app.
+    const stdout = await withInventoryLock(async () => {
+      try {
+        return await runCommand("python3", ["scripts/import_label_catalog.py", inputPath], process.cwd());
+      } catch {
+        return await runCommand("python", ["scripts/import_label_catalog.py", inputPath], process.cwd());
+      }
+    });
 
     return JSON.parse(stdout) as LabelCatalogImportSummary;
   } finally {

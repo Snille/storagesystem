@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePublicApiKey } from "@/app/api/public/_lib";
 import { answerInventoryQuestion } from "@/lib/public-api";
-import { readAppSettings } from "@/lib/settings";
 
 export async function POST(request: Request) {
   const unauthorized = requirePublicApiKey(request);
@@ -10,16 +9,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = (await request.json()) as { query?: string };
+    const payload = (await request.json()) as { query?: string; language?: string };
     const query = payload.query?.trim() ?? "";
 
     if (!query) {
       return NextResponse.json({ error: "query is required." }, { status: 400 });
     }
 
-    const settings = await readAppSettings();
-    const language = settings.appearance.language ?? "en";
-    const result = await answerInventoryQuestion(query, "public", language);
+    const result = await answerInventoryQuestion(query, "public", payload.language?.trim() || undefined);
     return NextResponse.json({
       query,
       answer: result.answer,

@@ -1,32 +1,15 @@
-import { getAiConfig, getEffectivePrompts, getOpenRouterHeaders, languageNameForPrompt } from "@/lib/config";
+import { assertAiApiKey, extractJsonObject, generateAiText } from "@/lib/ai-client";
+import { getAiConfig, getEffectivePrompts, languageNameForPrompt } from "@/lib/config";
 import { getCurrentSessionByBox, readInventoryData } from "@/lib/data-store";
-import { fetchAlbumAssets, getAssetOriginalUrl, getAssetThumbnailUrl } from "@/lib/immich";
 import { createTranslator, readLanguageCatalogSync } from "@/lib/i18n";
 import { presentLocation } from "@/lib/location-presentation";
+import { fetchAlbumAssetsCached } from "@/lib/photo-source";
+import { getPublicApiKey, signPublicAsset, type PublicAssetVariant } from "@/lib/public-api-auth";
 import { searchInventory } from "@/lib/search";
 import { readAppSettingsSync } from "@/lib/settings";
 
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-function toAbsoluteUrl(pathname: string) {
-  const settings = readAppSettingsSync();
-  const baseUrl = settings.security.appBaseUrl?.trim() || process.env.APP_BASE_URL?.trim();
-  if (!baseUrl) {
-    return pathname;
-  }
-
-  return `${trimTrailingSlash(baseUrl)}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
-}
-
-function toPublicAssetUrl(assetId: string, variant: "thumbnail" | "original") {
-  const settings = readAppSettingsSync();
-  const pathname = `/api/public/assets/${assetId}/${variant}`;
-  const key = settings.security.publicApiKey?.trim() || process.env.LAGERSYSTEM_API_KEY?.trim() || "";
-  const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
-  return toAbsoluteUrl(`${pathname}${suffix}`);
-}
+// Response shapes here are a contract with the Home Assistant integration
+// (Snille/storagesystem-ha). Add fields freely; do not rename or remove any.
 
 type PublicPhoto = {
   photoId: string;
@@ -38,7 +21,7 @@ type PublicPhoto = {
   originalUrl: string;
 };
 
-type PublicBoxResult = {
+export type PublicBoxResult = {
   boxId: string;
   label: string;
   locationId: string;
@@ -57,22 +40,60 @@ type PublicBoxResult = {
   score?: number;
 };
 
-function getPublicLocationLabels(languageCode?: string) {
-  const settings = readAppSettingsSync();
-  const catalog = readLanguageCatalogSync(languageCode || settings.appearance.language);
-  const t = createTranslator(catalog);
+type PublicContext = {
+  languageCode: string;
+  t: ReturnType<typeof createTranslator>;
+  baseUrl: string;
+  apiKey: string;
+};
 
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+/** Reads settings, language and key once per request instead of once per photo. */
+function createPublicContext(languageCode?: string): PublicContext {
+  const settings = readAppSettingsSync();
+  const code = languageCode?.trim() || settings.appearance.language || "en";
+  return {
+    languageCode: code,
+    t: createTranslator(readLanguageCatalogSync(code)),
+    baseUrl: trimTrailingSlash(settings.security.appBaseUrl?.trim() || process.env.APP_BASE_URL?.trim() || ""),
+    apiKey: getPublicApiKey()
+  };
+}
+
+function toAbsoluteUrl(context: PublicContext, pathname: string) {
+  return context.baseUrl ? `${context.baseUrl}${pathname}` : pathname;
+}
+
+// Photo URLs are loaded by browsers (the HA card), so they cannot send headers.
+// They carry a signature for that one photo instead of the API key itself.
+function toPublicAssetUrl(context: PublicContext, assetId: string, variant: PublicAssetVariant) {
+  const pathname = `/api/public/assets/${encodeURIComponent(assetId)}/${variant}`;
+  const suffix = context.apiKey ? `?sig=${signPublicAsset(assetId, variant, context.apiKey)}` : "";
+  return toAbsoluteUrl(context, `${pathname}${suffix}`);
+}
+
+function getLocationLabels(t: PublicContext["t"]) {
   return {
     shelvingUnit: t("boxForm.ivar", "Lagerhylla"),
     bench: t("boxForm.bench", "Bänk"),
     cabinet: t("boxForm.cabinet", "Skåp"),
     surface: t("boxForm.surface", "Yta"),
-    slot: t("boxForm.place", "Plats")
+    slot: t("boxForm.place", "Plats"),
+    shelfRow: t("locations.shelfLabel", "Hylla {count}", { count: "{count}" }),
+    benchTop: t("boxForm.benchTop", "Ovanpå"),
+    benchUnder: t("boxForm.benchUnder", "Under")
   };
 }
 
-function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number], languageCode?: string): PublicBoxResult {
-  const location = presentLocation(input.box.currentLocationId, input.box.boxId, getPublicLocationLabels(languageCode));
+export function getPublicLocationLabels(languageCode?: string) {
+  return getLocationLabels(createPublicContext(languageCode).t);
+}
+
+function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number], context: PublicContext): PublicBoxResult {
+  const location = presentLocation(input.box.currentLocationId, input.box.boxId, getLocationLabels(context.t));
 
   return {
     boxId: input.box.boxId,
@@ -95,232 +116,138 @@ function buildPublicBoxResult(input: ReturnType<typeof searchInventory>[number],
       role: photo.photoRole,
       capturedAt: photo.capturedAt,
       notes: photo.notes,
-      thumbnailUrl: toPublicAssetUrl(photo.immichAssetId, "thumbnail"),
-      originalUrl: toPublicAssetUrl(photo.immichAssetId, "original")
+      thumbnailUrl: toPublicAssetUrl(context, photo.immichAssetId, "thumbnail"),
+      originalUrl: toPublicAssetUrl(context, photo.immichAssetId, "original")
     })),
     score: input.score
   };
 }
 
-function buildLocalAnswer(query: string, matches: PublicBoxResult[]) {
+function formatLocation(match: PublicBoxResult) {
+  return `${match.location.system}, ${match.location.shelf}, ${match.location.slot}`;
+}
+
+export function buildLocalAnswer(query: string, matches: PublicBoxResult[], t: PublicContext["t"]) {
   if (matches.length === 0) {
-    return `Jag hittade ingen tydlig träff för "${query}".`;
+    return t("publicApi.answerNone", 'Jag hittade ingen tydlig träff för "{query}".', { query });
   }
 
   if (matches.length === 1) {
-    const match = matches[0];
-    return `${match.label} finns i ${match.location.system}, ${match.location.shelf}, ${match.location.slot}.`;
+    return t("publicApi.answerSingle", "{label} finns i {location}.", {
+      label: matches[0].label,
+      location: formatLocation(matches[0])
+    });
   }
 
-  const top = matches.slice(0, 3);
-  const joined = top
-    .map((match) => `${match.label} i ${match.location.system}, ${match.location.shelf}, ${match.location.slot}`)
+  const joined = matches
+    .slice(0, 3)
+    .map((match) => t("publicApi.answerMatchItem", "{label} i {location}", { label: match.label, location: formatLocation(match) }))
     .join("; ");
 
-  return `Jag hittade ${matches.length} möjliga träffar för "${query}". De tydligaste är: ${joined}.`;
-}
-
-function extractResponseText(json: unknown) {
-  if (!json || typeof json !== "object") {
-    return "";
-  }
-
-  const direct = (json as { output_text?: unknown }).output_text;
-  if (typeof direct === "string" && direct.trim()) {
-    return direct.trim();
-  }
-
-  const output = (json as { output?: unknown }).output;
-  if (!Array.isArray(output)) {
-    return "";
-  }
-
-  const chunks: string[] = [];
-  for (const item of output) {
-    if (!item || typeof item !== "object") continue;
-    const content = (item as { content?: unknown }).content;
-    if (!Array.isArray(content)) continue;
-
-    for (const part of content) {
-      if (!part || typeof part !== "object") continue;
-      const text = (part as { text?: unknown }).text;
-      if (typeof text === "string" && text.trim()) {
-        chunks.push(text.trim());
-      }
-    }
-  }
-
-  return chunks.join("\n").trim();
-}
-
-async function askAiForInventoryAnswer(
-  query: string,
-  matches: PublicBoxResult[],
-  mode: "public" | "voice" = "public",
-  languageCode?: string
-) {
-  const aiConfig = getAiConfig();
-  const settings = readAppSettingsSync();
-  const effectivePrompts = getEffectivePrompts(settings);
-  const langCode = languageCode ?? settings.appearance.language ?? "en";
-  const langName = languageNameForPrompt(langCode);
-  const context = matches.slice(0, 5).map((match) => ({
-    label: match.label,
-    location: `${match.location.system}, ${match.location.shelf}, ${match.location.slot}`,
-    summary: match.summary ?? "",
-    keywords: match.itemKeywords
-  }));
-
-  const immutableInstruction =
-    langCode === "sv"
-      ? 'Om du nämner en plats ska du alltid använda det mänskligt läsbara location-fältet exakt som det ges i kontexten. Nämn aldrig interna ID:n eller kodliknande värden som boxId, locationId eller strängar som liknar IVAR-B-H3-P1-A eller CABINET-A-H1-P1.'
-      : langCode === "de"
-        ? 'Wenn du einen Ort nennst, verwende immer das menschenlesbare location-Feld genau wie es im Kontext angegeben ist. Nenne niemals interne IDs oder kodeartige Werte wie boxId, locationId oder Zeichenfolgen wie IVAR-B-H3-P1-A oder CABINET-A-H1-P1.'
-        : 'When mentioning a location, always use the human-readable location field exactly as given in the context. Never mention internal IDs or code-like values such as boxId, locationId, or strings resembling IVAR-B-H3-P1-A or CABINET-A-H1-P1.';
-
-  const baseSystemPrompt =
-    (mode === "voice" ? effectivePrompts.voiceAskSystemPrompt : effectivePrompts.publicAskSystemPrompt)?.trim() ||
-    (mode === "voice"
-      ? 'You answer questions about where things are stored in a workshop. Use only the provided context. Answer naturally in 1 to 2 short sentences. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}'
-      : 'You answer briefly about where things are stored in a workshop. Use only the provided context. If the matches are uncertain, say so. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}');
-
-  const systemText = `You must answer in ${langName}. Do not use any other language.\n\n${baseSystemPrompt}\n\n${immutableInstruction}`;
-  const userText = [
-    `Query: ${query}`,
-    "",
-    "Candidates:",
-    JSON.stringify(context, null, 2),
-  ].join("\n");
-
-  if (aiConfig.provider === "anthropic") {
-    const response = await fetch(`${aiConfig.baseUrl}/v1/messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        ...(aiConfig.apiKey ? { "x-api-key": aiConfig.apiKey } : {})
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        max_tokens: 300,
-        system: systemText,
-        messages: [{ role: "user", content: [{ type: "text", text: userText }] }]
-      }),
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI-svar misslyckades: ${response.status}`);
-    }
-
-    const json = (await response.json()) as { content?: Array<{ type?: string; text?: string }> };
-    const text = (json.content ?? [])
-      .filter((part) => part.type === "text" && typeof part.text === "string")
-      .map((part) => part.text ?? "")
-      .join("\n")
-      .trim();
-
-    return parseAnswerText(text);
-  }
-
-  const response = await fetch(`${aiConfig.baseUrl}/responses`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(aiConfig.apiKey ? { Authorization: `Bearer ${aiConfig.apiKey}` } : {}),
-      ...(aiConfig.provider === "openrouter" ? getOpenRouterHeaders("Lagersystem - Public Ask") : {})
-    },
-    body: JSON.stringify({
-      model: aiConfig.model,
-      input: [
-        { role: "system", content: [{ type: "input_text", text: systemText }] },
-        { role: "user", content: [{ type: "input_text", text: userText }] }
-      ]
-    }),
-    cache: "no-store"
+  return t("publicApi.answerMultiple", 'Jag hittade {count} möjliga träffar för "{query}". De tydligaste är: {matches}.', {
+    count: matches.length,
+    query,
+    matches: joined
   });
-
-  if (!response.ok) {
-    throw new Error(`AI-svar misslyckades: ${response.status}`);
-  }
-
-  const text = extractResponseText(await response.json());
-  return parseAnswerText(text);
 }
 
-function parseAnswerText(text: string) {
+const LOCATION_RULE: Record<string, string> = {
+  sv: "Om du nämner en plats ska du alltid använda det mänskligt läsbara location-fältet exakt som det ges i kontexten. Nämn aldrig interna ID:n eller kodliknande värden som boxId, locationId eller strängar som liknar IVAR-B-H3-P1-A eller CABINET-A-H1-P1.",
+  de: "Wenn du einen Ort nennst, verwende immer das menschenlesbare location-Feld genau wie es im Kontext angegeben ist. Nenne niemals interne IDs oder kodeartige Werte wie boxId, locationId oder Zeichenfolgen wie IVAR-B-H3-P1-A oder CABINET-A-H1-P1.",
+  en: "When mentioning a location, always use the human-readable location field exactly as given in the context. Never mention internal IDs or code-like values such as boxId, locationId, or strings resembling IVAR-B-H3-P1-A or CABINET-A-H1-P1."
+};
+
+const DEFAULT_ASK_PROMPTS = {
+  voice:
+    'You answer questions about where things are stored in a workshop. Use only the provided context. Answer naturally in 1 to 2 short sentences. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}',
+  public:
+    'You answer briefly about where things are stored in a workshop. Use only the provided context. If the matches are uncertain, say so. Do not invent boxes or locations. Reply only as JSON on the form {"answer":"..."}'
+};
+
+export function parseAnswerText(text: string) {
   const trimmed = text.trim();
-  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
+  const candidate = extractJsonObject(trimmed);
+  if (candidate.startsWith("{")) {
     try {
-      const parsed = JSON.parse(jsonMatch[0]) as { answer?: string };
+      const parsed = JSON.parse(candidate) as { answer?: unknown };
       if (typeof parsed.answer === "string" && parsed.answer.trim()) {
         return parsed.answer.trim();
       }
     } catch {
-      // ignore
+      // not JSON; use the text as it is
     }
   }
 
   return trimmed.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
 }
 
+async function askAiForInventoryAnswer(query: string, matches: PublicBoxResult[], mode: "public" | "voice", languageCode: string) {
+  const aiConfig = getAiConfig();
+  assertAiApiKey(aiConfig);
+  const prompts = getEffectivePrompts(readAppSettingsSync());
+  const baseSystemPrompt =
+    (mode === "voice" ? prompts.voiceAskSystemPrompt : prompts.publicAskSystemPrompt)?.trim() || DEFAULT_ASK_PROMPTS[mode];
+  const context = matches.slice(0, 5).map((match) => ({
+    label: match.label,
+    location: formatLocation(match),
+    summary: match.summary ?? "",
+    keywords: match.itemKeywords
+  }));
+
+  const text = await generateAiText(aiConfig, {
+    system: [
+      `You must answer in ${languageNameForPrompt(languageCode)}. Do not use any other language.`,
+      baseSystemPrompt,
+      LOCATION_RULE[languageCode] ?? LOCATION_RULE.en
+    ].join("\n\n"),
+    userText: [`Query: ${query}`, "", "Candidates:", JSON.stringify(context, null, 2)].join("\n"),
+    maxTokens: 300,
+    title: "Lagersystem - Public Ask"
+  });
+
+  return parseAnswerText(text);
+}
+
 export async function searchPublicInventory(query: string, limit = 10, languageCode?: string) {
-  const data = await readInventoryData();
-  const albumAssets = await fetchAlbumAssets().catch(() => []);
+  const context = createPublicContext(languageCode);
+  const [data, albumAssets] = await Promise.all([readInventoryData(), fetchAlbumAssetsCached().catch(() => [])]);
   const assetFileNamesById = new Map(albumAssets.map((asset) => [asset.id, asset.originalFileName]));
   const results = searchInventory(data, query, assetFileNamesById).slice(0, Math.max(1, Math.min(limit, 25)));
-  return results.map((result) => buildPublicBoxResult(result, languageCode));
+  return results.map((result) => buildPublicBoxResult(result, context));
 }
 
 export async function getPublicBoxById(boxId: string, languageCode?: string) {
   const data = await readInventoryData();
-  const sessionsByBox = getCurrentSessionByBox(data);
   const box = data.boxes.find((entry) => entry.boxId === boxId);
 
   if (!box) {
     return null;
   }
 
-  const session = sessionsByBox.get(box.boxId);
-  const photos = data.photos.filter((photo) => photo.sessionId === session?.sessionId);
+  const session = getCurrentSessionByBox(data).get(box.boxId);
+  const photos = session ? data.photos.filter((photo) => photo.sessionId === session.sessionId) : [];
+  return buildPublicBoxResult({ box, session, photos, score: 0 }, createPublicContext(languageCode));
+}
 
-  return buildPublicBoxResult({
-    box,
-    session,
-    photos,
-    score: 0
-  }, languageCode);
+export function publicBoxNotFoundMessage(languageCode?: string) {
+  return createPublicContext(languageCode).t("publicApi.boxNotFound", "Lådan kunde inte hittas.");
 }
 
 export async function answerInventoryQuestion(query: string, mode: "public" | "voice" = "public", languageCode?: string) {
-  const matches = await searchPublicInventory(query, 5, languageCode);
-  const localAnswer = buildLocalAnswer(query, matches);
+  const context = createPublicContext(languageCode);
+  const matches = await searchPublicInventory(query, 5, context.languageCode);
+  const localAnswer = buildLocalAnswer(query, matches, context.t);
 
-  if (matches.length === 0) {
-    return {
-      answer: localAnswer,
-      source: "search" as const,
-      matches
-    };
-  }
-
-  try {
-    const aiAnswer = await askAiForInventoryAnswer(query, matches, mode, languageCode);
-    if (aiAnswer) {
-      return {
-        answer: aiAnswer,
-        source: "ai" as const,
-        matches
-      };
+  if (matches.length > 0) {
+    try {
+      const aiAnswer = await askAiForInventoryAnswer(query, matches, mode, context.languageCode);
+      if (aiAnswer) {
+        return { answer: aiAnswer, source: "ai" as const, matches };
+      }
+    } catch (error) {
+      console.warn("[public-api] AI answer failed; using the local answer.", error instanceof Error ? error.message : error);
     }
-  } catch {
-    // fall back to local answer
   }
 
-  return {
-    answer: localAnswer,
-    source: "search" as const,
-    matches
-  };
+  return { answer: localAnswer, source: "search" as const, matches };
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -11,7 +12,8 @@ from openpyxl import load_workbook
 
 
 ROOT = Path(__file__).resolve().parent.parent
-INVENTORY_PATH = ROOT / "data" / "inventory.json"
+DATA_DIR = Path(os.environ.get("LAGERSYSTEM_DATA_DIR") or ROOT / "data")
+INVENTORY_PATH = DATA_DIR / "inventory.json"
 
 REQUIRED_HEADERS = {
     "Namn",
@@ -26,7 +28,13 @@ def load_inventory() -> dict[str, Any]:
 
 
 def save_inventory(data: dict[str, Any]) -> None:
-    INVENTORY_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Write a temp file and rename it over the original, so a crash never leaves half a file.
+    temp_path = INVENTORY_PATH.with_name(f"{INVENTORY_PATH.name}.{os.getpid()}.tmp")
+    with temp_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, INVENTORY_PATH)
 
 
 def now_iso() -> str:

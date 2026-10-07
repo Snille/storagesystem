@@ -526,6 +526,11 @@
   "translations.empty": "Inga strängar matchar den aktuella filtreringen.",
   "translations.aiTitle": "AI-utkast",
   "translations.aiHint": "AI kan nu fylla i saknade strängar i vald sektion. Granska utkastet och spara när du är nöjd.",
+  "publicApi.answerNone": "Jag hittade ingen tydlig träff för \"{query}\".",
+  "publicApi.answerSingle": "{label} finns i {location}.",
+  "publicApi.answerMatchItem": "{label} i {location}",
+  "publicApi.answerMultiple": "Jag hittade {count} möjliga träffar för \"{query}\". De tydligaste är: {matches}.",
+  "publicApi.boxNotFound": "Lådan kunde inte hittas.",
   "_meta": {
     "code": "sv",
     "label": "Svenska",
