@@ -43,6 +43,18 @@ describe("generateAiText", () => {
     expect(calls[0].body).not.toHaveProperty("input");
   });
 
+  it("turns reasoning off on OpenRouter when JSON is requested", async () => {
+    const calls = mockFetch([{ json: { choices: [{ message: { content: "{}" } }] } }, { json: { choices: [{ message: { content: "ok" } }] } }]);
+    const config: AiConfig = { provider: "openrouter", baseUrl: "https://openrouter.ai/api/v1", model: "m", apiKey: "k" };
+
+    await generateAiText(config, { userText: "x", jsonObject: true });
+    expect(calls[0].body.reasoning).toEqual({ enabled: false });
+    expect(calls[0].body.response_format).toEqual({ type: "json_object" });
+
+    await generateAiText(config, { userText: "plain text please" });
+    expect(calls[1].body).not.toHaveProperty("reasoning");
+  });
+
   it("sends OpenAI the Responses format with the JSON schema", async () => {
     const calls = mockFetch([{ json: { output_text: "ok" } }]);
     const config: AiConfig = { provider: "openai", baseUrl: "https://api.openai.com/v1", model: "m", apiKey: "k" };

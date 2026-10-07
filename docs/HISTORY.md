@@ -1,5 +1,11 @@
 # History
 
+## v1.6.1 - 2026-10-07
+
+### Fixes
+
+- AI drafts in the translation tool returned nothing with reasoning models on OpenRouter (for example `qwen/qwen3.5-flash`): in JSON mode they answered with their thinking or a stray number. The app now turns reasoning off on OpenRouter whenever it asks for JSON. Models without reasoning ignore the setting.
+
 ## v1.6.0 - 2026-10-07
 
 ### New

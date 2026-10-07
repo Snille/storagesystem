@@ -201,7 +201,12 @@ async function sendChatCompletions(config: AiConfig, request: AiTextRequest, tim
         ...(request.system ? [{ role: "system", content: request.system }] : []),
         { role: "user", content: userContent }
       ],
-      ...(request.jsonObject ? { response_format: { type: "json_object" } } : {})
+      ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
+      // Reasoning models on OpenRouter (e.g. qwen3.5-flash) return their thinking or
+      // garbage instead of the requested JSON. Models without reasoning ignore this.
+      ...(config.provider === "openrouter" && (request.jsonObject || request.jsonSchema)
+        ? { reasoning: { enabled: false } }
+        : {})
     },
     {
       ...bearer(config.apiKey),

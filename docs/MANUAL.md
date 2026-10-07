@@ -2,7 +2,7 @@
 
 This manual is intended for day-to-day use of the app. For technical details, see [README.md](../README.md).
 
-Current version: `v1.6.0`
+Current version: `v1.6.1`
 
 ## The Basic Idea
 
